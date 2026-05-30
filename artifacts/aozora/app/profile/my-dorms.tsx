@@ -17,11 +17,14 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 import {
   getGetMyDormListingsQueryKey,
   useGetMyDormListings,
   useDeleteDorm,
 } from "@workspace/api-client-react";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "#f59e0b",
@@ -33,7 +36,30 @@ export default function MyDormsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { token } = useAuth();
   const [search, setSearch] = useState("");
+  const [appealingId, setAppealingId] = useState<number | null>(null);
+
+  const handleAppeal = async (dormId: number) => {
+    if (!token) return;
+    setAppealingId(dormId);
+    try {
+      const res = await fetch(`${BASE_URL}/api/user/admin-conversation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      router.push(`/admin-conversation/${data.id}`);
+    } catch {
+      Alert.alert("Error", "Could not open admin chat. Please try again.");
+    } finally {
+      setAppealingId(null);
+    }
+  };
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetMyDormListings({
     query: { queryKey: getGetMyDormListingsQueryKey() },
@@ -165,6 +191,25 @@ export default function MyDormsScreen() {
                     <Text style={[styles.actionText, { color: "#ef4444" }]}>Delete</Text>
                   </TouchableOpacity>
                 </View>
+
+                {item.status === "rejected" && (
+                  <TouchableOpacity
+                    style={[styles.appealDormBtn, { borderColor: "#ef444440", backgroundColor: "#ef444410" }]}
+                    onPress={() => handleAppeal(item.id)}
+                    disabled={appealingId === item.id}
+                    activeOpacity={0.8}
+                  >
+                    {appealingId === item.id ? (
+                      <ActivityIndicator size="small" color="#ef4444" />
+                    ) : (
+                      <>
+                        <Feather name="message-circle" size={14} color="#ef4444" />
+                        <Text style={styles.appealDormBtnText}>Appeal this rejection to Admin</Text>
+                        <Feather name="arrow-right" size={13} color="#ef4444" />
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           )}
@@ -223,4 +268,6 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 20, fontWeight: "bold" },
   emptySub: { fontSize: 15, textAlign: "center", lineHeight: 22 },
   createBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 24, paddingVertical: 12, marginTop: 4 },
+  appealDormBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5, marginTop: 10 },
+  appealDormBtnText: { flex: 1, fontSize: 13, fontWeight: "600", color: "#ef4444" },
 });

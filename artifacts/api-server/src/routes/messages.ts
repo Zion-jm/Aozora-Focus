@@ -287,6 +287,39 @@ router.post("/conversations/:conversationId/read", requireAuth, async (req, res)
 
 // ─── ADMIN CONVERSATIONS ──────────────────────────────────────────────────────
 
+// POST /user/admin-conversation — any authenticated user starts/retrieves their conversation with the admin
+router.post("/user/admin-conversation", requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+
+  if (req.user!.role === "admin") {
+    res.status(400).json({ error: "Admins cannot open an appeal with themselves" });
+    return;
+  }
+
+  const admin = sqlite.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get() as any;
+  if (!admin) {
+    res.status(404).json({ error: "No admin found" });
+    return;
+  }
+  const adminId = admin.id;
+
+  let conv = sqlite.prepare(
+    "SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ?"
+  ).get(adminId, userId) as any;
+
+  if (!conv) {
+    const result = sqlite.prepare(
+      "INSERT INTO admin_conversations (admin_id, user_id) VALUES (?, ?)"
+    ).run(adminId, userId);
+    conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(result.lastInsertRowid) as any;
+  } else if (conv.user_deleted_at) {
+    sqlite.prepare("UPDATE admin_conversations SET user_deleted_at = NULL WHERE id = ?").run(conv.id);
+    conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(conv.id) as any;
+  }
+
+  res.status(201).json(serializeAdminConversation(conv, userId));
+});
+
 // POST /admin/conversations — admin starts or retrieves existing conversation with a user
 router.post("/admin/conversations", requireAuth, requireRole("admin"), async (req, res) => {
   const { userId } = req.body;

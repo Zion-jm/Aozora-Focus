@@ -11,6 +11,7 @@ import {
   TextInput,
   Platform,
 } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -25,6 +26,8 @@ import {
   customFetch,
 } from "@workspace/api-client-react";
 import type { VerificationRecord } from "@workspace/api-client-react";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const ID_TYPES = [
   "National ID",
@@ -103,7 +106,29 @@ function Field({
 export default function VerifyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, token } = useAuth();
+  const [isAppealing, setIsAppealing] = useState(false);
+
+  const handleAppeal = async () => {
+    if (!token) return;
+    setIsAppealing(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/user/admin-conversation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      router.push(`/admin-conversation/${data.id}`);
+    } catch {
+      Alert.alert("Error", "Could not open admin chat. Please try again.");
+    } finally {
+      setIsAppealing(false);
+    }
+  };
 
   const [step, setStep] = useState<Step>("personal");
   const [info, setInfo] = useState<PersonalInfo>({
@@ -427,6 +452,25 @@ export default function VerifyScreen() {
             >
               <Feather name="refresh-cw" size={18} color="#fff" />
               <Text style={styles.resubmitBtnText}>Resubmit Verification</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.appealVerifyBtn,
+                { borderColor: "#ef444460", borderRadius: colors.radius },
+              ]}
+              onPress={handleAppeal}
+              disabled={isAppealing}
+              activeOpacity={0.8}
+            >
+              {isAppealing ? (
+                <ActivityIndicator color="#ef4444" />
+              ) : (
+                <>
+                  <Feather name="message-circle" size={18} color="#ef4444" />
+                  <Text style={styles.appealVerifyBtnText}>Appeal to Admin</Text>
+                </>
+              )}
             </TouchableOpacity>
           </>
         ) : step === "personal" ? (
@@ -825,4 +869,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   resubmitBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  appealVerifyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    marginTop: 4,
+  },
+  appealVerifyBtnText: { fontSize: 16, fontWeight: "700", color: "#ef4444" },
 });

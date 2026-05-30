@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -14,6 +15,8 @@ import { router } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -48,7 +51,8 @@ function MenuItem({
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
+  const [isAppealing, setIsAppealing] = useState(false);
 
   const handleLogout = () => {
     Alert.alert("Log out", "Are you sure you want to log out?", [
@@ -62,6 +66,27 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const handleAppeal = async () => {
+    if (!token) return;
+    setIsAppealing(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/user/admin-conversation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      router.push(`/admin-conversation/${data.id}`);
+    } catch {
+      Alert.alert("Error", "Could not open admin chat. Please try again.");
+    } finally {
+      setIsAppealing(false);
+    }
   };
 
   const verificationColor =
@@ -81,6 +106,9 @@ export default function ProfileScreen() {
       : user?.verificationStatus === "rejected"
       ? "Rejected"
       : "Unverified";
+
+  const showAppealBanner =
+    user?.verificationStatus === "rejected" && user?.role !== "admin";
 
   return (
     <ScrollView
@@ -121,6 +149,9 @@ export default function ProfileScreen() {
             {user?.verificationStatus === "verified" && (
               <Ionicons name="checkmark-circle" size={13} color={verificationColor} />
             )}
+            {user?.verificationStatus === "rejected" && (
+              <Feather name="x-circle" size={13} color={verificationColor} />
+            )}
             <Text style={[styles.verifyBadgeText, { color: verificationColor }]}>{verificationLabel}</Text>
           </View>
         </View>
@@ -133,6 +164,38 @@ export default function ProfileScreen() {
           <Text style={[styles.editProfileBtnText, { color: colors.foreground }]}>Edit Profile</Text>
         </TouchableOpacity>
       </View>
+
+      {showAppealBanner && (
+        <View style={[styles.appealBanner, { backgroundColor: "#ef444408", borderColor: "#ef444430" }]}>
+          <View style={styles.appealBannerTop}>
+            <View style={[styles.appealIconWrap, { backgroundColor: "#ef444415" }]}>
+              <Feather name="shield-off" size={20} color="#ef4444" />
+            </View>
+            <View style={styles.appealBannerBody}>
+              <Text style={styles.appealBannerTitle}>Verification Rejected</Text>
+              <Text style={[styles.appealBannerSub, { color: colors.mutedForeground }]}>
+                Your identity submission was not approved. You can appeal this decision directly to our admin team.
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.appealBtn, { backgroundColor: "#ef4444" }]}
+            onPress={handleAppeal}
+            disabled={isAppealing}
+            activeOpacity={0.85}
+          >
+            {isAppealing ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Feather name="message-circle" size={16} color="#fff" />
+                <Text style={styles.appealBtnText}>Appeal Rejection</Text>
+                <Feather name="arrow-right" size={15} color="rgba(255,255,255,0.8)" />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>ACCOUNT</Text>
@@ -168,9 +231,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
   headerTitle: { fontSize: 28, fontWeight: "bold" },
   profileCard: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 24, alignItems: "center", gap: 8 },
-  avatarImage: { width: 80, height: 80, borderRadius: 40, borderWidth: 2 },
-  avatarCircle: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
-  avatarLetter: { fontSize: 36, fontWeight: "bold" },
   name: { fontSize: 22, fontWeight: "bold" },
   subInfo: { fontSize: 13 },
   email: { fontSize: 15 },
@@ -181,7 +241,43 @@ const styles = StyleSheet.create({
   roleBadgeText: { fontSize: 13, fontWeight: "600" },
   verifyBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   verifyBadgeText: { fontSize: 13, fontWeight: "600" },
-  section: { marginHorizontal: 16, borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+
+  /* Appeal banner */
+  appealBanner: {
+    marginHorizontal: 16,
+    marginBottom: 4,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 16,
+    gap: 14,
+  },
+  appealBannerTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  appealIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  appealBannerBody: { flex: 1, gap: 4 },
+  appealBannerTitle: { fontSize: 15, fontWeight: "700", color: "#ef4444" },
+  appealBannerSub: { fontSize: 13, lineHeight: 18 },
+  appealBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  appealBtnText: { fontSize: 15, fontWeight: "700", color: "#fff", flex: 1, textAlign: "center" },
+
+  section: { marginHorizontal: 16, borderRadius: 16, borderWidth: 1, overflow: "hidden", marginTop: 12 },
   sectionTitle: { fontSize: 11, fontWeight: "600", letterSpacing: 0.8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 },
   menuItem: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14, borderBottomWidth: 1 },
   menuIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
