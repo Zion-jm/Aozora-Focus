@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -22,8 +22,6 @@ import {
   useListMessages,
   useSendMessage,
   getGetConversationsQueryKey,
-  useGetConversations,
-  useMarkConversationRead,
 } from "@workspace/api-client-react";
 
 export default function ConversationScreen() {
@@ -33,46 +31,20 @@ export default function ConversationScreen() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
-  const convId = Number(id);
+  const flatRef = useRef<FlatList>(null);
 
-  // Fetch all conversations to get metadata (name, dorm) for this one
-  const { data: convListData } = useGetConversations({
-    query: { queryKey: getGetConversationsQueryKey() },
-  });
-  const conversation = (convListData as any)?.conversations?.find(
-    (c: any) => c.id === convId
-  );
-
-  const { data, isLoading, refetch } = useListMessages(convId, {
-    query: { enabled: !!convId, queryKey: getListMessagesQueryKey(String(convId)) },
+  const { data, isLoading, refetch } = useListMessages(id!, {
+    query: { enabled: !!id, queryKey: getListMessagesQueryKey(id!) },
   });
 
   const messages = (data as any)?.messages || [];
 
-  const markRead = useMarkConversationRead();
-
-  // Mark messages as read when screen opens and whenever new messages arrive
-  useEffect(() => {
-    if (convId) {
-      markRead.mutate(
-        { conversationId: convId },
-        {
-          onSuccess: () => {
-            qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
-          },
-        }
-      );
-    }
-  }, [convId, messages.length]);
-
   const send = useSendMessage({
     mutation: {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(String(convId)) });
+        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(id!) });
         qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
         setText("");
-        // Mark as read after sending (clears any race-condition unread)
-        markRead.mutate({ conversationId: convId });
       },
     },
   });
@@ -86,13 +58,8 @@ export default function ConversationScreen() {
 
   const handleSend = () => {
     if (!text.trim()) return;
-    send.mutate({ conversationId: convId, data: { content: text.trim() } });
+    send.mutate({ conversationId: id!, data: { content: text.trim() } });
   };
-
-  const headerTitle = conversation
-    ? conversation.otherParticipant?.fullName || "Conversation"
-    : "Conversation";
-  const headerSubtitle = conversation?.dorm?.name;
 
   const renderMessage = ({ item }: { item: any }) => {
     const isMe = item.senderId === user?.id;
@@ -144,16 +111,9 @@ export default function ConversationScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-            {headerTitle}
-          </Text>
-          {headerSubtitle ? (
-            <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
-              {headerSubtitle}
-            </Text>
-          ) : null}
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
+          Conversation
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -163,6 +123,7 @@ export default function ConversationScreen() {
         </View>
       ) : (
         <FlatList
+          ref={flatRef}
           data={[...messages].reverse()}
           keyExtractor={(item: any) => item.id.toString()}
           renderItem={renderMessage}
@@ -231,9 +192,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { fontSize: 17, fontWeight: "bold" },
-  headerSubtitle: { fontSize: 12, marginTop: 1 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", flex: 1, textAlign: "center" },
   listContent: { padding: 16, gap: 12 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginVertical: 2 },
   msgRowMe: { flexDirection: "row-reverse" },

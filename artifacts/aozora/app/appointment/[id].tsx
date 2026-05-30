@@ -34,7 +34,6 @@ export default function AppointmentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const appointmentId = Number(id);
 
   const { data, isLoading } = useGetAppointmentById(id!, {
     query: { enabled: !!id, queryKey: getGetAppointmentByIdQueryKey(id!) },
@@ -98,13 +97,6 @@ export default function AppointmentDetailScreen() {
           )}
         </View>
 
-        {user?.role === "owner" && appt.student && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-            <Text style={[styles.cardTitle, { color: colors.mutedForeground }]}>STUDENT</Text>
-            <Text style={[styles.cardValue, { color: colors.foreground }]}>{appt.student.fullName}</Text>
-          </View>
-        )}
-
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           <Text style={[styles.cardTitle, { color: colors.mutedForeground }]}>DATE & TIME</Text>
           <View style={styles.iconRow}>
@@ -140,18 +132,13 @@ export default function AppointmentDetailScreen() {
                   { text: "Cancel", style: "cancel" },
                   {
                     text: "Approve",
-                    onPress: () =>
-                      update.mutate({ appointmentId, data: { status: "approved" } }),
+                    onPress: () => update.mutate({ id: id!, data: { status: "approved" } }),
                   },
                 ])
               }
               disabled={update.isPending}
             >
-              {update.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Feather name="check" size={18} color="#fff" />
-              )}
+              <Feather name="check" size={18} color="#fff" />
               <Text style={styles.actionBtnText}>Approve</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -162,18 +149,13 @@ export default function AppointmentDetailScreen() {
                   {
                     text: "Reject",
                     style: "destructive",
-                    onPress: () =>
-                      update.mutate({ appointmentId, data: { status: "rejected" } }),
+                    onPress: () => update.mutate({ id: id!, data: { status: "rejected" } }),
                   },
                 ])
               }
               disabled={update.isPending}
             >
-              {update.isPending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Feather name="x" size={18} color="#fff" />
-              )}
+              <Feather name="x" size={18} color="#fff" />
               <Text style={styles.actionBtnText}>Reject</Text>
             </TouchableOpacity>
           </View>
