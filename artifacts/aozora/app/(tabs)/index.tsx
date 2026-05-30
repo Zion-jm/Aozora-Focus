@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity, RefreshControl } from "react-native";
+import React, { useState, useMemo } from "react";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Image, TouchableOpacity, RefreshControl, TextInput } from "react-native";
 import { useColors } from "@/hooks/useColors";
 import { getGetDormsQueryKey, useGetDorms } from "@workspace/api-client-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,22 +9,34 @@ import { router } from "expo-router";
 export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  
+  const [search, setSearch] = useState("");
+
   const { data, isLoading, isError, refetch, isRefetching } = useGetDorms({
     query: {
       queryKey: getGetDormsQueryKey()
     }
   });
 
+  const filtered = useMemo(() => {
+    const all = data?.dorms || [];
+    if (!search.trim()) return all;
+    const q = search.toLowerCase();
+    return all.filter(
+      (d: any) =>
+        d.name?.toLowerCase().includes(q) ||
+        d.address?.toLowerCase().includes(q)
+    );
+  }, [data, search]);
+
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={[styles.card, { backgroundColor: colors.card, borderRadius: colors.radius, borderColor: colors.border }]}
       onPress={() => router.push(`/dorm/${item.id}`)}
       activeOpacity={0.8}
     >
-      <Image 
-        source={{ uri: item.coverPhotoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?q=80&w=800&auto=format&fit=crop" }} 
-        style={styles.cardImage} 
+      <Image
+        source={{ uri: item.coverPhotoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?q=80&w=800&auto=format&fit=crop" }}
+        style={styles.cardImage}
       />
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
@@ -63,6 +75,23 @@ export default function ExploreScreen() {
       <View style={[styles.header, { paddingTop: insets.top || 40, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Explore</Text>
         <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>Find your perfect dorm in Lopez</Text>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by name or address…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -75,7 +104,7 @@ export default function ExploreScreen() {
         </View>
       ) : (
         <FlatList
-          data={data?.dorms || []}
+          data={filtered}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
@@ -84,8 +113,10 @@ export default function ExploreScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Feather name="home" size={48} color={colors.mutedForeground} />
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No dorms found</Text>
+              <Feather name="search" size={48} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                {search.trim() ? `No dorms match "${search}"` : "No dorms found"}
+              </Text>
             </View>
           }
         />
@@ -110,6 +141,20 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     marginTop: 4,
+    marginBottom: 12,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    padding: 0,
   },
   centerContainer: {
     flex: 1,

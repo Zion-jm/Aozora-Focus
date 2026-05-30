@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -32,6 +33,7 @@ export default function AppointmentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetAppointments({
     query: { queryKey: getGetAppointmentsQueryKey() },
@@ -39,6 +41,18 @@ export default function AppointmentsScreen() {
 
   const appointments = data?.appointments || [];
   const pendingCount = appointments.filter((a: any) => a.status === "pending").length;
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return appointments;
+    const q = search.toLowerCase();
+    return appointments.filter(
+      (a: any) =>
+        a.dorm?.name?.toLowerCase().includes(q) ||
+        STATUS_LABELS[a.status]?.toLowerCase().includes(q) ||
+        a.preferredDate?.toLowerCase().includes(q) ||
+        a.message?.toLowerCase().includes(q)
+    );
+  }, [appointments, search]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -63,6 +77,23 @@ export default function AppointmentsScreen() {
         <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
           {user?.role === "owner" ? "Review visit requests from students" : "Your scheduled dorm visits"}
         </Text>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by dorm, status, or date…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -79,7 +110,7 @@ export default function AppointmentsScreen() {
         </View>
       ) : (
         <FlatList
-          data={appointments}
+          data={filtered}
           keyExtractor={(item: any) => item.id.toString()}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
@@ -130,13 +161,17 @@ export default function AppointmentsScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Feather name="calendar" size={48} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No visits yet</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                {search.trim() ? `No results for "${search}"` : "No visits yet"}
+              </Text>
               <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-                {user?.role === "owner"
+                {search.trim()
+                  ? "Try searching by dorm name, status, or date"
+                  : user?.role === "owner"
                   ? "Students will appear here when they request a visit"
                   : "Browse dorms and book a visit to get started"}
               </Text>
-              {user?.role === "student" && (
+              {!search.trim() && user?.role === "student" && (
                 <TouchableOpacity
                   style={[styles.exploreBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
                   onPress={() => router.push("/(tabs)")}
@@ -159,7 +194,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 28, fontWeight: "bold" },
   badge: { borderRadius: 12, minWidth: 24, height: 24, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
   badgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
-  headerSubtitle: { fontSize: 15, marginTop: 4 },
+  headerSubtitle: { fontSize: 15, marginTop: 4, marginBottom: 12 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
   errorText: { fontSize: 15 },
   retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },

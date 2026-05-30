@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -39,6 +40,7 @@ export default function MessagesScreen() {
   const { user, token } = useAuth();
   const qc = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetConversations({
     query: { queryKey: getGetConversationsQueryKey() },
@@ -46,6 +48,17 @@ export default function MessagesScreen() {
 
   const conversations = (data as any)?.conversations || [];
   const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return conversations;
+    const q = search.toLowerCase();
+    return conversations.filter(
+      (c: any) =>
+        c.otherParticipant?.fullName?.toLowerCase().includes(q) ||
+        c.dorm?.name?.toLowerCase().includes(q) ||
+        c.lastMessage?.content?.toLowerCase().includes(q)
+    );
+  }, [conversations, search]);
 
   const handleOpen = (item: any) => {
     if (item.type === "admin") {
@@ -108,6 +121,23 @@ export default function MessagesScreen() {
         <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
           {isAdmin ? "Conversations with users" : "Chat with dorm owners and admin"}
         </Text>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search conversations…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -121,7 +151,7 @@ export default function MessagesScreen() {
         </View>
       ) : (
         <FlatList
-          data={conversations}
+          data={filtered}
           keyExtractor={(item: any) => `${item.type}-${item.id}`}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
@@ -208,9 +238,15 @@ export default function MessagesScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Feather name="message-square" size={48} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No conversations yet</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                {search.trim() ? `No results for "${search}"` : "No conversations yet"}
+              </Text>
               <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-                {isAdmin ? "Go to Users to start a conversation with a student or owner." : "Browse dorms and message an owner to start chatting."}
+                {search.trim()
+                  ? "Try a different name or keyword"
+                  : isAdmin
+                  ? "Go to Users to start a conversation with a student or owner."
+                  : "Browse dorms and message an owner to start chatting."}
               </Text>
             </View>
           }
@@ -227,7 +263,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 28, fontWeight: "bold" },
   unreadBadge: { borderRadius: 12, minWidth: 24, height: 24, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
   unreadBadgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
-  headerSubtitle: { fontSize: 15, marginTop: 4 },
+  headerSubtitle: { fontSize: 15, marginTop: 4, marginBottom: 12 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   listContent: { paddingBottom: 20 },
   item: { flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, gap: 14 },
