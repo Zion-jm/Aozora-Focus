@@ -64,7 +64,11 @@ router.put("/admin/users/:userId/status", requireAuth, requireRole("admin"), asy
     updatedAt: new Date().toISOString(),
   }).where(eq(users.id, userId)).returning();
 
-  const user = result[0]!;
+  const user = result[0];
+  if (!user) {
+    res.status(404).json({ error: "Not found", message: "User not found" });
+    return;
+  }
   res.json({
     id: user.id,
     fullName: user.fullName,
@@ -80,7 +84,21 @@ router.put("/admin/users/:userId/status", requireAuth, requireRole("admin"), asy
 
 router.get("/admin/verifications", requireAuth, requireRole("admin"), async (_req, res) => {
   const verifs = await db.select().from(verificationRecords).all();
-  res.json({ verifications: verifs, total: verifs.length });
+  const allUsers = await db.select().from(users).all();
+  const userMap = Object.fromEntries(allUsers.map((u) => [u.id, u]));
+
+  res.json({
+    verifications: verifs.map((v) => {
+      const u = userMap[v.userId];
+      return {
+        ...v,
+        user: u
+          ? { id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, avatarUrl: u.avatarUrl }
+          : null,
+      };
+    }),
+    total: verifs.length,
+  });
 });
 
 router.put("/admin/verifications/:verificationId", requireAuth, requireRole("admin"), async (req, res) => {
@@ -93,7 +111,11 @@ router.put("/admin/verifications/:verificationId", requireAuth, requireRole("adm
     reviewedAt: new Date().toISOString(),
   }).where(eq(verificationRecords.id, id)).returning();
 
-  const verif = result[0]!;
+  const verif = result[0];
+  if (!verif) {
+    res.status(404).json({ error: "Not found", message: "Verification record not found" });
+    return;
+  }
 
   if (status === "approved") {
     await db.update(users).set({ verificationStatus: "verified" }).where(eq(users.id, verif.userId));
@@ -101,7 +123,11 @@ router.put("/admin/verifications/:verificationId", requireAuth, requireRole("adm
     await db.update(users).set({ verificationStatus: "rejected" }).where(eq(users.id, verif.userId));
   }
 
-  res.json(verif);
+  const u = await db.select().from(users).where(eq(users.id, verif.userId)).get();
+  res.json({
+    ...verif,
+    user: u ? { id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, avatarUrl: u.avatarUrl } : null,
+  });
 });
 
 router.get("/admin/dorms", requireAuth, requireRole("admin"), async (req, res) => {

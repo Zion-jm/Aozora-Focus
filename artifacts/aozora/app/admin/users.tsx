@@ -58,7 +58,7 @@ export default function AdminUsersScreen() {
           text: action.charAt(0).toUpperCase() + action.slice(1),
           style: user.isSuspended ? "default" : "destructive",
           onPress: () =>
-            update.mutate({ id: user.id.toString(), data: { isSuspended: !user.isSuspended } }),
+            update.mutate({ userId: user.id, data: { isSuspended: !user.isSuspended } }),
         },
       ]
     );

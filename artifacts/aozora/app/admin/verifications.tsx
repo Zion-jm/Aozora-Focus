@@ -24,11 +24,18 @@ import {
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "#f59e0b",
-  verified: "#10b981",
+  approved: "#10b981",
   rejected: "#ef4444",
 };
 
-const FILTERS = ["all", "pending", "verified", "rejected"];
+const STATUS_LABEL: Record<string, string> = {
+  all: "All",
+  pending: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
+const FILTERS = ["all", "pending", "approved", "rejected"];
 
 export default function AdminVerificationsScreen() {
   const colors = useColors();
@@ -50,16 +57,16 @@ export default function AdminVerificationsScreen() {
     },
   });
 
-  const handleReview = (item: any, status: "verified" | "rejected") => {
+  const handleReview = (item: any, status: "approved" | "rejected") => {
     Alert.alert(
-      `${status === "verified" ? "Approve" : "Reject"} ID?`,
-      `Mark ${item.user?.fullName}'s ID as ${status}?`,
+      `${status === "approved" ? "Approve" : "Reject"} ID?`,
+      `Mark ${item.user?.fullName ?? "this user"}'s ID as ${status === "approved" ? "approved" : "rejected"}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: status === "verified" ? "Approve" : "Reject",
+          text: status === "approved" ? "Approve" : "Reject",
           style: status === "rejected" ? "destructive" : "default",
-          onPress: () => review.mutate({ id: item.id.toString(), data: { status } }),
+          onPress: () => review.mutate({ verificationId: item.id, data: { status } }),
         },
       ]
     );
@@ -83,7 +90,7 @@ export default function AdminVerificationsScreen() {
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.filterText, { color: filter === f ? "#fff" : colors.mutedForeground }]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {STATUS_LABEL[f]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -118,26 +125,40 @@ export default function AdminVerificationsScreen() {
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLOR[item.status] || "#64748b") + "22" }]}>
                   <Text style={[styles.statusText, { color: STATUS_COLOR[item.status] || "#64748b" }]}>
-                    {item.status}
+                    {STATUS_LABEL[item.status] || item.status}
                   </Text>
                 </View>
               </View>
 
-              {item.imageUrl && (
+              {item.submittedAt && (
+                <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
+                  Submitted: {new Date(item.submittedAt).toLocaleDateString()}
+                </Text>
+              )}
+
+              {item.idImageUrl && (
                 <TouchableOpacity
                   style={[styles.viewIdBtn, { borderColor: colors.border, borderRadius: 8 }]}
-                  onPress={() => Linking.openURL(item.imageUrl)}
+                  onPress={() => Linking.openURL(item.idImageUrl)}
                 >
                   <Feather name="external-link" size={14} color={colors.primary} />
                   <Text style={[styles.viewIdText, { color: colors.primary }]}>View ID Document</Text>
                 </TouchableOpacity>
               )}
 
+              {item.reviewNote && (
+                <View style={[styles.noteBox, { backgroundColor: colors.muted, borderRadius: 8 }]}>
+                  <Text style={[styles.noteLabel, { color: colors.mutedForeground }]}>Note</Text>
+                  <Text style={[styles.noteText, { color: colors.foreground }]}>{item.reviewNote}</Text>
+                </View>
+              )}
+
               {item.status === "pending" && (
                 <View style={styles.actions}>
                   <TouchableOpacity
                     style={[styles.approveBtn, { backgroundColor: "#10b981", borderRadius: 8 }]}
-                    onPress={() => handleReview(item, "verified")}
+                    onPress={() => handleReview(item, "approved")}
+                    disabled={review.isPending}
                   >
                     <Ionicons name="checkmark-circle" size={16} color="#fff" />
                     <Text style={styles.btnText}>Approve</Text>
@@ -145,18 +166,27 @@ export default function AdminVerificationsScreen() {
                   <TouchableOpacity
                     style={[styles.rejectBtn, { backgroundColor: "#ef4444", borderRadius: 8 }]}
                     onPress={() => handleReview(item, "rejected")}
+                    disabled={review.isPending}
                   >
                     <Feather name="x-circle" size={16} color="#fff" />
                     <Text style={styles.btnText}>Reject</Text>
                   </TouchableOpacity>
                 </View>
               )}
+
+              {item.status !== "pending" && item.reviewedAt && (
+                <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
+                  Reviewed: {new Date(item.reviewedAt).toLocaleDateString()}
+                </Text>
+              )}
             </View>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Feather name="shield" size={48} color={colors.mutedForeground} />
-              <Text style={[{ color: colors.mutedForeground, fontSize: 16 }]}>No {filter} verifications</Text>
+              <Text style={[{ color: colors.mutedForeground, fontSize: 16 }]}>
+                No {STATUS_LABEL[filter]?.toLowerCase()} verifications
+              </Text>
             </View>
           }
         />
@@ -185,8 +215,12 @@ const styles = StyleSheet.create({
   idType: { fontSize: 13 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   statusText: { fontSize: 12, fontWeight: "600" },
+  dateText: { fontSize: 12 },
   viewIdBtn: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 14 },
   viewIdText: { fontSize: 14, fontWeight: "600" },
+  noteBox: { padding: 10, gap: 2 },
+  noteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
+  noteText: { fontSize: 13 },
   actions: { flexDirection: "row", gap: 10 },
   approveBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
   rejectBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
