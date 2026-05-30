@@ -50,7 +50,7 @@ outputType = "webview"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
-expertMode = true
+expertMode = false
 
 [postMerge]
 path = "scripts/post-merge.sh"
