@@ -106,6 +106,7 @@ router.get("/users/:userId", async (req, res) => {
     bio: user.bio ?? null,
     universityOrWorkplace: user.universityOrWorkplace ?? null,
     createdAt: user.createdAt,
+    phone: user.role === "owner" ? (user.phone ?? null) : null,
   });
 });
 
