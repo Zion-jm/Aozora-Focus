@@ -34,8 +34,8 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/api-server && pnpm run build && PORT=8000 node --enable-source-maps ./dist/index.mjs"
-waitForPort = 8000
+args = "pnpm --filter @workspace/api-server run dev"
+waitForPort = 8080
 
 [[workflows.workflow]]
 name = "Start application"
@@ -70,10 +70,6 @@ localPort = 8080
 externalPort = 8080
 
 [[ports]]
-localPort = 8081
-externalPort = 8081
-
-[[ports]]
 localPort = 20823
 externalPort = 80
 
@@ -84,4 +80,3 @@ channel = "stable-25_05"
 
 [userenv.shared]
 PORT = "8080"
-JWT_SECRET = "fa2c96e7aaaf1c3e70437507f25ac1fad7bf2a4cec54f306c0469c1fa5380edda0ce7393991a449bf5c7c9c428ce7c87"
