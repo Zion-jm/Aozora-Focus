@@ -91,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
+    queryClient.invalidateQueries();
   };
 
   return (

@@ -20,6 +20,7 @@ const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   getListMessagesQueryKey,
   useListMessages,
@@ -117,11 +118,13 @@ export default function ConversationScreen() {
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
         {!isMe && (
-          <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
-            <Text style={[styles.avatarText, { color: colors.primary }]}>
-              {(item.sender?.fullName || "U")[0].toUpperCase()}
-            </Text>
-          </View>
+          <UserAvatar
+            name={item.sender?.fullName}
+            avatarUrl={item.sender?.avatarUrl}
+            size={32}
+            color={colors.primary}
+            backgroundColor={colors.primary + "22"}
+          />
         )}
         <View style={styles.bubbleWrapper}>
           <View

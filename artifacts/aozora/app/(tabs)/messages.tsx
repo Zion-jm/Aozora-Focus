@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 import { getGetConversationsQueryKey, useGetConversations } from "@workspace/api-client-react";
 
 function timeAgo(dateStr: string) {
@@ -176,15 +177,20 @@ export default function MessagesScreen() {
                 delayLongPress={400}
                 activeOpacity={0.7}
               >
-                <View style={[styles.avatarWrap, { backgroundColor: avatarBg }]}>
-                  {isAdminConv ? (
+                {isAdminConv ? (
+                  <View style={[styles.avatarWrap, { backgroundColor: avatarBg }]}>
                     <Ionicons name="shield" size={22} color={avatarColor} />
-                  ) : (
-                    <Text style={[styles.avatarText, { color: avatarColor }]}>
-                      {(item.otherParticipant?.fullName || "U")[0].toUpperCase()}
-                    </Text>
-                  )}
-                </View>
+                  </View>
+                ) : (
+                  <UserAvatar
+                    name={item.otherParticipant?.fullName}
+                    avatarUrl={item.otherParticipant?.avatarUrl}
+                    size={48}
+                    color={avatarColor}
+                    backgroundColor={avatarBg}
+                    style={styles.avatarWrap}
+                  />
+                )}
                 <View style={styles.itemContent}>
                   <View style={styles.itemTop}>
                     <View style={styles.nameRow}>

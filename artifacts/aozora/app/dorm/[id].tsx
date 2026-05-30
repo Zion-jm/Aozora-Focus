@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   getGetDormByIdQueryKey,
   useGetDormById,
@@ -356,11 +357,13 @@ export default function DormDetailScreen() {
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Owner</Text>
               <View style={[styles.ownerCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-                <View style={[styles.ownerAvatar, { backgroundColor: colors.primary + "22" }]}>
-                  <Text style={[styles.ownerAvatarText, { color: colors.primary }]}>
-                    {(d.owner.fullName || "O")[0].toUpperCase()}
-                  </Text>
-                </View>
+                <UserAvatar
+                  name={d.owner.fullName}
+                  avatarUrl={(d.owner as any).avatarUrl}
+                  size={48}
+                  color={colors.primary}
+                  backgroundColor={colors.primary + "22"}
+                />
                 <View>
                   <Text style={[styles.ownerName, { color: colors.foreground }]}>{d.owner.fullName}</Text>
                   {d.owner.verificationStatus === "verified" && (

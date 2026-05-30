@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -14,6 +13,7 @@ import { router } from "expo-router";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -97,18 +97,13 @@ export default function ProfileScreen() {
       </View>
 
       <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {user?.avatarUrl ? (
-          <Image
-            source={{ uri: user.avatarUrl }}
-            style={[styles.avatarImage, { borderColor: colors.border }]}
-          />
-        ) : (
-          <View style={[styles.avatarCircle, { backgroundColor: colors.primary + "22" }]}>
-            <Text style={[styles.avatarLetter, { color: colors.primary }]}>
-              {(user?.fullName || "U")[0].toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <UserAvatar
+          name={user?.fullName}
+          avatarUrl={user?.avatarUrl}
+          size={80}
+          color={colors.primary}
+          backgroundColor={colors.primary + "22"}
+        />
         <Text style={[styles.name, { color: colors.foreground }]}>{user?.fullName || "User"}</Text>
         {user?.universityOrWorkplace ? (
           <Text style={[styles.subInfo, { color: colors.mutedForeground }]}>

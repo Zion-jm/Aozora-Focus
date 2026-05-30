@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from "expo-router";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { UserAvatar } from "@/components/UserAvatar";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -137,11 +138,13 @@ export default function AdminConversationScreen() {
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
         {!isMe && (
-          <View style={[styles.avatar, { backgroundColor: "#ef444422" }]}>
-            <Text style={[styles.avatarText, { color: "#ef4444" }]}>
-              {(otherUser?.fullName || "A")[0].toUpperCase()}
-            </Text>
-          </View>
+          <UserAvatar
+            name={item.sender?.fullName ?? otherUser?.fullName}
+            avatarUrl={item.sender?.avatarUrl ?? otherUser?.avatarUrl}
+            size={32}
+            color="#ef4444"
+            backgroundColor="#ef444422"
+          />
         )}
         <View style={styles.bubbleWrapper}>
           <View

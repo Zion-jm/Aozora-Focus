@@ -196,7 +196,19 @@ router.get("/conversations/:conversationId/messages", requireAuth, async (req, r
   const total = allMsgs.length;
   const paginated = allMsgs.slice((page - 1) * limit, page * limit);
 
-  res.json({ messages: paginated, total, page });
+  const enriched = await Promise.all(
+    paginated.map(async (msg) => {
+      const sender = await db.select().from(users).where(eq(users.id, msg.senderId)).get();
+      return {
+        ...msg,
+        sender: sender
+          ? { id: sender.id, fullName: sender.fullName, avatarUrl: sender.avatarUrl }
+          : null,
+      };
+    })
+  );
+
+  res.json({ messages: enriched, total, page });
 });
 
 // ─── POST /conversations/:id/messages ────────────────────────────────────────
@@ -331,14 +343,20 @@ router.get("/admin-conversations/:id/messages", requireAuth, async (req, res) =>
     "SELECT * FROM admin_messages WHERE conversation_id = ? ORDER BY created_at ASC"
   ).all(convId) as any[];
 
-  const result = msgs.map((m: any) => ({
-    id: m.id,
-    conversationId: m.conversation_id,
-    senderId: m.sender_id,
-    content: m.content,
-    isRead: !!m.is_read,
-    createdAt: m.created_at,
-  }));
+  const result = msgs.map((m: any) => {
+    const sender = sqlite.prepare("SELECT id, full_name, avatar_url FROM users WHERE id = ?").get(m.sender_id) as any;
+    return {
+      id: m.id,
+      conversationId: m.conversation_id,
+      senderId: m.sender_id,
+      content: m.content,
+      isRead: !!m.is_read,
+      createdAt: m.created_at,
+      sender: sender
+        ? { id: sender.id, fullName: sender.full_name, avatarUrl: sender.avatar_url }
+        : null,
+    };
+  });
 
   res.json({ messages: result, total: result.length, page: 1 });
 });
