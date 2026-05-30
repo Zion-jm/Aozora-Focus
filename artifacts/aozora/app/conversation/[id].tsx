@@ -9,11 +9,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
@@ -30,7 +33,7 @@ export default function ConversationScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const convId = id ? parseInt(id, 10) : 0;
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const flatRef = useRef<FlatList>(null);
@@ -71,6 +74,32 @@ export default function ConversationScreen() {
   const handleSend = () => {
     if (!text.trim()) return;
     send.mutate({ conversationId: convId, data: { content: text.trim() } });
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Conversation",
+      "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await fetch(`${BASE_URL}/api/conversations/${convId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+              router.back();
+            } catch {
+              Alert.alert("Error", "Could not delete conversation. Please try again.");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const lastReadSentIndex = (() => {
@@ -144,7 +173,9 @@ export default function ConversationScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
           Conversation
         </Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={handleDelete} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Feather name="trash-2" size={20} color={colors.destructive} />
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (

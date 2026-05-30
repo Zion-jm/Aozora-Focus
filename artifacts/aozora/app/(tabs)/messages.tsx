@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,12 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
@@ -29,10 +31,14 @@ function timeAgo(dateStr: string) {
   return `${diffDays}d`;
 }
 
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+
 export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const qc = useQueryClient();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetConversations({
     query: { queryKey: getGetConversationsQueryKey() },
@@ -47,6 +53,38 @@ export default function MessagesScreen() {
     } else {
       router.push(`/conversation/${item.id}`);
     }
+  };
+
+  const handleLongPress = (item: any) => {
+    const endpoint = item.type === "admin"
+      ? `/api/admin-conversations/${item.id}`
+      : `/api/conversations/${item.id}`;
+
+    Alert.alert(
+      "Delete Conversation",
+      "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeletingId(`${item.type}-${item.id}`);
+              await fetch(`${BASE_URL}${endpoint}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+            } catch {
+              Alert.alert("Error", "Could not delete conversation. Please try again.");
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const isAdmin = user?.role === "admin";
@@ -94,14 +132,18 @@ export default function MessagesScreen() {
             const avatarBg = isAdminConv ? "#ef444422" : colors.primary + "22";
             const avatarColor = isAdminConv ? "#ef4444" : colors.primary;
 
+            const isDeleting = deletingId === `${item.type}-${item.id}`;
             return (
               <TouchableOpacity
                 style={[
                   styles.item,
                   { backgroundColor: colors.card, borderBottomColor: colors.border },
                   item.unreadCount > 0 && { backgroundColor: colors.primary + "08" },
+                  isDeleting && { opacity: 0.5 },
                 ]}
                 onPress={() => handleOpen(item)}
+                onLongPress={() => handleLongPress(item)}
+                delayLongPress={400}
                 activeOpacity={0.7}
               >
                 <View style={[styles.avatarWrap, { backgroundColor: avatarBg }]}>

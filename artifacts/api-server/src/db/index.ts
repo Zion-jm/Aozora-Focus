@@ -128,6 +128,17 @@ export function initializeDatabase() {
     );
   `);
 
+  // Add soft-delete columns (idempotent — ignore if already exist)
+  const migrations = [
+    "ALTER TABLE conversations ADD COLUMN student_deleted_at TEXT",
+    "ALTER TABLE conversations ADD COLUMN owner_deleted_at TEXT",
+    "ALTER TABLE admin_conversations ADD COLUMN admin_deleted_at TEXT",
+    "ALTER TABLE admin_conversations ADD COLUMN user_deleted_at TEXT",
+  ];
+  for (const sql of migrations) {
+    try { sqlite.exec(sql); } catch { /* column already exists */ }
+  }
+
   seedDatabase(sqlite);
 }
 

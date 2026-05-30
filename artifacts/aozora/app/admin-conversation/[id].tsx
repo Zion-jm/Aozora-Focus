@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -79,6 +80,28 @@ export default function AdminConversationScreen() {
     const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
   }, [convId, token]);
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Conversation",
+      "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiFetch(`/api/admin-conversations/${convId}`, token!, { method: "DELETE" });
+              router.back();
+            } catch {
+              Alert.alert("Error", "Could not delete conversation. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleSend = async () => {
     if (!text.trim() || !token || isSending) return;
@@ -183,7 +206,9 @@ export default function AdminConversationScreen() {
             </Text>
           )}
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={handleDelete} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Feather name="trash-2" size={20} color={colors.destructive} />
+        </TouchableOpacity>
       </View>
 
       {!isAdmin && (

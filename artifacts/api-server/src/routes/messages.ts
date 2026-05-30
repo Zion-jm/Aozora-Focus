@@ -102,22 +102,26 @@ router.get("/conversations", requireAuth, async (req, res) => {
   const enriched: any[] = [];
 
   if (role === "admin") {
-    // Admins see only their admin conversations
+    // Admins see only their non-deleted admin conversations
     const adminConvs = sqlite.prepare(
-      "SELECT * FROM admin_conversations WHERE admin_id = ? ORDER BY updated_at DESC"
+      "SELECT * FROM admin_conversations WHERE admin_id = ? AND admin_deleted_at IS NULL ORDER BY updated_at DESC"
     ).all(userId) as any[];
     for (const c of adminConvs) {
       enriched.push(serializeAdminConversation(c, userId));
     }
   } else {
-    // Regular users: dorm conversations + admin conversations directed at them
+    // Regular users: dorm conversations (non-deleted) + admin conversations directed at them (non-deleted)
     const allConvs = await db.select().from(conversations).all();
-    const myConvs = allConvs.filter((c) => c.studentId === userId || c.ownerId === userId);
+    const myConvs = allConvs.filter((c) => {
+      if (c.studentId === userId) return !(c as any).studentDeletedAt;
+      if (c.ownerId === userId) return !(c as any).ownerDeletedAt;
+      return false;
+    });
     const dormSerialized = await Promise.all(myConvs.map((c) => serializeConversation(c, userId)));
     enriched.push(...dormSerialized);
 
     const adminConvs = sqlite.prepare(
-      "SELECT * FROM admin_conversations WHERE user_id = ? ORDER BY updated_at DESC"
+      "SELECT * FROM admin_conversations WHERE user_id = ? AND user_deleted_at IS NULL ORDER BY updated_at DESC"
     ).all(userId) as any[];
     for (const c of adminConvs) {
       enriched.push(serializeAdminConversation(c, userId));
@@ -225,6 +229,29 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
   res.status(201).json(result[0]);
 });
 
+// ─── DELETE /conversations/:id — soft-delete for current user ────────────────
+
+router.delete("/conversations/:conversationId", requireAuth, async (req, res) => {
+  const convId = parseInt(req.params["conversationId"]!);
+  const userId = req.user!.id;
+  const role = req.user!.role;
+
+  const conv = sqlite.prepare("SELECT * FROM conversations WHERE id = ?").get(convId) as any;
+  if (!conv || (conv.student_id !== userId && conv.owner_id !== userId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  if (role === "student" || conv.student_id === userId) {
+    sqlite.prepare("UPDATE conversations SET student_deleted_at = ? WHERE id = ?").run(now, convId);
+  } else {
+    sqlite.prepare("UPDATE conversations SET owner_deleted_at = ? WHERE id = ?").run(now, convId);
+  }
+
+  res.json({ message: "Conversation deleted" });
+});
+
 // ─── POST /conversations/:id/read ────────────────────────────────────────────
 
 router.post("/conversations/:conversationId/read", requireAuth, async (req, res) => {
@@ -314,6 +341,27 @@ router.get("/admin-conversations/:id/messages", requireAuth, async (req, res) =>
   }));
 
   res.json({ messages: result, total: result.length, page: 1 });
+});
+
+// DELETE /admin-conversations/:id — soft-delete for current user
+router.delete("/admin-conversations/:id", requireAuth, async (req, res) => {
+  const convId = parseInt(req.params["id"]!);
+  const userId = req.user!.id;
+
+  const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
+  if (!conv || (conv.admin_id !== userId && conv.user_id !== userId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  if (conv.admin_id === userId) {
+    sqlite.prepare("UPDATE admin_conversations SET admin_deleted_at = ? WHERE id = ?").run(now, convId);
+  } else {
+    sqlite.prepare("UPDATE admin_conversations SET user_deleted_at = ? WHERE id = ?").run(now, convId);
+  }
+
+  res.json({ message: "Conversation deleted" });
 });
 
 // POST /admin-conversations/:id/messages
