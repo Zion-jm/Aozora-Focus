@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -36,14 +37,31 @@ export default function AdminUsersScreen() {
   const qc = useQueryClient();
   const { token } = useAuth();
   const [filter, setFilter] = useState<string>("all");
+  const [search, setSearch] = useState("");
   const [messagingUserId, setMessagingUserId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetUsers({
     query: { queryKey: getAdminGetUsersQueryKey() },
   });
-  const users = ((data as any)?.users || []).filter((u: any) =>
-    filter === "all" ? true : u.role === filter
-  );
+
+  const allUsers = (data as any)?.users || [];
+
+  const filtered = useMemo(() => {
+    let result = allUsers;
+    if (filter !== "all") {
+      result = result.filter((u: any) => u.role === filter);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (u: any) =>
+          u.fullName?.toLowerCase().includes(q) ||
+          u.email?.toLowerCase().includes(q) ||
+          u.phone?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [allUsers, filter, search]);
 
   const update = useAdminUpdateUserStatus({
     mutation: {
@@ -106,6 +124,27 @@ export default function AdminUsersScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by name, email, or phone…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+            autoCapitalize="none"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       <View style={[styles.filterBar, { borderBottomColor: colors.border }]}>
         {FILTERS.map((f) => (
           <TouchableOpacity
@@ -134,7 +173,7 @@ export default function AdminUsersScreen() {
         </View>
       ) : (
         <FlatList
-          data={users}
+          data={filtered}
           keyExtractor={(item: any) => item.id.toString()}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
@@ -204,7 +243,9 @@ export default function AdminUsersScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 15 }}>No users found</Text>
+              <Text style={{ color: colors.mutedForeground, fontSize: 15 }}>
+                {search.trim() ? `No users match "${search}"` : "No users found"}
+              </Text>
             </View>
           }
         />
@@ -218,6 +259,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
   filterBar: { flexDirection: "row", padding: 12, gap: 8, borderBottomWidth: 1 },
   filterBtn: { paddingHorizontal: 14, paddingVertical: 6 },
   filterText: { fontSize: 13, fontWeight: "600" },

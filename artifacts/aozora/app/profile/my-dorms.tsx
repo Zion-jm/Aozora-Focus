@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   RefreshControl,
   Alert,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -32,12 +33,24 @@ export default function MyDormsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetMyDormListings({
     query: { queryKey: getGetMyDormListingsQueryKey() },
   });
 
   const dorms = (data as any)?.dorms || [];
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return dorms;
+    const q = search.toLowerCase();
+    return dorms.filter(
+      (d: any) =>
+        d.name?.toLowerCase().includes(q) ||
+        d.address?.toLowerCase().includes(q) ||
+        d.status?.toLowerCase().includes(q)
+    );
+  }, [dorms, search]);
 
   const deleteDorm = useDeleteDorm({
     mutation: {
@@ -61,6 +74,26 @@ export default function MyDormsScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by name, address, or status…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -71,7 +104,7 @@ export default function MyDormsScreen() {
         </View>
       ) : (
         <FlatList
-          data={dorms}
+          data={filtered}
           keyExtractor={(item: any) => item.id.toString()}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
@@ -137,18 +170,24 @@ export default function MyDormsScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Feather name="home" size={56} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No listings yet</Text>
-              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                Create your first dorm listing and start accepting students
+              <Feather name={search.trim() ? "search" : "home"} size={56} color={colors.mutedForeground} />
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                {search.trim() ? `No results for "${search}"` : "No listings yet"}
               </Text>
-              <TouchableOpacity
-                style={[styles.createBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
-                onPress={() => router.push("/dorm/create")}
-              >
-                <Feather name="plus" size={18} color="#fff" />
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>Create Listing</Text>
-              </TouchableOpacity>
+              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                {search.trim()
+                  ? "Try a different name, address, or status"
+                  : "Create your first dorm listing and start accepting students"}
+              </Text>
+              {!search.trim() && (
+                <TouchableOpacity
+                  style={[styles.createBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+                  onPress={() => router.push("/dorm/create")}
+                >
+                  <Feather name="plus" size={18} color="#fff" />
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>Create Listing</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -163,6 +202,9 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold", flex: 1, textAlign: "center" },
   addBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   listContent: { padding: 16, gap: 16 },
   card: { borderWidth: 1, overflow: "hidden" },
