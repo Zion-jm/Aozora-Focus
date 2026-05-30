@@ -110,7 +110,7 @@ export default function MyDormsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: colors.primary + "15", borderRadius: 8 }]}
-                    onPress={() => router.push(`/dorm/create?edit=${item.id}`)}
+                    onPress={() => router.push({ pathname: "/dorm/create", params: { edit: item.id.toString() } })}
                   >
                     <Feather name="edit-2" size={15} color={colors.primary} />
                     <Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text>
@@ -123,7 +123,7 @@ export default function MyDormsScreen() {
                         {
                           text: "Delete",
                           style: "destructive",
-                          onPress: () => deleteDorm.mutate({ id: item.id.toString() }),
+                          onPress: () => deleteDorm.mutate({ dormId: item.id }),
                         },
                       ])
                     }
