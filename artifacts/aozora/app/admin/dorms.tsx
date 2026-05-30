@@ -62,7 +62,7 @@ export default function AdminDormsScreen() {
         { text: "Cancel", style: "cancel" },
         {
           text: status.charAt(0).toUpperCase() + status.slice(1),
-          onPress: () => update.mutate({ id: dorm.id.toString(), data: { status } }),
+          onPress: () => update.mutate({ dormId: dorm.id, data: { status } }),
         },
       ]
     );
