@@ -1,5 +1,14 @@
 # Aozora
 
+> **PROJECT TYPE: Mobile App — Expo / React Native (NOT a website)**
+>
+> This is an **Expo mobile application** built with React Native and Expo Router.
+> The main artifact is `artifacts/aozora/` and must be set up as an `expo` (mobile) artifact, **not** a `react-vite` or any web artifact type.
+> Do NOT create a new web artifact or treat this as a website on import.
+>
+> To run the mobile app: `pnpm --filter @workspace/aozora run dev`
+> To run the API server: `pnpm --filter @workspace/api-server run dev`
+
 A mobile-first dorm finder and visitation appointment platform for students in Lopez, Quezon, Philippines. Tagline: "Home, but smarter."
 
 ## Run & Operate
@@ -13,12 +22,23 @@ A mobile-first dorm finder and visitation appointment platform for students in L
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- Mobile: Expo 54 (React Native), Expo Router 6, react-native-maps 1.18.0 (pinned)
+- **Mobile (primary artifact):** Expo 54 (React Native), Expo Router 6, react-native-maps 1.18.0 (pinned)
 - API: Express 5, better-sqlite3, bcryptjs, jsonwebtoken
 - DB: SQLite (stored at `cwd()/aozora.db`, configurable via `DB_PATH` env)
 - Validation: Zod (`zod/v4`)
 - API codegen: Orval (from OpenAPI spec at `lib/api-spec/openapi.yaml`)
 - Build: esbuild (CJS bundle)
+
+## Artifact Setup (important for import)
+
+This workspace has two artifacts:
+
+| Artifact | Type | Directory | Preview |
+|---|---|---|---|
+| **Aozora** | `expo` (mobile) | `artifacts/aozora/` | `/` |
+| **API Server** | `api` | `artifacts/api-server/` | `/api` |
+
+When setting up after import, register `artifacts/aozora/` as an **expo** artifact (kind: `mobile`) and `artifacts/api-server/` as an **api** artifact. The `artifact.toml` for each lives at `artifacts/<name>/.replit-artifact/artifact.toml`.
 
 ## Where things live
 
