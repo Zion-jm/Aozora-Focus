@@ -10,4 +10,10 @@ export interface UpdateProfileRequest {
   fullName?: string;
   phone?: string;
   avatarUrl?: string;
+  /** ISO date string e.g. "1999-05-15" */
+  birthday?: string;
+  universityOrWorkplace?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  bio?: string;
 }

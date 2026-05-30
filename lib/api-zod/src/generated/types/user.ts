@@ -17,5 +17,10 @@ export interface User {
   verificationStatus: UserVerificationStatus;
   isSuspended: boolean;
   avatarUrl?: string | null;
+  birthday?: string | null;
+  universityOrWorkplace?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  bio?: string | null;
   createdAt: string;
 }

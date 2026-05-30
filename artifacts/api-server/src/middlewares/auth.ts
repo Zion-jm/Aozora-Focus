@@ -15,6 +15,11 @@ export interface AuthUser {
   verificationStatus: "unverified" | "pending" | "verified" | "rejected";
   isSuspended: boolean;
   avatarUrl: string | null;
+  birthday: string | null;
+  universityOrWorkplace: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  bio: string | null;
   createdAt: string;
 }
 
@@ -61,6 +66,11 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       verificationStatus: user.verificationStatus as AuthUser["verificationStatus"],
       isSuspended: user.isSuspended,
       avatarUrl: user.avatarUrl,
+      birthday: user.birthday ?? null,
+      universityOrWorkplace: user.universityOrWorkplace ?? null,
+      emergencyContactName: user.emergencyContactName ?? null,
+      emergencyContactPhone: user.emergencyContactPhone ?? null,
+      bio: user.bio ?? null,
       createdAt: user.createdAt,
     };
     next();

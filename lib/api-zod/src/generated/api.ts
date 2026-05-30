@@ -47,6 +47,11 @@ export const LoginResponse = zod.object({
   "verificationStatus": zod.enum(['unverified', 'pending', 'verified', 'rejected']),
   "isSuspended": zod.boolean(),
   "avatarUrl": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
+  "universityOrWorkplace": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "bio": zod.string().nullish(),
   "createdAt": zod.string()
 })
 })
@@ -72,6 +77,11 @@ export const GetMeResponse = zod.object({
   "verificationStatus": zod.enum(['unverified', 'pending', 'verified', 'rejected']),
   "isSuspended": zod.boolean(),
   "avatarUrl": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
+  "universityOrWorkplace": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "bio": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -82,7 +92,12 @@ export const GetMeResponse = zod.object({
 export const UpdateProfileBody = zod.object({
   "fullName": zod.string().optional(),
   "phone": zod.string().optional(),
-  "avatarUrl": zod.string().optional()
+  "avatarUrl": zod.string().optional(),
+  "birthday": zod.string().optional().describe('ISO date string e.g. \"1999-05-15\"'),
+  "universityOrWorkplace": zod.string().optional(),
+  "emergencyContactName": zod.string().optional(),
+  "emergencyContactPhone": zod.string().optional(),
+  "bio": zod.string().optional()
 })
 
 export const UpdateProfileResponse = zod.object({
@@ -94,6 +109,11 @@ export const UpdateProfileResponse = zod.object({
   "verificationStatus": zod.enum(['unverified', 'pending', 'verified', 'rejected']),
   "isSuspended": zod.boolean(),
   "avatarUrl": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
+  "universityOrWorkplace": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "bio": zod.string().nullish(),
   "createdAt": zod.string()
 })
 
@@ -695,6 +715,11 @@ export const AdminGetUsersResponse = zod.object({
   "verificationStatus": zod.enum(['unverified', 'pending', 'verified', 'rejected']),
   "isSuspended": zod.boolean(),
   "avatarUrl": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
+  "universityOrWorkplace": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "bio": zod.string().nullish(),
   "createdAt": zod.string()
 })),
   "total": zod.number(),
@@ -723,6 +748,11 @@ export const AdminUpdateUserStatusResponse = zod.object({
   "verificationStatus": zod.enum(['unverified', 'pending', 'verified', 'rejected']),
   "isSuspended": zod.boolean(),
   "avatarUrl": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
+  "universityOrWorkplace": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "bio": zod.string().nullish(),
   "createdAt": zod.string()
 })
 

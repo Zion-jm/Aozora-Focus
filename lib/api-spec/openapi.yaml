@@ -832,6 +832,21 @@ components:
         avatarUrl:
           type: string
           nullable: true
+        birthday:
+          type: string
+          nullable: true
+        universityOrWorkplace:
+          type: string
+          nullable: true
+        emergencyContactName:
+          type: string
+          nullable: true
+        emergencyContactPhone:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required: [id, fullName, role, verificationStatus, isSuspended, createdAt]
@@ -897,6 +912,17 @@ components:
         phone:
           type: string
         avatarUrl:
+          type: string
+        birthday:
+          type: string
+          description: ISO date string e.g. "1999-05-15"
+        universityOrWorkplace:
+          type: string
+        emergencyContactName:
+          type: string
+        emergencyContactPhone:
+          type: string
+        bio:
           type: string
 
     SubmitVerificationRequest:

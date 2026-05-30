@@ -18,6 +18,11 @@ export const users = sqliteTable("users", {
   }).notNull().default("unverified"),
   isSuspended: integer("is_suspended", { mode: "boolean" }).notNull().default(false),
   avatarUrl: text("avatar_url"),
+  birthday: text("birthday"),
+  universityOrWorkplace: text("university_or_workplace"),
+  emergencyContactName: text("emergency_contact_name"),
+  emergencyContactPhone: text("emergency_contact_phone"),
+  bio: text("bio"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });

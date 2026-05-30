@@ -46,6 +46,11 @@ export interface User {
   verificationStatus: UserVerificationStatus;
   isSuspended: boolean;
   avatarUrl?: string | null;
+  birthday?: string | null;
+  universityOrWorkplace?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  bio?: string | null;
   createdAt: string;
 }
 
@@ -88,6 +93,12 @@ export interface UpdateProfileRequest {
   fullName?: string;
   phone?: string;
   avatarUrl?: string;
+  /** ISO date string e.g. "1999-05-15" */
+  birthday?: string;
+  universityOrWorkplace?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  bio?: string;
 }
 
 export interface SubmitVerificationRequest {

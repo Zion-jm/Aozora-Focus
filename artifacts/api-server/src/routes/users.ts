@@ -6,19 +6,8 @@ import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
-router.put("/users/me", requireAuth, async (req, res) => {
-  const { fullName, phone, avatarUrl } = req.body;
-  const userId = req.user!.id;
-
-  const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-  if (fullName) updates.fullName = fullName;
-  if (phone !== undefined) updates.phone = phone;
-  if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
-
-  const result = await db.update(users).set(updates).where(eq(users.id, userId)).returning();
-  const user = result[0]!;
-
-  res.json({
+function formatUser(user: typeof users.$inferSelect) {
+  return {
     id: user.id,
     fullName: user.fullName,
     email: user.email,
@@ -27,8 +16,35 @@ router.put("/users/me", requireAuth, async (req, res) => {
     verificationStatus: user.verificationStatus,
     isSuspended: user.isSuspended,
     avatarUrl: user.avatarUrl,
+    birthday: user.birthday ?? null,
+    universityOrWorkplace: user.universityOrWorkplace ?? null,
+    emergencyContactName: user.emergencyContactName ?? null,
+    emergencyContactPhone: user.emergencyContactPhone ?? null,
+    bio: user.bio ?? null,
     createdAt: user.createdAt,
-  });
+  };
+}
+
+router.put("/users/me", requireAuth, async (req, res) => {
+  const {
+    fullName, phone, avatarUrl,
+    birthday, universityOrWorkplace,
+    emergencyContactName, emergencyContactPhone, bio,
+  } = req.body;
+  const userId = req.user!.id;
+
+  const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+  if (fullName) updates.fullName = fullName;
+  if (phone !== undefined) updates.phone = phone;
+  if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+  if (birthday !== undefined) updates.birthday = birthday;
+  if (universityOrWorkplace !== undefined) updates.universityOrWorkplace = universityOrWorkplace;
+  if (emergencyContactName !== undefined) updates.emergencyContactName = emergencyContactName;
+  if (emergencyContactPhone !== undefined) updates.emergencyContactPhone = emergencyContactPhone;
+  if (bio !== undefined) updates.bio = bio;
+
+  const result = await db.update(users).set(updates).where(eq(users.id, userId)).returning();
+  res.json(formatUser(result[0]!));
 });
 
 router.post("/users/me/submit-verification", requireAuth, async (req, res) => {

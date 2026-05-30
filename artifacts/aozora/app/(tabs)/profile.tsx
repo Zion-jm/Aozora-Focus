@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -96,12 +97,24 @@ export default function ProfileScreen() {
       </View>
 
       <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={[styles.avatarCircle, { backgroundColor: colors.primary + "22" }]}>
-          <Text style={[styles.avatarLetter, { color: colors.primary }]}>
-            {(user?.fullName || "U")[0].toUpperCase()}
-          </Text>
-        </View>
+        {user?.avatarUrl ? (
+          <Image
+            source={{ uri: user.avatarUrl }}
+            style={[styles.avatarImage, { borderColor: colors.border }]}
+          />
+        ) : (
+          <View style={[styles.avatarCircle, { backgroundColor: colors.primary + "22" }]}>
+            <Text style={[styles.avatarLetter, { color: colors.primary }]}>
+              {(user?.fullName || "U")[0].toUpperCase()}
+            </Text>
+          </View>
+        )}
         <Text style={[styles.name, { color: colors.foreground }]}>{user?.fullName || "User"}</Text>
+        {user?.universityOrWorkplace ? (
+          <Text style={[styles.subInfo, { color: colors.mutedForeground }]}>
+            {user.universityOrWorkplace}
+          </Text>
+        ) : null}
         <Text style={[styles.email, { color: colors.mutedForeground }]}>{user?.email || user?.phone || ""}</Text>
         <View style={styles.badges}>
           <View style={[styles.roleBadge, { backgroundColor: colors.primary + "18" }]}>
@@ -116,6 +129,14 @@ export default function ProfileScreen() {
             <Text style={[styles.verifyBadgeText, { color: verificationColor }]}>{verificationLabel}</Text>
           </View>
         </View>
+        <TouchableOpacity
+          style={[styles.editProfileBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
+          onPress={() => router.push("/profile/edit")}
+          activeOpacity={0.75}
+        >
+          <Feather name="edit-2" size={14} color={colors.foreground} />
+          <Text style={[styles.editProfileBtnText, { color: colors.foreground }]}>Edit Profile</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card }]}>
@@ -152,10 +173,14 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
   headerTitle: { fontSize: 28, fontWeight: "bold" },
   profileCard: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 24, alignItems: "center", gap: 8 },
+  avatarImage: { width: 80, height: 80, borderRadius: 40, borderWidth: 2 },
   avatarCircle: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
   avatarLetter: { fontSize: 36, fontWeight: "bold" },
   name: { fontSize: 22, fontWeight: "bold" },
+  subInfo: { fontSize: 13 },
   email: { fontSize: 15 },
+  editProfileBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  editProfileBtnText: { fontSize: 13, fontWeight: "600" },
   badges: { flexDirection: "row", gap: 8, marginTop: 4 },
   roleBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
   roleBadgeText: { fontSize: 13, fontWeight: "600" },
