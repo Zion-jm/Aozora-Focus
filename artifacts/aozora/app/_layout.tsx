@@ -40,6 +40,7 @@ function RootLayoutNav() {
       <Stack.Screen name="profile/verify" />
       <Stack.Screen name="profile/favorites" />
       <Stack.Screen name="profile/my-dorms" />
+      <Stack.Screen name="admin-conversation/[id]" />
       <Stack.Screen name="admin/index" />
       <Stack.Screen name="admin/users" />
       <Stack.Screen name="admin/dorms" />
