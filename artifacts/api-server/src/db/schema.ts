@@ -107,3 +107,21 @@ export const favorites = sqliteTable("favorites", {
   dormId: integer("dorm_id").notNull().references(() => dorms.id),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
+
+export const dormReviews = sqliteTable("dorm_reviews", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dormId: integer("dorm_id").notNull().references(() => dorms.id),
+  reviewerId: integer("reviewer_id").notNull().references(() => users.id),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
+export const userReviews = sqliteTable("user_reviews", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  reviewedUserId: integer("reviewed_user_id").notNull().references(() => users.id),
+  reviewerId: integer("reviewer_id").notNull().references(() => users.id),
+  rating: integer("rating").notNull(),
+  comment: text("comment"),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});

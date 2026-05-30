@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import path from "path";
 import * as schema from "./schema";
-import { seedDatabase } from "./seed";
+import { seedDatabase, seedReviewsIfEmpty } from "./seed";
 
 const DB_PATH = process.env["DB_PATH"] ?? path.join(process.cwd(), "aozora.db");
 
@@ -109,6 +109,26 @@ export function initializeDatabase() {
       UNIQUE(user_id, dorm_id)
     );
 
+    CREATE TABLE IF NOT EXISTS dorm_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dorm_id INTEGER NOT NULL REFERENCES dorms(id),
+      reviewer_id INTEGER NOT NULL REFERENCES users(id),
+      rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(dorm_id, reviewer_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reviewed_user_id INTEGER NOT NULL REFERENCES users(id),
+      reviewer_id INTEGER NOT NULL REFERENCES users(id),
+      rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(reviewed_user_id, reviewer_id)
+    );
+
     CREATE TABLE IF NOT EXISTS admin_conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       admin_id INTEGER NOT NULL REFERENCES users(id),
@@ -140,12 +160,15 @@ export function initializeDatabase() {
     "ALTER TABLE users ADD COLUMN emergency_contact_phone TEXT",
     "ALTER TABLE users ADD COLUMN bio TEXT",
     "ALTER TABLE dorms ADD COLUMN nearby_landmark TEXT",
+    "ALTER TABLE users ADD COLUMN average_rating REAL",
+    "ALTER TABLE users ADD COLUMN total_reviews INTEGER NOT NULL DEFAULT 0",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }
   }
 
   seedDatabase(sqlite);
+  seedReviewsIfEmpty(sqlite);
 }
 
 export { sqlite };

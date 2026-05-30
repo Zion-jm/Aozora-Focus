@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ReviewsSection } from "@/components/ReviewsSection";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -358,6 +359,14 @@ export default function PublicProfileScreen() {
               ))}
             </View>
           )}
+
+          <ReviewsSection
+            type="user"
+            targetId={Number(id)}
+            token={token}
+            colors={colors}
+          />
+          <View style={{ height: 20 }} />
         </ScrollView>
       )}
 

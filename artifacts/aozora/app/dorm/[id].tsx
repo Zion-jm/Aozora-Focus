@@ -19,6 +19,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ReviewsSection } from "@/components/ReviewsSection";
 import {
   getGetDormByIdQueryKey,
   useGetDormById,
@@ -379,7 +380,17 @@ export default function DormDetailScreen() {
               </View>
             </>
           )}
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
         </View>
+
+        <ReviewsSection
+          type="dorm"
+          targetId={d.id}
+          token={token}
+          colors={colors}
+        />
+        <View style={{ height: 16 }} />
       </ScrollView>
 
       {user && user.role === "student" && (
