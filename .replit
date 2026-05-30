@@ -1,3 +1,4 @@
+guessImports = false
 modules = ["nodejs-20", "web", "bash", "python-3.11"]
 
 [deployment]
@@ -9,7 +10,7 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "Project"
+runButton = ""
 
 [[workflows.workflow]]
 name = "Project"
