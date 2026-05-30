@@ -20,17 +20,33 @@ author = "agent"
 task = "workflow.run"
 args = "API Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
 [[workflows.workflow]]
 name = "API Server"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/api-server run dev"
-waitForPort = 8080
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/api-server && PORT=8000 NODE_PATH=/home/runner/workspace/artifacts/api-server/node_modules node build.mjs && PORT=8000 NODE_PATH=/home/runner/workspace/artifacts/api-server/node_modules node --enable-source-maps ./dist/index.mjs"
+waitForPort = 8000
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node dev-proxy.js"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -41,8 +57,12 @@ path = "scripts/post-merge.sh"
 timeoutMs = 20000
 
 [[ports]]
-localPort = 8080
+localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
 
 [[ports]]
 localPort = 8081
@@ -50,7 +70,7 @@ externalPort = 8081
 
 [[ports]]
 localPort = 20823
-externalPort = 3000
+externalPort = 80
 
 [nix]
 channel = "stable-25_05"
