@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
-  Linking,
+  Image,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -42,6 +44,7 @@ export default function AdminVerificationsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [filter, setFilter] = useState("pending");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetVerifications({
     query: { queryKey: getAdminGetVerificationsQueryKey() },
@@ -145,11 +148,18 @@ export default function AdminVerificationsScreen() {
 
               {item.idImageUrl && (
                 <TouchableOpacity
-                  style={[styles.viewIdBtn, { borderColor: colors.border, borderRadius: 8 }]}
-                  onPress={() => Linking.openURL(item.idImageUrl)}
+                  onPress={() => setPreviewImage(item.idImageUrl)}
+                  activeOpacity={0.85}
                 >
-                  <Feather name="external-link" size={14} color={colors.primary} />
-                  <Text style={[styles.viewIdText, { color: colors.primary }]}>View ID Document</Text>
+                  <Image
+                    source={{ uri: item.idImageUrl }}
+                    style={[styles.idThumbnail, { borderColor: colors.border, borderRadius: 8 }]}
+                    resizeMode="cover"
+                  />
+                  <View style={[styles.viewIdOverlay, { borderRadius: 8 }]}>
+                    <Feather name="zoom-in" size={18} color="#fff" />
+                    <Text style={styles.viewIdOverlayText}>Tap to view full image</Text>
+                  </View>
                 </TouchableOpacity>
               )}
 
@@ -198,6 +208,29 @@ export default function AdminVerificationsScreen() {
           }
         />
       )}
+
+      <Modal
+        visible={!!previewImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewImage(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setPreviewImage(null)}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setPreviewImage(null)}>
+              <Feather name="x" size={22} color="#fff" />
+            </TouchableOpacity>
+            {previewImage && (
+              <Image
+                source={{ uri: previewImage }}
+                style={styles.modalImage}
+                resizeMode="contain"
+              />
+            )}
+            <Text style={styles.modalHint}>Tap anywhere to close</Text>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -224,8 +257,26 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   statusText: { fontSize: 12, fontWeight: "600" },
   dateText: { fontSize: 12 },
-  viewIdBtn: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 14 },
-  viewIdText: { fontSize: 14, fontWeight: "600" },
+  idThumbnail: { width: "100%", height: 160, borderWidth: 1 },
+  viewIdOverlay: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 8,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  viewIdOverlayText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  modalBackdrop: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center", justifyContent: "center",
+  },
+  modalContent: { width: "100%", alignItems: "center", padding: 16, gap: 12 },
+  modalClose: {
+    alignSelf: "flex-end",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 20, padding: 8,
+  },
+  modalImage: { width: "100%", height: 420 },
+  modalHint: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
   noteBox: { padding: 10, gap: 2 },
   noteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
   noteText: { fontSize: 13 },
