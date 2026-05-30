@@ -132,7 +132,7 @@ export default function AppointmentDetailScreen() {
                   { text: "Cancel", style: "cancel" },
                   {
                     text: "Approve",
-                    onPress: () => update.mutate({ id: id!, data: { status: "approved" } }),
+                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "approved" } }),
                   },
                 ])
               }
@@ -149,7 +149,7 @@ export default function AppointmentDetailScreen() {
                   {
                     text: "Reject",
                     style: "destructive",
-                    onPress: () => update.mutate({ id: id!, data: { status: "rejected" } }),
+                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "rejected" } }),
                   },
                 ])
               }
