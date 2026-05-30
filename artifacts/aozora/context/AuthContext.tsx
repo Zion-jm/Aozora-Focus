@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
-import { User, useGetMe, setAuthTokenGetter } from "@workspace/api-client-react";
+import { User, useGetMe, setAuthTokenGetter, getGetMeQueryKey } from "@workspace/api-client-react";
 
 interface AuthContextType {
   user: User | null;
@@ -91,6 +91,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
+
+    queryClient.setQueryData(getGetMeQueryKey(), updatedUser);
+
+    queryClient.setQueriesData(
+      {
+        predicate: (query) =>
+          typeof query.queryKey[0] === "string" &&
+          /^\/api\/dorms\/\d+$/.test(query.queryKey[0] as string),
+      },
+      (old: any) => {
+        if (!old || old.owner?.id !== updatedUser.id) return old;
+        return {
+          ...old,
+          owner: {
+            ...old.owner,
+            fullName: updatedUser.fullName,
+            avatarUrl: updatedUser.avatarUrl ?? null,
+          },
+        };
+      }
+    );
+
+    queryClient.setQueriesData(
+      { queryKey: ["/api/conversations"] },
+      (old: any) => {
+        if (!old?.conversations) return old;
+        return {
+          ...old,
+          conversations: old.conversations.map((conv: any) =>
+            conv.otherParticipant?.id === updatedUser.id
+              ? {
+                  ...conv,
+                  otherParticipant: {
+                    ...conv.otherParticipant,
+                    fullName: updatedUser.fullName,
+                    avatarUrl: updatedUser.avatarUrl ?? null,
+                  },
+                }
+              : conv
+          ),
+        };
+      }
+    );
+
     queryClient.invalidateQueries();
   };
 

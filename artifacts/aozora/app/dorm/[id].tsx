@@ -358,14 +358,16 @@ export default function DormDetailScreen() {
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Owner</Text>
               <View style={[styles.ownerCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
                 <UserAvatar
-                  name={d.owner.fullName}
-                  avatarUrl={(d.owner as any).avatarUrl}
+                  name={user?.id === d.owner.id ? (user?.fullName ?? d.owner.fullName) : d.owner.fullName}
+                  avatarUrl={user?.id === d.owner.id ? (user?.avatarUrl ?? (d.owner as any).avatarUrl) : (d.owner as any).avatarUrl}
                   size={48}
                   color={colors.primary}
                   backgroundColor={colors.primary + "22"}
                 />
                 <View>
-                  <Text style={[styles.ownerName, { color: colors.foreground }]}>{d.owner.fullName}</Text>
+                  <Text style={[styles.ownerName, { color: colors.foreground }]}>
+                    {user?.id === d.owner.id ? (user?.fullName ?? d.owner.fullName) : d.owner.fullName}
+                  </Text>
                   {d.owner.verificationStatus === "verified" && (
                     <View style={styles.verifiedRow}>
                       <Ionicons name="checkmark-circle" size={13} color="#10b981" />
