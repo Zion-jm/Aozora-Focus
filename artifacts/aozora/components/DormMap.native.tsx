@@ -51,41 +51,46 @@ export default function DormMap() {
         showsUserLocation
         onPress={handleDismiss}
       >
-        {dorms.map((dorm) => (
-          <Marker
-            key={dorm.id}
-            coordinate={{ latitude: dorm.latitude!, longitude: dorm.longitude! }}
-            onPress={() => handleMarkerPress(dorm)}
-          >
-            <TouchableOpacity
-              style={[
-                styles.pin,
-                {
-                  backgroundColor: selected?.id === dorm.id ? colors.primary : "#fff",
-                  borderColor: colors.primary,
-                },
-              ]}
+        {dorms.map((dorm) => {
+          const isSelected = selected?.id === dorm.id;
+          return (
+            <Marker
+              key={dorm.id}
+              coordinate={{ latitude: dorm.latitude!, longitude: dorm.longitude! }}
               onPress={() => handleMarkerPress(dorm)}
-              activeOpacity={0.85}
             >
-              <Text
-                style={[
-                  styles.pinPrice,
-                  { color: selected?.id === dorm.id ? "#fff" : colors.primary },
-                ]}
-                numberOfLines={1}
+              <TouchableOpacity
+                style={styles.markerWrap}
+                onPress={() => handleMarkerPress(dorm)}
+                activeOpacity={0.85}
               >
-                ₱{Math.round(Number(dorm.monthlyRent) / 1000)}k
-              </Text>
-            </TouchableOpacity>
-            <View
-              style={[
-                styles.pinTail,
-                { borderTopColor: selected?.id === dorm.id ? colors.primary : "#fff" },
-              ]}
-            />
-          </Marker>
-        ))}
+                <View
+                  style={[
+                    styles.pin,
+                    {
+                      backgroundColor: isSelected ? colors.primary : "#fff",
+                      borderColor: isSelected ? colors.primary : colors.primary,
+                      shadowColor: colors.primary,
+                      transform: [{ scale: isSelected ? 1.2 : 1 }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="home"
+                    size={16}
+                    color={isSelected ? "#fff" : colors.primary}
+                  />
+                </View>
+                <View
+                  style={[
+                    styles.pinTail,
+                    { borderTopColor: isSelected ? colors.primary : colors.primary },
+                  ]}
+                />
+              </TouchableOpacity>
+            </Marker>
+          );
+        })}
       </MapView>
 
       {selected && (
@@ -205,27 +210,27 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
 
+  markerWrap: {
+    alignItems: "center",
+  },
   pin: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2.5,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    minWidth: 52,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  pinPrice: { fontSize: 13, fontWeight: "700" },
   pinTail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 7,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 6,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     alignSelf: "center",
