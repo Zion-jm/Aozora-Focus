@@ -8,8 +8,12 @@ import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -20,10 +24,12 @@ function NativeTabLayout() {
         <Icon sf={{ default: "map", selected: "map.fill" }} />
         <Label>Map</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="appointments">
-        <Icon sf={{ default: "calendar", selected: "calendar.badge.clock" }} />
-        <Label>Visits</Label>
-      </NativeTabs.Trigger>
+      {!isAdmin && (
+        <NativeTabs.Trigger name="appointments">
+          <Icon sf={{ default: "calendar", selected: "calendar.badge.clock" }} />
+          <Label>Visits</Label>
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="messages">
         <Icon sf={{ default: "message", selected: "message.fill" }} />
         <Label>Messages</Label>
@@ -38,6 +44,8 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
@@ -102,6 +110,7 @@ function ClassicTabLayout() {
         name="appointments"
         options={{
           title: "Visits",
+          href: isAdmin ? null : undefined,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="calendar" tintColor={color} size={24} />

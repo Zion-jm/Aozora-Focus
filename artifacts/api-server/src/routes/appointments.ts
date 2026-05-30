@@ -70,7 +70,8 @@ router.get("/appointments", requireAuth, async (req, res) => {
     allAppointments = await db.select().from(appointments).all();
     allAppointments = allAppointments.filter((a) => dormIds.includes(a.dormId));
   } else {
-    allAppointments = await db.select().from(appointments).all();
+    res.status(403).json({ error: "Forbidden", message: "Admins cannot access appointment records" });
+    return;
   }
 
   if (status) {
@@ -113,6 +114,13 @@ router.post("/appointments", requireAuth, async (req, res) => {
 });
 
 router.get("/appointments/:appointmentId", requireAuth, async (req, res) => {
+  const user = req.user!;
+
+  if (user.role === "admin") {
+    res.status(403).json({ error: "Forbidden", message: "Admins cannot access appointment records" });
+    return;
+  }
+
   const id = parseInt(req.params["appointmentId"]!);
   const appt = await db.select().from(appointments).where(eq(appointments.id, id)).get();
 
@@ -121,8 +129,18 @@ router.get("/appointments/:appointmentId", requireAuth, async (req, res) => {
     return;
   }
 
-  const student = await db.select().from(users).where(eq(users.id, appt.studentId)).get();
   const dorm = await db.select().from(dorms).where(eq(dorms.id, appt.dormId)).get();
+
+  if (user.role === "student" && appt.studentId !== user.id) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  if (user.role === "owner" && dorm?.ownerId !== user.id) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const student = await db.select().from(users).where(eq(users.id, appt.studentId)).get();
 
   res.json(serializeAppointment(appt, student, dorm));
 });
@@ -138,7 +156,7 @@ router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
   }
 
   const dorm = await db.select().from(dorms).where(eq(dorms.id, appt.dormId)).get();
-  if (!dorm || (dorm.ownerId !== req.user!.id && req.user!.role !== "admin")) {
+  if (!dorm || dorm.ownerId !== req.user!.id) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

@@ -33,7 +33,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/api-server && PORT=8000 NODE_PATH=/home/runner/workspace/artifacts/api-server/node_modules node build.mjs && PORT=8000 NODE_PATH=/home/runner/workspace/artifacts/api-server/node_modules node --enable-source-maps ./dist/index.mjs"
+args = "cd artifacts/api-server && PORT=8000 NODE_PATH=/home/runner/workspace/artifacts/api-server/node_modules node --enable-source-maps ./dist/index.mjs"
 waitForPort = 8000
 
 [[workflows.workflow]]
@@ -59,6 +59,10 @@ timeoutMs = 20000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
 
 [[ports]]
 localPort = 8080
