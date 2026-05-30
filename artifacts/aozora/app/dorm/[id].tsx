@@ -180,15 +180,17 @@ export default function DormDetailScreen() {
     query: { enabled: !!id, queryKey: getGetDormByIdQueryKey(id!) },
   });
 
-  const { data: favData } = useCheckFavorite(id!, {
-    query: { enabled: !!id && !!user, queryKey: getCheckFavoriteQueryKey(id!) },
+  const dormIdNum = Number(id);
+
+  const { data: favData } = useCheckFavorite(dormIdNum, {
+    query: { enabled: !!id && !!user, queryKey: getCheckFavoriteQueryKey(dormIdNum) },
   });
   const isFavorited = (favData as any)?.isFavorited ?? false;
 
   const addFav = useAddFavorite({
     mutation: {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getCheckFavoriteQueryKey(id!) });
+        qc.invalidateQueries({ queryKey: getCheckFavoriteQueryKey(dormIdNum) });
         qc.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
       },
     },
@@ -196,7 +198,7 @@ export default function DormDetailScreen() {
   const removeFav = useRemoveFavorite({
     mutation: {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getCheckFavoriteQueryKey(id!) });
+        qc.invalidateQueries({ queryKey: getCheckFavoriteQueryKey(dormIdNum) });
         qc.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
       },
     },
@@ -268,8 +270,8 @@ export default function DormDetailScreen() {
             <TouchableOpacity
               style={[styles.favBtn, { backgroundColor: colors.card }]}
               onPress={() => {
-                if (isFavorited) removeFav.mutate({ dormId: id! });
-                else addFav.mutate({ data: { dormId: Number(id) } });
+                if (isFavorited) removeFav.mutate({ dormId: dormIdNum });
+                else addFav.mutate({ data: { dormId: dormIdNum } });
               }}
             >
               <Ionicons
