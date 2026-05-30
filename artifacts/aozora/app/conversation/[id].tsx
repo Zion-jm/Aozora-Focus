@@ -28,13 +28,14 @@ export default function ConversationScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const convId = id ? parseInt(id, 10) : 0;
   const { user } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const flatRef = useRef<FlatList>(null);
 
-  const { data, isLoading, refetch } = useListMessages(id!, {
-    query: { enabled: !!id, queryKey: getListMessagesQueryKey(id!) },
+  const { data, isLoading, refetch } = useListMessages(convId, {
+    query: { enabled: !!convId, queryKey: getListMessagesQueryKey(convId) },
   });
 
   const messages = (data as any)?.messages || [];
@@ -42,7 +43,7 @@ export default function ConversationScreen() {
   const send = useSendMessage({
     mutation: {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(id!) });
+        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) });
         qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
         setText("");
       },
@@ -58,7 +59,7 @@ export default function ConversationScreen() {
 
   const handleSend = () => {
     if (!text.trim()) return;
-    send.mutate({ conversationId: id!, data: { content: text.trim() } });
+    send.mutate({ conversationId: convId, data: { content: text.trim() } });
   };
 
   const renderMessage = ({ item }: { item: any }) => {
