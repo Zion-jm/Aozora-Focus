@@ -91,7 +91,7 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
   const {
     name, description, monthlyRent, address,
     latitude, longitude, amenities, totalRooms,
-    bedsPerRoom, availableBeds, coverPhotoUrl,
+    bedsPerRoom, availableBeds, coverPhotoUrl, nearbyLandmark,
   } = req.body;
 
   if (!name || !description || !monthlyRent || !address || !totalRooms || !bedsPerRoom || availableBeds === undefined) {
@@ -113,6 +113,7 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
     availableBeds,
     status: "pending",
     coverPhotoUrl: coverPhotoUrl ?? null,
+    nearbyLandmark: nearbyLandmark ?? null,
   }).returning();
 
   res.status(201).json(parseDorm(result[0]!));
@@ -160,7 +161,7 @@ router.put("/dorms/:dormId", requireAuth, async (req, res) => {
     return;
   }
 
-  const { name, description, monthlyRent, address, latitude, longitude, amenities, totalRooms, bedsPerRoom, availableBeds, coverPhotoUrl } = req.body;
+  const { name, description, monthlyRent, address, latitude, longitude, amenities, totalRooms, bedsPerRoom, availableBeds, coverPhotoUrl, nearbyLandmark } = req.body;
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
@@ -173,6 +174,7 @@ router.put("/dorms/:dormId", requireAuth, async (req, res) => {
   if (bedsPerRoom !== undefined) updates.bedsPerRoom = bedsPerRoom;
   if (availableBeds !== undefined) updates.availableBeds = availableBeds;
   if (coverPhotoUrl !== undefined) updates.coverPhotoUrl = coverPhotoUrl;
+  if (nearbyLandmark !== undefined) updates.nearbyLandmark = nearbyLandmark;
 
   const result = await db.update(dorms).set(updates).where(eq(dorms.id, dormId)).returning();
   res.json(parseDorm(result[0]!));

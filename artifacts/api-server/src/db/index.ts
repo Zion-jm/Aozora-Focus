@@ -139,6 +139,7 @@ export function initializeDatabase() {
     "ALTER TABLE users ADD COLUMN emergency_contact_name TEXT",
     "ALTER TABLE users ADD COLUMN emergency_contact_phone TEXT",
     "ALTER TABLE users ADD COLUMN bio TEXT",
+    "ALTER TABLE dorms ADD COLUMN nearby_landmark TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }

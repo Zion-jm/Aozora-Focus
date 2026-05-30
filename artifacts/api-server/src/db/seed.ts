@@ -40,8 +40,8 @@ export function seedDatabase(db: Database.Database) {
   const amenities4 = JSON.stringify(["WiFi", "Fan", "Shared Bathroom", "Study Area"]);
 
   db.prepare(`
-    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, status, cover_photo_url, average_rating, total_reviews)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, nearby_landmark, status, cover_photo_url, average_rating, total_reviews)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     2,
     "Santos Dormitory",
@@ -49,14 +49,14 @@ export function seedDatabase(db: Database.Database) {
     3500,
     "Brgy. Poblacion, Lopez, Quezon",
     13.8856, 122.2604,
-    amenities1, 8, 2, 5, "approved",
+    amenities1, 8, 2, 5, "Lopez National High School", "approved",
     "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800",
     4.5, 12
   );
 
   db.prepare(`
-    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, status, cover_photo_url, average_rating, total_reviews)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, nearby_landmark, status, cover_photo_url, average_rating, total_reviews)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     2,
     "Blue Sky Boarding House",
@@ -64,14 +64,14 @@ export function seedDatabase(db: Database.Database) {
     2500,
     "Brgy. Magallanes, Lopez, Quezon",
     13.8910, 122.2550,
-    amenities2, 6, 3, 8, "approved",
+    amenities2, 6, 3, 8, "Quezon National High School", "approved",
     "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
     4.2, 8
   );
 
   db.prepare(`
-    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, status, cover_photo_url, average_rating, total_reviews)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, nearby_landmark, status, cover_photo_url, average_rating, total_reviews)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     3,
     "Reyes Premium Suites",
@@ -79,14 +79,14 @@ export function seedDatabase(db: Database.Database) {
     5500,
     "Brgy. Ilasan Norte, Lopez, Quezon",
     13.8820, 122.2680,
-    amenities3, 10, 1, 3, "approved",
+    amenities3, 10, 1, 3, "Lopez Town Plaza", "approved",
     "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800",
     4.8, 20
   );
 
   db.prepare(`
-    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, status, cover_photo_url, average_rating, total_reviews)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO dorms (owner_id, name, description, monthly_rent, address, latitude, longitude, amenities, total_rooms, beds_per_room, available_beds, nearby_landmark, status, cover_photo_url, average_rating, total_reviews)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     3,
     "Green Hills Dorm",
@@ -94,7 +94,7 @@ export function seedDatabase(db: Database.Database) {
     1800,
     "Brgy. Calantipayan, Lopez, Quezon",
     13.8780, 122.2520,
-    amenities4, 4, 4, 10, "approved",
+    amenities4, 4, 4, 10, "Lopez Public Market", "approved",
     "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800",
     3.9, 5
   );

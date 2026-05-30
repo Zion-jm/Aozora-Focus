@@ -52,6 +52,7 @@ export const dorms = sqliteTable("dorms", {
   bedsPerRoom: integer("beds_per_room").notNull(),
   availableBeds: integer("available_beds").notNull(),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  nearbyLandmark: text("nearby_landmark"),
   coverPhotoUrl: text("cover_photo_url"),
   averageRating: real("average_rating"),
   totalReviews: integer("total_reviews").notNull().default(0),
