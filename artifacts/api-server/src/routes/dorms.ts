@@ -205,8 +205,36 @@ router.post("/dorms/:dormId/photos", requireAuth, async (req, res) => {
     return;
   }
 
+  const dorm = await db.select().from(dorms).where(eq(dorms.id, dormId)).get();
+  if (!dorm) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  if (dorm.ownerId !== req.user!.id && req.user!.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
   const result = await db.insert(dormPhotos).values({ dormId, url, caption: caption ?? null, order }).returning();
   res.status(201).json(result[0]);
+});
+
+router.delete("/dorms/:dormId/photos/:photoId", requireAuth, async (req, res) => {
+  const dormId = parseInt(req.params["dormId"]!);
+  const photoId = parseInt(req.params["photoId"]!);
+
+  const dorm = await db.select().from(dorms).where(eq(dorms.id, dormId)).get();
+  if (!dorm) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  if (dorm.ownerId !== req.user!.id && req.user!.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  await db.delete(dormPhotos).where(and(eq(dormPhotos.id, photoId), eq(dormPhotos.dormId, dormId)));
+  res.json({ message: "Photo deleted" });
 });
 
 export default router;

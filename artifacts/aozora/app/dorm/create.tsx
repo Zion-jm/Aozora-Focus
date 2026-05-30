@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,19 +8,26 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Switch,
+  Image,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 
 import { useColors } from "@/hooks/useColors";
 import {
   useCreateDorm,
+  useUpdateDorm,
+  useAddDormPhoto,
+  useGetDormById,
   getGetMyDormListingsQueryKey,
   getGetDormsQueryKey,
+  getGetDormByIdQueryKey,
 } from "@workspace/api-client-react";
+import { useAuth } from "@/context/AuthContext";
 
 const AMENITY_OPTIONS = [
   "WiFi", "Air Conditioning", "Water", "Electricity", "Laundry",
@@ -28,10 +35,32 @@ const AMENITY_OPTIONS = [
   "Bathroom", "Comfort Room", "Lounge",
 ];
 
+interface ExistingPhoto {
+  id: number;
+  url: string;
+  caption?: string | null;
+  order: number;
+  isExisting: true;
+  markedForDelete?: boolean;
+}
+
+interface NewPhoto {
+  uri: string;
+  base64?: string | null;
+  isExisting: false;
+}
+
+type PhotoItem = ExistingPhoto | NewPhoto;
+
 export default function CreateDormScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { token } = useAuth();
+
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
+  const editId = edit ? parseInt(edit) : null;
+  const isEditMode = editId !== null;
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -42,8 +71,48 @@ export default function CreateDormScreen() {
   const [totalRooms, setTotalRooms] = useState("1");
   const [bedsPerRoom, setBedsPerRoom] = useState("1");
   const [availableBeds, setAvailableBeds] = useState("1");
-  const [coverPhotoUrl, setCoverPhotoUrl] = useState("");
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: existingDorm, isLoading: loadingDorm } = useGetDormById(
+    editId!,
+    { query: { enabled: isEditMode } }
+  );
+
+  useEffect(() => {
+    if (!existingDorm) return;
+    const d = existingDorm as any;
+    setName(d.name ?? "");
+    setDescription(d.description ?? "");
+    setMonthlyRent(String(d.monthlyRent ?? ""));
+    setAddress(d.address ?? "");
+    setLatitude(String(d.latitude ?? "13.8856"));
+    setLongitude(String(d.longitude ?? "122.2604"));
+    setTotalRooms(String(d.totalRooms ?? "1"));
+    setBedsPerRoom(String(d.bedsPerRoom ?? "1"));
+    setAvailableBeds(String(d.availableBeds ?? "1"));
+    setSelectedAmenities(Array.isArray(d.amenities) ? d.amenities : []);
+    if (Array.isArray(d.photos) && d.photos.length > 0) {
+      setPhotos(
+        d.photos.map((p: any) => ({
+          id: p.id,
+          url: p.url,
+          caption: p.caption,
+          order: p.order,
+          isExisting: true as const,
+        }))
+      );
+    } else if (d.coverPhotoUrl) {
+      setPhotos([{
+        id: -1,
+        url: d.coverPhotoUrl,
+        caption: null,
+        order: 0,
+        isExisting: true as const,
+      }]);
+    }
+  }, [existingDorm]);
 
   const toggleAmenity = (a: string) => {
     setSelectedAmenities((prev) =>
@@ -51,40 +120,154 @@ export default function CreateDormScreen() {
     );
   };
 
-  const create = useCreateDorm({
-    mutation: {
-      onSuccess: () => {
+  const pickImages = useCallback(async () => {
+    if (Platform.OS !== "web") {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Allow access to your photo library to add dorm photos.");
+        return;
+      }
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsMultipleSelection: true,
+      quality: 0.7,
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      const newPhotos: NewPhoto[] = result.assets.map((asset) => ({
+        uri: asset.uri,
+        base64: asset.base64,
+        isExisting: false as const,
+      }));
+      setPhotos((prev) => [...prev, ...newPhotos]);
+    }
+  }, []);
+
+  const removePhoto = (index: number) => {
+    const photo = photos[index];
+    if (!photo) return;
+    if (photo.isExisting) {
+      setPhotos((prev) =>
+        prev.map((p, i) =>
+          i === index ? { ...(p as ExistingPhoto), markedForDelete: true } : p
+        )
+      );
+    } else {
+      setPhotos((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const unremovePhoto = (index: number) => {
+    setPhotos((prev) =>
+      prev.map((p, i) =>
+        i === index ? { ...(p as ExistingPhoto), markedForDelete: false } : p
+      )
+    );
+  };
+
+  const create = useCreateDorm();
+  const update = useUpdateDorm();
+  const addPhoto = useAddDormPhoto();
+
+  const uploadPhotos = async (dormId: number) => {
+    const toAdd = photos.filter((p) => !p.isExisting) as NewPhoto[];
+    for (let i = 0; i < toAdd.length; i++) {
+      const photo = toAdd[i]!;
+      const url = photo.base64
+        ? `data:image/jpeg;base64,${photo.base64}`
+        : photo.uri;
+      await addPhoto.mutateAsync({ dormId, data: { url, order: i } });
+    }
+  };
+
+  const deleteRemovedPhotos = async (dormId: number) => {
+    const toDelete = photos.filter(
+      (p) => p.isExisting && (p as ExistingPhoto).markedForDelete && (p as ExistingPhoto).id > 0
+    ) as ExistingPhoto[];
+    for (const photo of toDelete) {
+      await fetch(`/api/dorms/${dormId}/photos/${photo.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !address.trim() || !monthlyRent) {
+      Alert.alert("Missing Fields", "Please fill in name, address, and monthly rent.");
+      return;
+    }
+
+    const visiblePhotos = photos.filter(
+      (p) => !(p.isExisting && (p as ExistingPhoto).markedForDelete)
+    );
+    const firstPhoto = visiblePhotos[0];
+    const coverPhotoUrl = firstPhoto
+      ? firstPhoto.isExisting
+        ? (firstPhoto as ExistingPhoto).url
+        : undefined
+      : undefined;
+
+    const payload = {
+      name: name.trim(),
+      description: description.trim(),
+      monthlyRent: Number(monthlyRent),
+      address: address.trim(),
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      totalRooms: Number(totalRooms),
+      bedsPerRoom: Number(bedsPerRoom),
+      availableBeds: Number(availableBeds),
+      coverPhotoUrl,
+      amenities: selectedAmenities,
+    };
+
+    setIsSubmitting(true);
+    try {
+      if (isEditMode && editId) {
+        await update.mutateAsync({ dormId: editId, data: payload });
+        await deleteRemovedPhotos(editId);
+        await uploadPhotos(editId);
+        qc.invalidateQueries({ queryKey: getGetMyDormListingsQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetDormByIdQueryKey(editId) });
+        Alert.alert("Listing Updated!", "Your changes have been saved.", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
+      } else {
+        const newDorm = await create.mutateAsync({ data: payload });
+        const dormId = (newDorm as any).id;
+        await uploadPhotos(dormId);
         qc.invalidateQueries({ queryKey: getGetMyDormListingsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
         Alert.alert("Listing Created!", "Your dorm is pending admin approval.", [
           { text: "OK", onPress: () => router.back() },
         ]);
-      },
-      onError: () => Alert.alert("Error", "Could not create listing. Try again."),
-    },
-  });
-
-  const handleSubmit = () => {
-    if (!name.trim() || !address.trim() || !monthlyRent) {
-      Alert.alert("Missing Fields", "Please fill in name, address, and monthly rent.");
-      return;
+      }
+    } catch {
+      Alert.alert("Error", isEditMode ? "Could not save changes. Try again." : "Could not create listing. Try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    create.mutate({
-      data: {
-        name: name.trim(),
-        description: description.trim(),
-        monthlyRent: Number(monthlyRent),
-        address: address.trim(),
-        latitude: Number(latitude),
-        longitude: Number(longitude),
-        totalRooms: Number(totalRooms),
-        bedsPerRoom: Number(bedsPerRoom),
-        availableBeds: Number(availableBeds),
-        coverPhotoUrl: coverPhotoUrl.trim() || undefined,
-        amenities: selectedAmenities,
-      },
-    });
   };
+
+  if (isEditMode && loadingDorm) {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  const visiblePhotos = photos.filter(
+    (p) => !(p.isExisting && (p as ExistingPhoto).markedForDelete)
+  );
+  const deletedPhotos = photos.filter(
+    (p) => p.isExisting && (p as ExistingPhoto).markedForDelete
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -92,11 +275,14 @@ export default function CreateDormScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>New Listing</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+          {isEditMode ? "Edit Listing" : "New Listing"}
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]}>
+
         <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Dorm Name *</Text>
         <TextInput
           style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
@@ -176,16 +362,81 @@ export default function CreateDormScreen() {
           </View>
         </View>
 
-        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Cover Photo URL</Text>
-        <TextInput
-          style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
-          placeholder="https://..."
-          placeholderTextColor={colors.mutedForeground}
-          value={coverPhotoUrl}
-          onChangeText={setCoverPhotoUrl}
-          autoCapitalize="none"
-          keyboardType="url"
-        />
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+            Photos {visiblePhotos.length > 0 ? `(${visiblePhotos.length})` : ""}
+          </Text>
+          <TouchableOpacity
+            style={[styles.addPhotoBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary, borderRadius: 8 }]}
+            onPress={pickImages}
+          >
+            <Feather name="image" size={15} color={colors.primary} />
+            <Text style={[styles.addPhotoBtnText, { color: colors.primary }]}>Add from Gallery</Text>
+          </TouchableOpacity>
+        </View>
+
+        {visiblePhotos.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
+            {visiblePhotos.map((photo, idx) => {
+              const photoUri = photo.isExisting ? (photo as ExistingPhoto).url : (photo as NewPhoto).uri;
+              const globalIdx = photos.indexOf(photo);
+              return (
+                <View key={idx} style={[styles.photoThumb, { borderColor: colors.border }]}>
+                  <Image source={{ uri: photoUri }} style={styles.photoThumbImg} />
+                  {idx === 0 && (
+                    <View style={[styles.coverBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.coverBadgeText}>Cover</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.photoRemoveBtn}
+                    onPress={() => removePhoto(globalIdx)}
+                  >
+                    <Feather name="x" size={12} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            <TouchableOpacity
+              style={[styles.addPhotoThumb, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={pickImages}
+            >
+              <Feather name="plus" size={24} color={colors.mutedForeground} />
+              <Text style={[styles.addPhotoThumbText, { color: colors.mutedForeground }]}>Add</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        ) : (
+          <TouchableOpacity
+            style={[styles.photoPlaceholder, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}
+            onPress={pickImages}
+          >
+            <Feather name="camera" size={32} color={colors.mutedForeground} />
+            <Text style={[styles.photoPlaceholderText, { color: colors.mutedForeground }]}>
+              Tap to pick photos from gallery
+            </Text>
+            <Text style={[styles.photoPlaceholderSub, { color: colors.mutedForeground }]}>
+              First photo becomes the cover
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {deletedPhotos.length > 0 && (
+          <View style={[styles.deletedSection, { backgroundColor: "#ef444410", borderRadius: colors.radius }]}>
+            <Text style={[styles.deletedLabel, { color: "#ef4444" }]}>
+              {deletedPhotos.length} photo{deletedPhotos.length > 1 ? "s" : ""} will be removed
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                const indices = photos
+                  .map((p, i) => (p.isExisting && (p as ExistingPhoto).markedForDelete ? i : -1))
+                  .filter((i) => i >= 0);
+                indices.forEach((i) => unremovePhoto(i));
+              }}
+            >
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: "600" }}>Undo</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Amenities</Text>
         <View style={styles.amenitiesGrid}>
@@ -213,23 +464,28 @@ export default function CreateDormScreen() {
           style={[
             styles.submitBtn,
             { backgroundColor: colors.primary, borderRadius: colors.radius },
-            create.isPending && { opacity: 0.7 },
+            isSubmitting && { opacity: 0.7 },
           ]}
           onPress={handleSubmit}
-          disabled={create.isPending}
+          disabled={isSubmitting}
         >
-          {create.isPending ? (
+          {isSubmitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>
-              <Feather name="home" size={18} color="#fff" />
-              <Text style={styles.submitBtnText}>Submit Listing</Text>
+              <Feather name={isEditMode ? "save" : "home"} size={18} color="#fff" />
+              <Text style={styles.submitBtnText}>
+                {isEditMode ? "Save Changes" : "Submit Listing"}
+              </Text>
             </>
           )}
         </TouchableOpacity>
-        <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-          Your listing will be reviewed by an admin before going live.
-        </Text>
+
+        {!isEditMode && (
+          <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+            Your listing will be reviewed by an admin before going live.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -237,6 +493,7 @@ export default function CreateDormScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  center: { alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
@@ -247,6 +504,22 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 12 },
   half: { flex: 1 },
   third: { flex: 1 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  addPhotoBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
+  addPhotoBtnText: { fontSize: 13, fontWeight: "600" },
+  photoScroll: { marginTop: 4 },
+  photoThumb: { width: 100, height: 100, borderRadius: 10, marginRight: 10, borderWidth: 1, overflow: "hidden", position: "relative" },
+  photoThumbImg: { width: "100%", height: "100%" },
+  coverBadge: { position: "absolute", bottom: 0, left: 0, right: 0, paddingVertical: 3, alignItems: "center" },
+  coverBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+  photoRemoveBtn: { position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" },
+  addPhotoThumb: { width: 100, height: 100, borderRadius: 10, borderWidth: 1.5, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 4 },
+  addPhotoThumbText: { fontSize: 11, fontWeight: "500" },
+  photoPlaceholder: { borderWidth: 1.5, borderStyle: "dashed", paddingVertical: 36, alignItems: "center", gap: 8 },
+  photoPlaceholderText: { fontSize: 15, fontWeight: "500" },
+  photoPlaceholderSub: { fontSize: 12 },
+  deletedSection: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 10, marginTop: -4 },
+  deletedLabel: { fontSize: 13, fontWeight: "500" },
   amenitiesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   amenityChip: { paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5 },
   amenityText: { fontSize: 13, fontWeight: "500" },
