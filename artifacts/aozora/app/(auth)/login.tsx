@@ -21,8 +21,15 @@ export default function LoginScreen() {
         login(data.token, data.user);
         router.replace("/(tabs)");
       },
-      onError: (err) => {
-        Alert.alert("Login Failed", err.message || "Invalid credentials");
+      onError: (err: any) => {
+        if (err?.status === 403) {
+          Alert.alert(
+            "Account Suspended",
+            "Unable to log in, account suspended. Please contact support."
+          );
+        } else {
+          Alert.alert("Login Failed", "Invalid email/phone or password.");
+        }
       }
     }
   });
