@@ -12,7 +12,7 @@ import {
   TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { AntDesign, Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -274,8 +274,8 @@ export default function DormDetailScreen() {
                 else addFav.mutate({ data: { dormId: dormIdNum } });
               }}
             >
-              <Ionicons
-                name={isFavorited ? "heart" : "heart-outline"}
+              <AntDesign
+                name={isFavorited ? "heart" : "hearto"}
                 size={22}
                 color={isFavorited ? "#ef4444" : colors.foreground}
               />

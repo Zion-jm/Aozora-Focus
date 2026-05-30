@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { AntDesign, Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -30,7 +30,7 @@ export default function FavoritesScreen() {
     query: { queryKey: getGetFavoritesQueryKey() },
   });
 
-  const favorites = (data as any)?.favorites || [];
+  const favorites = (data as any)?.dorms || [];
 
   const remove = useRemoveFavorite({
     mutation: {
@@ -67,32 +67,32 @@ export default function FavoritesScreen() {
           renderItem={({ item }: { item: any }) => (
             <TouchableOpacity
               style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}
-              onPress={() => router.push(`/dorm/${item.dorm?.id || item.dormId}`)}
+              onPress={() => router.push(`/dorm/${item.id}`)}
               activeOpacity={0.8}
             >
               <Image
-                source={{ uri: item.dorm?.coverPhotoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600" }}
+                source={{ uri: item.coverPhotoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600" }}
                 style={styles.cardImage}
               />
               <View style={styles.cardContent}>
                 <View style={styles.cardTop}>
                   <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>
-                    {item.dorm?.name || "Dorm"}
+                    {item.name || "Dorm"}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => remove.mutate({ dormId: (item.dorm?.id || item.dormId).toString() })}
+                    onPress={() => remove.mutate({ dormId: item.id })}
                     hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                   >
-                    <Ionicons name="heart" size={22} color="#ef4444" />
+                    <AntDesign name="heart" size={22} color="#ef4444" />
                   </TouchableOpacity>
                 </View>
                 <Text style={[styles.cardPrice, { color: colors.primary }]}>
-                  ₱{Number(item.dorm?.monthlyRent || 0).toLocaleString()}/mo
+                  ₱{Number(item.monthlyRent || 0).toLocaleString()}/mo
                 </Text>
                 <View style={styles.locationRow}>
                   <Feather name="map-pin" size={13} color={colors.mutedForeground} />
                   <Text style={[styles.addressText, { color: colors.mutedForeground }]} numberOfLines={1}>
-                    {item.dorm?.address || "Lopez, Quezon"}
+                    {item.address || "Lopez, Quezon"}
                   </Text>
                 </View>
               </View>
@@ -100,7 +100,7 @@ export default function FavoritesScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="heart-outline" size={56} color={colors.mutedForeground} />
+              <AntDesign name="hearto" size={56} color={colors.mutedForeground} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No saved dorms</Text>
               <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
                 Tap the heart icon on any dorm to save it here
