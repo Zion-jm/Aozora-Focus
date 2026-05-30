@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { AntDesign, Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import { useColors } from "@/hooks/useColors";
@@ -111,7 +111,7 @@ export default function ProfileScreen() {
           </View>
           <View style={[styles.verifyBadge, { backgroundColor: verificationColor + "18" }]}>
             {user?.verificationStatus === "verified" && (
-              <Ionicons name="checkmark-circle" size={13} color={verificationColor} />
+              <AntDesign name="checkcircle" size={13} color={verificationColor} />
             )}
             <Text style={[styles.verifyBadgeText, { color: verificationColor }]}>{verificationLabel}</Text>
           </View>

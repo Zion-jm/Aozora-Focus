@@ -365,7 +365,7 @@ export default function DormDetailScreen() {
                   <Text style={[styles.ownerName, { color: colors.foreground }]}>{d.owner.fullName}</Text>
                   {d.owner.verificationStatus === "verified" && (
                     <View style={styles.verifiedRow}>
-                      <Ionicons name="checkmark-circle" size={13} color="#10b981" />
+                      <AntDesign name="checkcircle" size={13} color="#10b981" />
                       <Text style={[styles.verifiedText, { color: "#10b981" }]}>Verified Owner</Text>
                     </View>
                   )}
