@@ -15,11 +15,14 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 import {
   getAdminGetUsersQueryKey,
   useAdminGetUsers,
   useAdminUpdateUserStatus,
 } from "@workspace/api-client-react";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const ROLE_COLOR: Record<string, string> = {
   student: "#0ea5e9",
@@ -31,7 +34,9 @@ export default function AdminUsersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { token } = useAuth();
   const [filter, setFilter] = useState<string>("all");
+  const [messagingUserId, setMessagingUserId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetUsers({
     query: { queryKey: getAdminGetUsersQueryKey() },
@@ -62,6 +67,31 @@ export default function AdminUsersScreen() {
         },
       ]
     );
+  };
+
+  const openMessageUser = async (user: any) => {
+    if (!token) return;
+    setMessagingUserId(user.id);
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/conversations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (!res.ok) {
+        Alert.alert("Error", "Could not open conversation.");
+        return;
+      }
+      const conv = await res.json();
+      router.push(`/admin-conversation/${conv.id}`);
+    } catch {
+      Alert.alert("Error", "Network error. Please try again.");
+    } finally {
+      setMessagingUserId(null);
+    }
   };
 
   const FILTERS = ["all", "student", "owner", "admin"];
@@ -143,19 +173,32 @@ export default function AdminUsersScreen() {
                 </View>
               </View>
               {item.role !== "admin" && (
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { backgroundColor: item.isSuspended ? "#10b98115" : "#ef444415", borderRadius: 8 },
-                  ]}
-                  onPress={() => toggleSuspend(item)}
-                >
-                  <Feather
-                    name={item.isSuspended ? "user-check" : "user-x"}
-                    size={16}
-                    color={item.isSuspended ? "#10b981" : "#ef4444"}
-                  />
-                </TouchableOpacity>
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: "#3b82f615", borderRadius: 8 }]}
+                    onPress={() => openMessageUser(item)}
+                    disabled={messagingUserId === item.id}
+                  >
+                    {messagingUserId === item.id ? (
+                      <ActivityIndicator size="small" color="#3b82f6" />
+                    ) : (
+                      <Ionicons name="chatbubble-outline" size={16} color="#3b82f6" />
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtn,
+                      { backgroundColor: item.isSuspended ? "#10b98115" : "#ef444415", borderRadius: 8 },
+                    ]}
+                    onPress={() => toggleSuspend(item)}
+                  >
+                    <Feather
+                      name={item.isSuspended ? "user-check" : "user-x"}
+                      size={16}
+                      color={item.isSuspended ? "#10b981" : "#ef4444"}
+                    />
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           )}
@@ -190,5 +233,6 @@ const styles = StyleSheet.create({
   roleBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
   roleText: { fontSize: 11, fontWeight: "600" },
   suspendBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+  actions: { flexDirection: "row", gap: 6 },
   actionBtn: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
 });
