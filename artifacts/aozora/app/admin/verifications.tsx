@@ -11,6 +11,9 @@ import {
   Image,
   Modal,
   Pressable,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -45,6 +48,11 @@ export default function AdminVerificationsScreen() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState("pending");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [reviewModal, setReviewModal] = useState<{
+    item: any;
+    status: "approved" | "rejected";
+  } | null>(null);
+  const [reviewNote, setReviewNote] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetVerifications({
     query: { queryKey: getAdminGetVerificationsQueryKey() },
@@ -60,18 +68,23 @@ export default function AdminVerificationsScreen() {
     },
   });
 
-  const handleReview = (item: any, status: "approved" | "rejected") => {
-    Alert.alert(
-      `${status === "approved" ? "Approve" : "Reject"} ID?`,
-      `Mark ${item.user?.fullName ?? "this user"}'s ID as ${status === "approved" ? "approved" : "rejected"}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: status === "approved" ? "Approve" : "Reject",
-          style: status === "rejected" ? "destructive" : "default",
-          onPress: () => review.mutate({ verificationId: item.id, data: { status } }),
-        },
-      ]
+  const openReviewModal = (item: any, status: "approved" | "rejected") => {
+    setReviewNote("");
+    setReviewModal({ item, status });
+  };
+
+  const submitReview = () => {
+    if (!reviewModal) return;
+    const { item, status } = reviewModal;
+    if (status === "rejected" && !reviewNote.trim()) {
+      Alert.alert("Note required", "Please provide a reason for rejection.");
+      return;
+    }
+    review.mutate(
+      { verificationId: item.id, data: { status, reviewNote: reviewNote.trim() || undefined } },
+      {
+        onSuccess: () => setReviewModal(null),
+      }
     );
   };
 
@@ -174,7 +187,7 @@ export default function AdminVerificationsScreen() {
                 <View style={styles.actions}>
                   <TouchableOpacity
                     style={[styles.approveBtn, { backgroundColor: "#10b981", borderRadius: 8 }]}
-                    onPress={() => handleReview(item, "approved")}
+                    onPress={() => openReviewModal(item, "approved")}
                     disabled={review.isPending}
                   >
                     <Ionicons name="checkmark-circle" size={16} color="#fff" />
@@ -182,7 +195,7 @@ export default function AdminVerificationsScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.rejectBtn, { backgroundColor: "#ef4444", borderRadius: 8 }]}
-                    onPress={() => handleReview(item, "rejected")}
+                    onPress={() => openReviewModal(item, "rejected")}
                     disabled={review.isPending}
                   >
                     <Feather name="x-circle" size={16} color="#fff" />
@@ -209,6 +222,120 @@ export default function AdminVerificationsScreen() {
         />
       )}
 
+      {/* Review note modal */}
+      <Modal
+        visible={!!reviewModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setReviewModal(null)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.reviewModalBackdrop}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setReviewModal(null)} />
+          <View style={[styles.reviewModalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {/* Header */}
+            <View style={[styles.reviewModalHeader, { borderBottomColor: colors.border }]}>
+              <View style={[
+                styles.reviewModalIconWrap,
+                { backgroundColor: reviewModal?.status === "approved" ? "#10b98122" : "#ef444422" },
+              ]}>
+                {reviewModal?.status === "approved"
+                  ? <Ionicons name="checkmark-circle" size={22} color="#10b981" />
+                  : <Feather name="x-circle" size={22} color="#ef4444" />
+                }
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.reviewModalTitle, { color: colors.foreground }]}>
+                  {reviewModal?.status === "approved" ? "Approve ID" : "Reject ID"}
+                </Text>
+                <Text style={[styles.reviewModalSub, { color: colors.mutedForeground }]}>
+                  {reviewModal?.item?.user?.fullName ?? "User"}
+                  {" · "}
+                  {reviewModal?.item?.idType}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setReviewModal(null)} style={styles.reviewModalCloseBtn}>
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Note input */}
+            <View style={styles.reviewModalBody}>
+              <Text style={[styles.reviewNoteLabel, { color: colors.foreground }]}>
+                {reviewModal?.status === "rejected" ? "Reason for rejection" : "Note for user"}
+                {reviewModal?.status === "rejected" && (
+                  <Text style={{ color: "#ef4444" }}> *</Text>
+                )}
+              </Text>
+              <TextInput
+                style={[
+                  styles.reviewNoteInput,
+                  {
+                    borderColor: colors.border,
+                    color: colors.foreground,
+                    backgroundColor: colors.background,
+                    borderRadius: colors.radius,
+                  },
+                ]}
+                placeholder={
+                  reviewModal?.status === "rejected"
+                    ? "e.g. Image is too blurry, please resubmit with a clearer photo."
+                    : "Optional — any notes for this user."
+                }
+                placeholderTextColor={colors.mutedForeground}
+                value={reviewNote}
+                onChangeText={setReviewNote}
+                multiline
+                autoFocus
+              />
+              {reviewModal?.status === "rejected" && (
+                <Text style={[styles.reviewNoteHint, { color: colors.mutedForeground }]}>
+                  The user will see this reason so they can resubmit correctly.
+                </Text>
+              )}
+            </View>
+
+            {/* Actions */}
+            <View style={[styles.reviewModalFooter, { borderTopColor: colors.border }]}>
+              <TouchableOpacity
+                style={[styles.reviewCancelBtn, { borderColor: colors.border, borderRadius: colors.radius }]}
+                onPress={() => setReviewModal(null)}
+              >
+                <Text style={[styles.reviewCancelText, { color: colors.foreground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.reviewConfirmBtn,
+                  {
+                    backgroundColor: reviewModal?.status === "approved" ? "#10b981" : "#ef4444",
+                    borderRadius: colors.radius,
+                    opacity: review.isPending ? 0.6 : 1,
+                  },
+                ]}
+                onPress={submitReview}
+                disabled={review.isPending}
+              >
+                {review.isPending
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <>
+                      {reviewModal?.status === "approved"
+                        ? <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                        : <Feather name="x-circle" size={16} color="#fff" />
+                      }
+                      <Text style={styles.reviewConfirmText}>
+                        {reviewModal?.status === "approved" ? "Approve" : "Reject"}
+                      </Text>
+                    </>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Image preview modal */}
       <Modal
         visible={!!previewImage}
         transparent
@@ -280,6 +407,47 @@ const styles = StyleSheet.create({
   noteBox: { padding: 10, gap: 2 },
   noteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
   noteText: { fontSize: 13 },
+  reviewModalBackdrop: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  reviewModalSheet: {
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    borderWidth: 1, borderBottomWidth: 0,
+    overflow: "hidden",
+  },
+  reviewModalHeader: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 16, borderBottomWidth: 1,
+  },
+  reviewModalIconWrap: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: "center", justifyContent: "center",
+  },
+  reviewModalTitle: { fontSize: 16, fontWeight: "700" },
+  reviewModalSub: { fontSize: 13, marginTop: 1 },
+  reviewModalCloseBtn: { padding: 6 },
+  reviewModalBody: { padding: 16, gap: 8 },
+  reviewNoteLabel: { fontSize: 14, fontWeight: "600" },
+  reviewNoteInput: {
+    borderWidth: 1, padding: 12, fontSize: 14,
+    minHeight: 90, textAlignVertical: "top",
+  },
+  reviewNoteHint: { fontSize: 12 },
+  reviewModalFooter: {
+    flexDirection: "row", gap: 10,
+    padding: 16, paddingBottom: 32, borderTopWidth: 1,
+  },
+  reviewCancelBtn: {
+    flex: 1, borderWidth: 1, borderRadius: 8,
+    alignItems: "center", justifyContent: "center", paddingVertical: 14,
+  },
+  reviewCancelText: { fontSize: 15, fontWeight: "600" },
+  reviewConfirmBtn: {
+    flex: 2, flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: 8, paddingVertical: 14,
+  },
+  reviewConfirmText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   actions: { flexDirection: "row", gap: 10 },
   approveBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
   rejectBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
