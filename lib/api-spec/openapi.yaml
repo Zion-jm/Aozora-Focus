@@ -3,20 +3,34 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Aozora - Dorm Finder API for Lopez, Quezon
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: dorms
+    description: Dorm listing operations
+  - name: appointments
+    description: Visitation appointment operations
+  - name: messages
+    description: Messaging operations
+  - name: favorites
+    description: Favorites operations
+  - name: admin
+    description: Admin operations
+  - name: users
+    description: User profile operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +38,750 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # --- AUTH ---
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # --- USERS ---
+  /users/me:
+    put:
+      operationId: updateProfile
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/me/submit-verification:
+    post:
+      operationId: submitVerification
+      tags: [users]
+      summary: Submit ID verification request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitVerificationRequest"
+      responses:
+        "201":
+          description: Verification submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRecord"
+
+  /users/{userId}:
+    get:
+      operationId: getUserById
+      tags: [users]
+      summary: Get a public user profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicUser"
+
+  # --- DORMS ---
+  /dorms:
+    get:
+      operationId: getDorms
+      tags: [dorms]
+      summary: List dorms with optional filters
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: minRent
+          in: query
+          schema:
+            type: number
+        - name: maxRent
+          in: query
+          schema:
+            type: number
+        - name: hasAvailableBeds
+          in: query
+          schema:
+            type: boolean
+        - name: amenities
+          in: query
+          schema:
+            type: string
+            description: Comma-separated list of amenities
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [price_asc, price_desc, rating_desc, newest]
+        - name: lat
+          in: query
+          schema:
+            type: number
+        - name: lng
+          in: query
+          schema:
+            type: number
+        - name: radiusKm
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of dorms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DormsListResponse"
+
+    post:
+      operationId: createDorm
+      tags: [dorms]
+      summary: Create a new dorm listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDormRequest"
+      responses:
+        "201":
+          description: Dorm created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dorm"
+
+  /dorms/stats:
+    get:
+      operationId: getDormStats
+      tags: [dorms]
+      summary: Get aggregate dorm stats (total listings, avg price, available beds)
+      responses:
+        "200":
+          description: Dorm stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DormStats"
+
+  /dorms/{dormId}:
+    get:
+      operationId: getDormById
+      tags: [dorms]
+      summary: Get dorm details
+      parameters:
+        - name: dormId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dorm details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DormDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateDorm
+      tags: [dorms]
+      summary: Update dorm listing (owner only)
+      parameters:
+        - name: dormId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDormRequest"
+      responses:
+        "200":
+          description: Updated dorm
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dorm"
+
+    delete:
+      operationId: deleteDorm
+      tags: [dorms]
+      summary: Delete dorm listing (owner only)
+      parameters:
+        - name: dormId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /dorms/{dormId}/photos:
+    post:
+      operationId: addDormPhoto
+      tags: [dorms]
+      summary: Add a photo URL to a dorm listing
+      parameters:
+        - name: dormId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPhotoRequest"
+      responses:
+        "201":
+          description: Photo added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DormPhoto"
+
+  /dorms/my-listings:
+    get:
+      operationId: getMyDormListings
+      tags: [dorms]
+      summary: Get dorms owned by the current user
+      responses:
+        "200":
+          description: Owner's dorm listings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DormsListResponse"
+
+  # --- APPOINTMENTS ---
+  /appointments:
+    get:
+      operationId: getAppointments
+      tags: [appointments]
+      summary: Get appointments for current user
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [student, owner]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentsListResponse"
+
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Request a visitation appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentRequest"
+      responses:
+        "201":
+          description: Appointment requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{appointmentId}:
+    get:
+      operationId: getAppointmentById
+      tags: [appointments]
+      summary: Get appointment details
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+    put:
+      operationId: updateAppointmentStatus
+      tags: [appointments]
+      summary: Approve or reject appointment (owner only)
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentStatusRequest"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  # --- CONVERSATIONS & MESSAGES ---
+  /conversations:
+    get:
+      operationId: getConversations
+      tags: [messages]
+      summary: Get all conversations for current user
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationsListResponse"
+
+    post:
+      operationId: createConversation
+      tags: [messages]
+      summary: Start a new conversation about a dorm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationRequest"
+      responses:
+        "201":
+          description: Conversation created or existing returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{conversationId}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: Get messages in a conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagesListResponse"
+
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message in a conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /conversations/{conversationId}/read:
+    post:
+      operationId: markConversationRead
+      tags: [messages]
+      summary: Mark all messages in conversation as read
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # --- FAVORITES ---
+  /favorites:
+    get:
+      operationId: getFavorites
+      tags: [favorites]
+      summary: Get current user's favorite dorms
+      responses:
+        "200":
+          description: Favorite dorms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DormsListResponse"
+
+    post:
+      operationId: addFavorite
+      tags: [favorites]
+      summary: Add a dorm to favorites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FavoriteRequest"
+      responses:
+        "201":
+          description: Added to favorites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /favorites/{dormId}:
+    delete:
+      operationId: removeFavorite
+      tags: [favorites]
+      summary: Remove a dorm from favorites
+      parameters:
+        - name: dormId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed from favorites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /favorites/check/{dormId}:
+    get:
+      operationId: checkFavorite
+      tags: [favorites]
+      summary: Check if a dorm is favorited
+      parameters:
+        - name: dormId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Favorite status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteCheckResponse"
+
+  # --- ADMIN ---
+  /admin/users:
+    get:
+      operationId: adminGetUsers
+      tags: [admin]
+      summary: List all users (admin only)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: verificationStatus
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUsersListResponse"
+
+  /admin/users/{userId}/status:
+    put:
+      operationId: adminUpdateUserStatus
+      tags: [admin]
+      summary: Suspend or unsuspend a user (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateUserStatusRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /admin/verifications:
+    get:
+      operationId: adminGetVerifications
+      tags: [admin]
+      summary: List pending ID verifications (admin only)
+      responses:
+        "200":
+          description: Verifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationsListResponse"
+
+  /admin/verifications/{verificationId}:
+    put:
+      operationId: adminReviewVerification
+      tags: [admin]
+      summary: Approve or reject a verification (admin only)
+      parameters:
+        - name: verificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminReviewVerificationRequest"
+      responses:
+        "200":
+          description: Reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationRecord"
+
+  /admin/dorms:
+    get:
+      operationId: adminGetDorms
+      tags: [admin]
+      summary: List all dorms for review (admin only)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+      responses:
+        "200":
+          description: Dorms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DormsListResponse"
+
+  /admin/dorms/{dormId}/status:
+    put:
+      operationId: adminUpdateDormStatus
+      tags: [admin]
+      summary: Approve or reject a dorm listing (admin only)
+      parameters:
+        - name: dormId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateDormStatusRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dorm"
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Admin dashboard stats
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +789,567 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    # --- USER SCHEMAS ---
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [student, owner, admin]
+        verificationStatus:
+          type: string
+          enum: [unverified, pending, verified, rejected]
+        isSuspended:
+          type: boolean
+        avatarUrl:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, fullName, role, verificationStatus, isSuspended, createdAt]
+
+    PublicUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        role:
+          type: string
+        verificationStatus:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+      required: [id, fullName, role, verificationStatus]
+
+    RegisterRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        password:
+          type: string
+        role:
+          type: string
+          enum: [student, owner]
+      required: [fullName, password, role]
+
+    LoginRequest:
+      type: object
+      properties:
+        identifier:
+          type: string
+          description: Email or phone number
+        password:
+          type: string
+      required: [identifier, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required: [token, user]
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        avatarUrl:
+          type: string
+
+    SubmitVerificationRequest:
+      type: object
+      properties:
+        idImageUrl:
+          type: string
+        idType:
+          type: string
+          description: e.g. "National ID", "Passport", "Driver's License"
+      required: [idImageUrl, idType]
+
+    VerificationRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        idImageUrl:
+          type: string
+        idType:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        reviewNote:
+          type: string
+          nullable: true
+        submittedAt:
+          type: string
+        reviewedAt:
+          type: string
+          nullable: true
+      required: [id, userId, idImageUrl, idType, status, submittedAt]
+
+    # --- DORM SCHEMAS ---
+    Dorm:
+      type: object
+      properties:
+        id:
+          type: integer
+        ownerId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        monthlyRent:
+          type: number
+        address:
+          type: string
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        amenities:
+          type: array
+          items:
+            type: string
+        totalRooms:
+          type: integer
+        bedsPerRoom:
+          type: integer
+        availableBeds:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        coverPhotoUrl:
+          type: string
+          nullable: true
+        averageRating:
+          type: number
+          nullable: true
+        totalReviews:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, ownerId, name, description, monthlyRent, address, amenities, totalRooms, bedsPerRoom, availableBeds, status, totalReviews, createdAt]
+
+    DormDetail:
+      allOf:
+        - $ref: "#/components/schemas/Dorm"
+        - type: object
+          properties:
+            owner:
+              $ref: "#/components/schemas/PublicUser"
+            photos:
+              type: array
+              items:
+                $ref: "#/components/schemas/DormPhoto"
+            isFavorited:
+              type: boolean
+          required: [owner, photos, isFavorited]
+
+    DormsListResponse:
+      type: object
+      properties:
+        dorms:
+          type: array
+          items:
+            $ref: "#/components/schemas/Dorm"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required: [dorms, total, page, totalPages]
+
+    CreateDormRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        monthlyRent:
+          type: number
+        address:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        amenities:
+          type: array
+          items:
+            type: string
+        totalRooms:
+          type: integer
+        bedsPerRoom:
+          type: integer
+        availableBeds:
+          type: integer
+        coverPhotoUrl:
+          type: string
+      required: [name, description, monthlyRent, address, totalRooms, bedsPerRoom, availableBeds]
+
+    UpdateDormRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        monthlyRent:
+          type: number
+        address:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        amenities:
+          type: array
+          items:
+            type: string
+        totalRooms:
+          type: integer
+        bedsPerRoom:
+          type: integer
+        availableBeds:
+          type: integer
+        coverPhotoUrl:
+          type: string
+
+    DormPhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+        dormId:
+          type: integer
+        url:
+          type: string
+        caption:
+          type: string
+          nullable: true
+        order:
+          type: integer
+      required: [id, dormId, url, order]
+
+    AddPhotoRequest:
+      type: object
+      properties:
+        url:
+          type: string
+        caption:
+          type: string
+        order:
+          type: integer
+      required: [url]
+
+    DormStats:
+      type: object
+      properties:
+        totalListings:
+          type: integer
+        approvedListings:
+          type: integer
+        totalAvailableBeds:
+          type: integer
+        averageRent:
+          type: number
+        rentRangeMin:
+          type: number
+        rentRangeMax:
+          type: number
+      required: [totalListings, approvedListings, totalAvailableBeds, averageRent, rentRangeMin, rentRangeMax]
+
+    # --- APPOINTMENT SCHEMAS ---
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        dormId:
+          type: integer
+        preferredDate:
+          type: string
+        preferredTime:
+          type: string
+        message:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        ownerNote:
+          type: string
+          nullable: true
+        student:
+          $ref: "#/components/schemas/PublicUser"
+        dorm:
+          $ref: "#/components/schemas/Dorm"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, studentId, dormId, preferredDate, preferredTime, status, student, dorm, createdAt, updatedAt]
+
+    AppointmentsListResponse:
+      type: object
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        total:
+          type: integer
+      required: [appointments, total]
+
+    CreateAppointmentRequest:
+      type: object
+      properties:
+        dormId:
+          type: integer
+        preferredDate:
+          type: string
+        preferredTime:
+          type: string
+        message:
+          type: string
+      required: [dormId, preferredDate, preferredTime]
+
+    UpdateAppointmentStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        ownerNote:
+          type: string
+      required: [status]
+
+    # --- MESSAGE SCHEMAS ---
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        dormId:
+          type: integer
+        studentId:
+          type: integer
+        ownerId:
+          type: integer
+        dorm:
+          $ref: "#/components/schemas/Dorm"
+        otherParticipant:
+          $ref: "#/components/schemas/PublicUser"
+        lastMessage:
+          $ref: "#/components/schemas/Message"
+          nullable: true
+        unreadCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, dormId, studentId, ownerId, dorm, otherParticipant, unreadCount, createdAt, updatedAt]
+
+    ConversationsListResponse:
+      type: object
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Conversation"
+        totalUnread:
+          type: integer
+      required: [conversations, totalUnread]
+
+    CreateConversationRequest:
+      type: object
+      properties:
+        dormId:
+          type: integer
+        initialMessage:
+          type: string
+      required: [dormId, initialMessage]
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        senderId:
+          type: integer
+        content:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, conversationId, senderId, content, isRead, createdAt]
+
+    MessagesListResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        total:
+          type: integer
+        page:
+          type: integer
+      required: [messages, total, page]
+
+    SendMessageRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+
+    # --- FAVORITES SCHEMAS ---
+    FavoriteRequest:
+      type: object
+      properties:
+        dormId:
+          type: integer
+      required: [dormId]
+
+    FavoriteCheckResponse:
+      type: object
+      properties:
+        isFavorited:
+          type: boolean
+      required: [isFavorited]
+
+    # --- ADMIN SCHEMAS ---
+    AdminUsersListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+      required: [users, total, page, totalPages]
+
+    AdminUpdateUserStatusRequest:
+      type: object
+      properties:
+        isSuspended:
+          type: boolean
+      required: [isSuspended]
+
+    VerificationsListResponse:
+      type: object
+      properties:
+        verifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationRecord"
+        total:
+          type: integer
+      required: [verifications, total]
+
+    AdminReviewVerificationRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        reviewNote:
+          type: string
+      required: [status]
+
+    AdminUpdateDormStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+        note:
+          type: string
+      required: [status]
+
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalStudents:
+          type: integer
+        totalOwners:
+          type: integer
+        pendingVerifications:
+          type: integer
+        totalDorms:
+          type: integer
+        pendingDorms:
+          type: integer
+        approvedDorms:
+          type: integer
+        totalAppointments:
+          type: integer
+        pendingAppointments:
+          type: integer
+      required: [totalUsers, totalStudents, totalOwners, pendingVerifications, totalDorms, pendingDorms, approvedDorms, totalAppointments, pendingAppointments]

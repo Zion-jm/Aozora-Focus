@@ -1,0 +1,194 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  RefreshControl,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { useColors } from "@/hooks/useColors";
+import {
+  getAdminGetUsersQueryKey,
+  useAdminGetUsers,
+  useAdminUpdateUserStatus,
+} from "@workspace/api-client-react";
+
+const ROLE_COLOR: Record<string, string> = {
+  student: "#0ea5e9",
+  owner: "#8b5cf6",
+  admin: "#ef4444",
+};
+
+export default function AdminUsersScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
+  const [filter, setFilter] = useState<string>("all");
+
+  const { data, isLoading, isError, refetch, isRefetching } = useAdminGetUsers({
+    query: { queryKey: getAdminGetUsersQueryKey() },
+  });
+  const users = ((data as any)?.users || []).filter((u: any) =>
+    filter === "all" ? true : u.role === filter
+  );
+
+  const update = useAdminUpdateUserStatus({
+    mutation: {
+      onSuccess: () => qc.invalidateQueries({ queryKey: getAdminGetUsersQueryKey() }),
+      onError: () => Alert.alert("Error", "Could not update user."),
+    },
+  });
+
+  const toggleSuspend = (user: any) => {
+    const action = user.isSuspended ? "unsuspend" : "suspend";
+    Alert.alert(
+      `${action.charAt(0).toUpperCase() + action.slice(1)} User?`,
+      `Are you sure you want to ${action} ${user.fullName}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: action.charAt(0).toUpperCase() + action.slice(1),
+          style: user.isSuspended ? "default" : "destructive",
+          onPress: () =>
+            update.mutate({ id: user.id.toString(), data: { isSuspended: !user.isSuspended } }),
+        },
+      ]
+    );
+  };
+
+  const FILTERS = ["all", "student", "owner", "admin"];
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top || 48, borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Users</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <View style={[styles.filterBar, { borderBottomColor: colors.border }]}>
+        {FILTERS.map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[
+              styles.filterBtn,
+              { borderRadius: 20 },
+              filter === f && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={[styles.filterText, { color: filter === f ? "#fff" : colors.mutedForeground }]}>
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : isError ? (
+        <View style={styles.center}>
+          <Text style={{ color: colors.destructive }}>Failed to load users</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={users}
+          keyExtractor={(item: any) => item.id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
+          }
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 40 }]}
+          renderItem={({ item }: { item: any }) => (
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
+                item.isSuspended && { opacity: 0.6 },
+              ]}
+            >
+              <View style={[styles.avatar, { backgroundColor: (ROLE_COLOR[item.role] || colors.primary) + "22" }]}>
+                <Text style={[styles.avatarText, { color: ROLE_COLOR[item.role] || colors.primary }]}>
+                  {(item.fullName || "U")[0].toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.info}>
+                <View style={styles.nameRow}>
+                  <Text style={[styles.name, { color: colors.foreground }]}>{item.fullName}</Text>
+                  {item.verificationStatus === "verified" && (
+                    <Ionicons name="checkmark-circle" size={15} color="#10b981" />
+                  )}
+                  {item.isSuspended && (
+                    <View style={[styles.suspendBadge, { backgroundColor: "#ef444420" }]}>
+                      <Text style={{ color: "#ef4444", fontSize: 11, fontWeight: "600" }}>Suspended</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.email, { color: colors.mutedForeground }]}>{item.email || item.phone}</Text>
+                <View style={[styles.roleBadge, { backgroundColor: (ROLE_COLOR[item.role] || colors.primary) + "18" }]}>
+                  <Text style={[styles.roleText, { color: ROLE_COLOR[item.role] || colors.primary }]}>
+                    {item.role}
+                  </Text>
+                </View>
+              </View>
+              {item.role !== "admin" && (
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: item.isSuspended ? "#10b98115" : "#ef444415", borderRadius: 8 },
+                  ]}
+                  onPress={() => toggleSuspend(item)}
+                >
+                  <Feather
+                    name={item.isSuspended ? "user-check" : "user-x"}
+                    size={16}
+                    color={item.isSuspended ? "#10b981" : "#ef4444"}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Text style={{ color: colors.mutedForeground, fontSize: 15 }}>No users found</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
+  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 18, fontWeight: "bold" },
+  filterBar: { flexDirection: "row", padding: 12, gap: 8, borderBottomWidth: 1 },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 6 },
+  filterText: { fontSize: 13, fontWeight: "600" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
+  listContent: { padding: 16, gap: 10 },
+  card: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderWidth: 1 },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontSize: 18, fontWeight: "bold" },
+  info: { flex: 1, gap: 4 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  name: { fontSize: 16, fontWeight: "600" },
+  email: { fontSize: 13 },
+  roleBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  roleText: { fontSize: 11, fontWeight: "600" },
+  suspendBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+  actionBtn: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
+});

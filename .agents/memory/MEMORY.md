@@ -1,0 +1,3 @@
+- [Aozora SQLite backend](aozora-backend.md) — api-server uses better-sqlite3 directly (not Drizzle/PostgreSQL); DB at cwd()/aozora.db; login field is "identifier" not "email"
+- [react-native-maps web fix](rn-maps-web.md) — must use platform-specific files (DormMap.native.tsx / DormMap.tsx) to prevent web bundle failure; never import react-native-maps directly in a shared file
+- [Expo babel-preset version](expo-babel.md) — babel-preset-expo must be ~54.0.10 for Expo 54; 56.x causes bundler failures

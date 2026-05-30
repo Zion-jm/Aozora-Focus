@@ -1,0 +1,229 @@
+Build a mobile-first application called Aozora.
+
+Tagline: "Home, but smarter."
+
+Aozora is a dorm finder and visitation appointment platform focused on Lopez, Quezon.
+
+Use:
+
+* React Native with Expo Go
+* Node.js + Express backend
+* SQLite database
+
+The application should be designed as a real-world MVP that is simple, modern, and useful for students looking for dorms near their school or workplace.
+
+---
+
+# USER ROLES
+
+## Admin
+
+Admins can:
+
+* manage users
+* verify owner identities
+* approve or remove dorm listings
+* review reports
+* manage suspicious accounts
+
+Admins cannot read private messages between owners and students.
+
+---
+
+## Owner
+
+Owners can:
+
+* register and login
+* verify their identity by uploading a valid ID
+* create dorm listings
+* edit dorm listings
+* upload photos
+* set dorm location on the map
+* manage visitation requests
+* respond to inquiries and messages
+
+---
+
+## Student / Boarder
+
+Students can:
+
+* register and login
+* browse dorm listings
+* search and filter dorms
+* view dorms on a map
+* request visitation appointments
+* send inquiries to owners
+* save favorite dorms
+* view appointment history
+
+---
+
+# AUTHENTICATION
+
+Allow registration and login using:
+
+* email address
+  OR
+* phone number
+
+Account verification should include:
+
+* ID upload
+* admin review and approval
+* verified badge for approved users
+
+Store:
+
+* full name
+* email
+* phone number
+* role
+* verification status
+
+---
+
+# DORM LISTINGS
+
+Each dorm listing should contain:
+
+* dorm name
+* description
+* monthly rent
+* location
+* photos
+* amenities
+* owner information
+* number of rooms
+* beds per room
+* available bedspaces
+
+---
+
+# MAP FEATURE
+
+Aozora should include a map centered on Lopez, Quezon.
+
+Students should be able to:
+
+* view dorms as map pins
+* open dorm details from map markers
+* find dorms near a selected school or workplace
+
+Add filtering options such as:
+
+* nearest to school
+* nearest to workplace
+* lowest price
+* highest rating
+* available bedspaces
+
+Allow users to save frequently used schools or workplaces for faster searching.
+
+---
+
+# VISITATION APPOINTMENT SYSTEM
+
+Flow:
+
+1. Student selects a dorm
+2. Student requests a visitation appointment
+3. Owner receives the request
+4. Owner approves or rejects the request
+5. Student sees the appointment status
+
+Statuses:
+
+* pending
+* approved
+* rejected
+
+Appointment fields:
+
+* student
+* dorm
+* preferred date
+* preferred time
+* message
+
+---
+
+# MESSAGING SYSTEM
+
+Add private in-app messaging between students and owners.
+
+Features:
+
+* inquiry conversations
+* timestamps
+* property-specific conversations
+* unread message indicators
+
+Only participants can access their conversations.
+
+Admins cannot read messages.
+
+---
+
+# FAVORITES
+
+Students can:
+
+* save dorms to favorites
+* view favorite dorms later
+
+---
+
+# UI / UX
+
+Design the application as a modern mobile app with:
+
+* bottom navigation
+* clean card-based layouts
+* modern colors and typography
+* intuitive navigation
+* responsive mobile screens
+
+---
+
+# DATABASE
+
+Include models/tables for:
+
+* users
+* dorms
+* appointments
+* messages
+* favorites
+* verification records
+
+Use SQLite.
+
+---
+
+# FUTURE READY
+
+Structure the code so it can later support:
+
+* payments
+* tenant management
+* maintenance requests
+* notifications
+* analytics
+
+Do not implement these yet.
+
+---
+
+# ADDITIONAL IMPROVEMENTS
+
+Analyze the project and add additional features, screens, filters, and quality-of-life improvements that would naturally improve a dorm finder and appointment platform, while keeping the project simple, practical, and suitable for a student capstone project.
+
+Prioritize usability, trust, convenience, and discoverability.
+
+---
+
+# GOAL
+
+Create a complete MVP of Aozora that helps students in Lopez, Quezon easily find verified dorms near their school or workplace, communicate with owners, and schedule visits through a modern mobile application.
