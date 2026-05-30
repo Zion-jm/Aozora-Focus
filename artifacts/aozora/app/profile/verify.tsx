@@ -100,7 +100,7 @@ function Field({
 export default function VerifyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [step, setStep] = useState<Step>("personal");
   const [info, setInfo] = useState<PersonalInfo>({
@@ -166,7 +166,10 @@ export default function VerifyScreen() {
         },
       },
       {
-        onSuccess: () => setStep("id"),
+        onSuccess: (data) => {
+          updateUser(data);
+          setStep("id");
+        },
         onError: () =>
           Alert.alert("Error", "Could not save your information. Try again."),
       }
@@ -230,7 +233,7 @@ export default function VerifyScreen() {
     const idImageUrl = imageBase64
       ? `data:image/jpeg;base64,${imageBase64}`
       : imageUri;
-    submitVerification.mutate({ data: { idType, imageUrl: idImageUrl } });
+    submitVerification.mutate({ data: { idType, idImageUrl } });
   };
 
   return (

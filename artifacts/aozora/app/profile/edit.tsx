@@ -68,7 +68,7 @@ function Field({
 export default function EditProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [fullName, setFullName] = useState(user?.fullName ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
@@ -88,7 +88,8 @@ export default function EditProfileScreen() {
 
   const updateProfile = useUpdateProfile({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        updateUser(data);
         Alert.alert("Saved!", "Your profile has been updated.", [
           { text: "OK", onPress: () => router.back() },
         ]);
