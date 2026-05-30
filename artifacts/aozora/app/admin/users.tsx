@@ -211,34 +211,42 @@ export default function AdminUsersScreen() {
                   </Text>
                 </View>
               </View>
-              {item.role !== "admin" && (
-                <View style={styles.actions}>
+              <View style={styles.actions}>
                   <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: "#3b82f615", borderRadius: 8 }]}
-                    onPress={() => openMessageUser(item)}
-                    disabled={messagingUserId === item.id}
+                    style={[styles.actionBtn, { backgroundColor: colors.primary + "15", borderRadius: 8 }]}
+                    onPress={() => router.push({ pathname: "/admin/user-detail", params: { userId: item.id.toString() } })}
                   >
-                    {messagingUserId === item.id ? (
-                      <ActivityIndicator size="small" color="#3b82f6" />
-                    ) : (
-                      <Ionicons name="chatbubble-outline" size={16} color="#3b82f6" />
-                    )}
+                    <Feather name="user" size={16} color={colors.primary} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.actionBtn,
-                      { backgroundColor: item.isSuspended ? "#10b98115" : "#ef444415", borderRadius: 8 },
-                    ]}
-                    onPress={() => toggleSuspend(item)}
-                  >
-                    <Feather
-                      name={item.isSuspended ? "user-check" : "user-x"}
-                      size={16}
-                      color={item.isSuspended ? "#10b981" : "#ef4444"}
-                    />
-                  </TouchableOpacity>
+                  {item.role !== "admin" && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: "#3b82f615", borderRadius: 8 }]}
+                        onPress={() => openMessageUser(item)}
+                        disabled={messagingUserId === item.id}
+                      >
+                        {messagingUserId === item.id ? (
+                          <ActivityIndicator size="small" color="#3b82f6" />
+                        ) : (
+                          <Ionicons name="chatbubble-outline" size={16} color="#3b82f6" />
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.actionBtn,
+                          { backgroundColor: item.isSuspended ? "#10b98115" : "#ef444415", borderRadius: 8 },
+                        ]}
+                        onPress={() => toggleSuspend(item)}
+                      >
+                        <Feather
+                          name={item.isSuspended ? "user-check" : "user-x"}
+                          size={16}
+                          color={item.isSuspended ? "#10b981" : "#ef4444"}
+                        />
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
-              )}
             </View>
           )}
           ListEmptyComponent={

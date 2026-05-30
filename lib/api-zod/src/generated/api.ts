@@ -729,6 +729,41 @@ export const AdminGetUsersResponse = zod.object({
 
 
 /**
+ * @summary Get full user profile with verification history (admin only)
+ */
+export const AdminGetUserDetailParams = zod.object({
+  "userId": zod.coerce.number()
+})
+
+export const AdminGetUserDetailResponse = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "role": zod.string(),
+  "verificationStatus": zod.string(),
+  "isSuspended": zod.boolean(),
+  "avatarUrl": zod.string().nullish(),
+  "birthday": zod.string().nullish(),
+  "universityOrWorkplace": zod.string().nullish(),
+  "emergencyContactName": zod.string().nullish(),
+  "emergencyContactPhone": zod.string().nullish(),
+  "bio": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "verificationRecords": zod.array(zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "idImageUrl": zod.string(),
+  "idType": zod.string(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reviewNote": zod.string().nullish(),
+  "submittedAt": zod.string(),
+  "reviewedAt": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary Suspend or unsuspend a user (admin only)
  */
 export const AdminUpdateUserStatusParams = zod.object({

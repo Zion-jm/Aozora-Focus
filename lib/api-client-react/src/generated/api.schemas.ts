@@ -319,6 +319,24 @@ export interface FavoriteCheckResponse {
   isFavorited: boolean;
 }
 
+export interface AdminUserDetail {
+  id: number;
+  fullName: string;
+  email?: string | null;
+  phone?: string | null;
+  role: string;
+  verificationStatus: string;
+  isSuspended: boolean;
+  avatarUrl?: string | null;
+  birthday?: string | null;
+  universityOrWorkplace?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  bio?: string | null;
+  createdAt: string;
+  verificationRecords: VerificationRecord[];
+}
+
 export interface AdminUsersListResponse {
   users: User[];
   total: number;

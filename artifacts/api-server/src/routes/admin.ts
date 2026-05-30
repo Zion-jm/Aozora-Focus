@@ -25,6 +25,40 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
   });
 });
 
+router.get("/admin/users/:userId", requireAuth, requireRole("admin"), async (req, res) => {
+  const userId = parseInt(req.params["userId"]!);
+  const user = await db.select().from(users).where(eq(users.id, userId)).get();
+
+  if (!user) {
+    res.status(404).json({ error: "Not found", message: "User not found" });
+    return;
+  }
+
+  const verifs = await db
+    .select()
+    .from(verificationRecords)
+    .where(eq(verificationRecords.userId, userId))
+    .all();
+
+  res.json({
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    verificationStatus: user.verificationStatus,
+    isSuspended: user.isSuspended,
+    avatarUrl: user.avatarUrl,
+    birthday: user.birthday ?? null,
+    universityOrWorkplace: user.universityOrWorkplace ?? null,
+    emergencyContactName: user.emergencyContactName ?? null,
+    emergencyContactPhone: user.emergencyContactPhone ?? null,
+    bio: user.bio ?? null,
+    createdAt: user.createdAt,
+    verificationRecords: verifs,
+  });
+});
+
 router.get("/admin/users", requireAuth, requireRole("admin"), async (req, res) => {
   const { role, verificationStatus, page = "1" } = req.query as Record<string, string>;
   let allUsers = await db.select().from(users).all();

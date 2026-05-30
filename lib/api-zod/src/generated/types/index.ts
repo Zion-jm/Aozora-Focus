@@ -16,6 +16,7 @@ export * from './adminStats';
 export * from './adminUpdateDormStatusRequest';
 export * from './adminUpdateDormStatusRequestStatus';
 export * from './adminUpdateUserStatusRequest';
+export * from './adminUserDetail';
 export * from './adminUsersListResponse';
 export * from './appointment';
 export * from './appointmentsListResponse';

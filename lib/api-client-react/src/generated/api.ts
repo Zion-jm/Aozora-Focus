@@ -27,6 +27,7 @@ import type {
   AdminStats,
   AdminUpdateDormStatusRequest,
   AdminUpdateUserStatusRequest,
+  AdminUserDetail,
   AdminUsersListResponse,
   Appointment,
   AppointmentsListResponse,
@@ -2311,6 +2312,83 @@ export function useAdminGetUsers<TData = Awaited<ReturnType<typeof adminGetUsers
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getAdminGetUsersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAdminGetUserDetailUrl = (userId: number,) => {
+
+
+
+
+  return `/api/admin/users/${userId}`
+}
+
+/**
+ * @summary Get full user profile with verification history (admin only)
+ */
+export const adminGetUserDetail = async (userId: number, options?: RequestInit): Promise<AdminUserDetail> => {
+
+  return customFetch<AdminUserDetail>(getAdminGetUserDetailUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetUserDetailQueryKey = (userId: number,) => {
+    return [
+    `/api/admin/users/${userId}`
+    ] as const;
+    }
+
+
+export const getAdminGetUserDetailQueryOptions = <TData = Awaited<ReturnType<typeof adminGetUserDetail>>, TError = ErrorType<void>>(userId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetUserDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetUserDetailQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetUserDetail>>> = ({ signal }) => adminGetUserDetail(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(userId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetUserDetail>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetUserDetailQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetUserDetail>>>
+export type AdminGetUserDetailQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get full user profile with verification history (admin only)
+ */
+
+export function useAdminGetUserDetail<TData = Awaited<ReturnType<typeof adminGetUserDetail>>, TError = ErrorType<void>>(
+ userId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetUserDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetUserDetailQueryOptions(userId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

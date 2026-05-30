@@ -662,6 +662,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminUsersListResponse"
 
+  /admin/users/{userId}:
+    get:
+      operationId: adminGetUserDetail
+      tags: [admin]
+      summary: Get full user profile with verification history (admin only)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User detail with verification records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserDetail"
+        "404":
+          description: Not found
+
   /admin/users/{userId}/status:
     put:
       operationId: adminUpdateUserStatus
@@ -1304,6 +1325,51 @@ components:
       required: [isFavorited]
 
     # --- ADMIN SCHEMAS ---
+    AdminUserDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+        verificationStatus:
+          type: string
+        isSuspended:
+          type: boolean
+        avatarUrl:
+          type: string
+          nullable: true
+        birthday:
+          type: string
+          nullable: true
+        universityOrWorkplace:
+          type: string
+          nullable: true
+        emergencyContactName:
+          type: string
+          nullable: true
+        emergencyContactPhone:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        verificationRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationRecord"
+      required: [id, fullName, role, verificationStatus, isSuspended, createdAt, verificationRecords]
+
     AdminUsersListResponse:
       type: object
       properties:

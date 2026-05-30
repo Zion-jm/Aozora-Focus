@@ -112,7 +112,11 @@ export default function AdminVerificationsScreen() {
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 40 }]}
           renderItem={({ item }: { item: any }) => (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-              <View style={styles.cardTop}>
+              <TouchableOpacity
+                style={styles.cardTop}
+                onPress={() => item.user?.id && router.push({ pathname: "/admin/user-detail", params: { userId: item.user.id.toString() } })}
+                activeOpacity={0.75}
+              >
                 <View style={[styles.avatar, { backgroundColor: colors.primary + "22" }]}>
                   <Text style={[styles.avatarText, { color: colors.primary }]}>
                     {(item.user?.fullName || "U")[0].toUpperCase()}
@@ -123,12 +127,15 @@ export default function AdminVerificationsScreen() {
                   <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>{item.user?.email || item.user?.phone || ""}</Text>
                   <Text style={[styles.idType, { color: colors.mutedForeground }]}>ID: {item.idType}</Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLOR[item.status] || "#64748b") + "22" }]}>
-                  <Text style={[styles.statusText, { color: STATUS_COLOR[item.status] || "#64748b" }]}>
-                    {STATUS_LABEL[item.status] || item.status}
-                  </Text>
+                <View style={styles.cardTopRight}>
+                  <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLOR[item.status] || "#64748b") + "22" }]}>
+                    <Text style={[styles.statusText, { color: STATUS_COLOR[item.status] || "#64748b" }]}>
+                      {STATUS_LABEL[item.status] || item.status}
+                    </Text>
+                  </View>
+                  <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
                 </View>
-              </View>
+              </TouchableOpacity>
 
               {item.submittedAt && (
                 <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
@@ -213,6 +220,7 @@ const styles = StyleSheet.create({
   userName: { fontSize: 16, fontWeight: "600" },
   userEmail: { fontSize: 13 },
   idType: { fontSize: 13 },
+  cardTopRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   statusText: { fontSize: 12, fontWeight: "600" },
   dateText: { fontSize: 12 },
