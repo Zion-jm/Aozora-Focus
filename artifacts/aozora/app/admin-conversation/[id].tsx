@@ -144,6 +144,7 @@ export default function AdminConversationScreen() {
             size={32}
             color="#ef4444"
             backgroundColor="#ef444422"
+            userId={item.sender?.id ?? otherUser?.id}
           />
         )}
         <View style={styles.bubbleWrapper}>

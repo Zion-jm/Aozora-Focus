@@ -103,6 +103,9 @@ router.get("/users/:userId", async (req, res) => {
     role: user.role,
     verificationStatus: user.verificationStatus,
     avatarUrl: user.avatarUrl,
+    bio: user.bio ?? null,
+    universityOrWorkplace: user.universityOrWorkplace ?? null,
+    createdAt: user.createdAt,
   });
 });
 

@@ -131,6 +131,7 @@ export default function ProfileScreen() {
           size={80}
           color={colors.primary}
           backgroundColor={colors.primary + "22"}
+          userId={user?.id}
         />
         <Text style={[styles.name, { color: colors.foreground }]}>{user?.fullName || "User"}</Text>
         {user?.universityOrWorkplace ? (

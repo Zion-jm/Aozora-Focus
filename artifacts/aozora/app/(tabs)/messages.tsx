@@ -189,6 +189,7 @@ export default function MessagesScreen() {
                     color={avatarColor}
                     backgroundColor={avatarBg}
                     style={styles.avatarWrap}
+                    userId={item.otherParticipant?.id}
                   />
                 )}
                 <View style={styles.itemContent}>

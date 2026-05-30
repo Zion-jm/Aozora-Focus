@@ -363,6 +363,7 @@ export default function DormDetailScreen() {
                   size={48}
                   color={colors.primary}
                   backgroundColor={colors.primary + "22"}
+                  userId={d.owner.id}
                 />
                 <View>
                   <Text style={[styles.ownerName, { color: colors.foreground }]}>

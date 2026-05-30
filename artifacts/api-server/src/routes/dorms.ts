@@ -44,12 +44,14 @@ router.get("/dorms/my-listings", requireAuth, requireRole("owner", "admin"), asy
 router.get("/dorms", async (req, res) => {
   const {
     search, minRent, maxRent, hasAvailableBeds,
-    sortBy, page = "1", limit = "20",
+    sortBy, page = "1", limit = "20", ownerId,
   } = req.query as Record<string, string>;
 
   let query = db.select().from(dorms).where(eq(dorms.status, "approved")).$dynamic();
 
   const conditions = [eq(dorms.status, "approved")];
+
+  if (ownerId) conditions.push(eq(dorms.ownerId, parseInt(ownerId)));
 
   if (search) {
     conditions.push(

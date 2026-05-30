@@ -124,6 +124,7 @@ export default function ConversationScreen() {
             size={32}
             color={colors.primary}
             backgroundColor={colors.primary + "22"}
+            userId={item.sender?.id}
           />
         )}
         <View style={styles.bubbleWrapper}>
