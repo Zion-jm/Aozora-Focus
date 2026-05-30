@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   Alert,
   Modal,
   TextInput,
-  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -33,6 +32,33 @@ import {
   getGetConversationsQueryKey,
 } from "@workspace/api-client-react";
 
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const TIME_SLOTS = [
+  "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM",
+  "12:00 PM", "1:00 PM", "2:00 PM", "3:00 PM",
+  "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM", "8:00 PM",
+];
+
+function generateDateChips(count = 30): { date: Date; label: string; value: string }[] {
+  const chips = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let i = 1; i <= count; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    chips.push({
+      date: d,
+      label: `${DAY_NAMES[d.getDay()]} ${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`,
+      value: `${d.getFullYear()}-${mm}-${dd}`,
+    });
+  }
+  return chips;
+}
+
 export default function DormDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -41,12 +67,14 @@ export default function DormDetailScreen() {
   const qc = useQueryClient();
 
   const [showBookModal, setShowBookModal] = useState(false);
-  const [preferredDate, setPreferredDate] = useState("");
-  const [preferredTime, setPreferredTime] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
   const [visitMessage, setVisitMessage] = useState("");
 
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [initialMsg, setInitialMsg] = useState("");
+
+  const dateChips = useMemo(() => generateDateChips(30), []);
 
   const { data: dorm, isLoading } = useGetDormById(id!, {
     query: { enabled: !!id, queryKey: getGetDormByIdQueryKey(id!) },
@@ -79,6 +107,9 @@ export default function DormDetailScreen() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getGetAppointmentsQueryKey() });
         setShowBookModal(false);
+        setSelectedDate("");
+        setSelectedTime("");
+        setVisitMessage("");
         Alert.alert("Visit Requested!", "The owner will review your request.");
       },
       onError: () => Alert.alert("Error", "Could not book visit. Try again."),
@@ -115,6 +146,7 @@ export default function DormDetailScreen() {
 
   const d = dorm as any;
   const amenities: string[] = typeof d.amenities === "string" ? JSON.parse(d.amenities || "[]") : (d.amenities || []);
+  const canSubmit = !!selectedDate && !!selectedTime;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -327,47 +359,137 @@ export default function DormDetailScreen() {
               <Feather name="x" size={24} color={colors.foreground} />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
             <Text style={[styles.modalDorm, { color: colors.mutedForeground }]}>{d.name}</Text>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Preferred Date *</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
-              placeholder="e.g. 2026-06-15"
-              placeholderTextColor={colors.mutedForeground}
-              value={preferredDate}
-              onChangeText={setPreferredDate}
-            />
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Preferred Time *</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
-              placeholder="e.g. 10:00 AM"
-              placeholderTextColor={colors.mutedForeground}
-              value={preferredTime}
-              onChangeText={setPreferredTime}
-            />
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Message (optional)</Text>
-            <TextInput
-              style={[styles.input, styles.textarea, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
-              placeholder="Any questions or notes for the owner?"
-              placeholderTextColor={colors.mutedForeground}
-              value={visitMessage}
-              onChangeText={setVisitMessage}
-              multiline
-              numberOfLines={4}
-            />
+
+            {/* Date picker */}
+            <View style={styles.pickerSection}>
+              <View style={styles.pickerLabelRow}>
+                <Feather name="calendar" size={16} color={colors.primary} />
+                <Text style={[styles.fieldLabel, { color: colors.foreground, marginBottom: 0 }]}>
+                  Select Date
+                </Text>
+                {selectedDate ? (
+                  <Text style={[styles.selectedBadge, { color: colors.primary, backgroundColor: colors.primary + "18" }]}>
+                    {dateChips.find((c) => c.value === selectedDate)?.label}
+                  </Text>
+                ) : (
+                  <Text style={[styles.requiredBadge, { color: "#ef4444" }]}>required</Text>
+                )}
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.dateStrip}
+              >
+                {dateChips.map((chip) => {
+                  const isSelected = selectedDate === chip.value;
+                  const parts = chip.label.split(" ");
+                  return (
+                    <TouchableOpacity
+                      key={chip.value}
+                      onPress={() => setSelectedDate(chip.value)}
+                      style={[
+                        styles.dateChip,
+                        {
+                          backgroundColor: isSelected ? colors.primary : colors.card,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                          borderRadius: colors.radius,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.dateChipDay, { color: isSelected ? "#fff" : colors.mutedForeground }]}>
+                        {parts[0]}
+                      </Text>
+                      <Text style={[styles.dateChipNum, { color: isSelected ? "#fff" : colors.foreground }]}>
+                        {parts[2]}
+                      </Text>
+                      <Text style={[styles.dateChipMonth, { color: isSelected ? "rgba(255,255,255,0.8)" : colors.mutedForeground }]}>
+                        {parts[1]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Time picker */}
+            <View style={styles.pickerSection}>
+              <View style={styles.pickerLabelRow}>
+                <Feather name="clock" size={16} color={colors.primary} />
+                <Text style={[styles.fieldLabel, { color: colors.foreground, marginBottom: 0 }]}>
+                  Select Time
+                </Text>
+                {selectedTime ? (
+                  <Text style={[styles.selectedBadge, { color: colors.primary, backgroundColor: colors.primary + "18" }]}>
+                    {selectedTime}
+                  </Text>
+                ) : (
+                  <Text style={[styles.requiredBadge, { color: "#ef4444" }]}>required</Text>
+                )}
+              </View>
+              <View style={styles.timeGrid}>
+                {TIME_SLOTS.map((slot) => {
+                  const isSelected = selectedTime === slot;
+                  return (
+                    <TouchableOpacity
+                      key={slot}
+                      onPress={() => setSelectedTime(slot)}
+                      style={[
+                        styles.timeChip,
+                        {
+                          backgroundColor: isSelected ? colors.primary : colors.card,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                          borderRadius: colors.radius,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.timeChipText, { color: isSelected ? "#fff" : colors.foreground }]}>
+                        {slot}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Optional message */}
+            <View style={styles.pickerSection}>
+              <View style={styles.pickerLabelRow}>
+                <Feather name="message-square" size={16} color={colors.primary} />
+                <Text style={[styles.fieldLabel, { color: colors.foreground, marginBottom: 0 }]}>
+                  Message
+                  <Text style={[styles.optionalTag, { color: colors.mutedForeground }]}> (optional)</Text>
+                </Text>
+              </View>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textarea,
+                  { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius },
+                ]}
+                placeholder="Any questions or notes for the owner?"
+                placeholderTextColor={colors.mutedForeground}
+                value={visitMessage}
+                onChangeText={setVisitMessage}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
             <TouchableOpacity
               style={[
                 styles.submitBtn,
                 { backgroundColor: colors.primary, borderRadius: colors.radius },
-                (!preferredDate || !preferredTime) && { opacity: 0.5 },
+                !canSubmit && { opacity: 0.4 },
               ]}
-              disabled={!preferredDate || !preferredTime || createAppt.isPending}
+              disabled={!canSubmit || createAppt.isPending}
               onPress={() => {
                 createAppt.mutate({
                   data: {
                     dormId: Number(id),
-                    preferredDate,
-                    preferredTime,
+                    preferredDate: selectedDate,
+                    preferredTime: selectedTime,
                     message: visitMessage,
                   },
                 });
@@ -376,7 +498,10 @@ export default function DormDetailScreen() {
               {createAppt.isPending ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitBtnText}>Send Request</Text>
+                <>
+                  <Feather name="send" size={18} color="#fff" />
+                  <Text style={styles.submitBtnText}>  Send Request</Text>
+                </>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -432,7 +557,20 @@ const styles = StyleSheet.create({
   modalDorm: { fontSize: 15, marginBottom: 20 },
   fieldLabel: { fontSize: 15, fontWeight: "600", marginBottom: 8 },
   input: { borderWidth: 1, padding: 14, fontSize: 15, marginBottom: 16 },
-  textarea: { height: 100, textAlignVertical: "top" },
-  submitBtn: { paddingVertical: 16, alignItems: "center", marginTop: 8, marginBottom: 40 },
+  textarea: { height: 90, textAlignVertical: "top" },
+  submitBtn: { flexDirection: "row", paddingVertical: 16, alignItems: "center", justifyContent: "center", marginTop: 4, marginBottom: 40 },
   submitBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  pickerSection: { marginBottom: 24 },
+  pickerLabelRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  selectedBadge: { fontSize: 12, fontWeight: "600", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
+  requiredBadge: { fontSize: 12, fontWeight: "500" },
+  optionalTag: { fontSize: 13, fontWeight: "400" },
+  dateStrip: { gap: 10, paddingVertical: 4, paddingHorizontal: 2 },
+  dateChip: { width: 62, paddingVertical: 10, alignItems: "center", borderWidth: 1.5 },
+  dateChipDay: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", marginBottom: 4 },
+  dateChipNum: { fontSize: 22, fontWeight: "bold", lineHeight: 26 },
+  dateChipMonth: { fontSize: 11, marginTop: 2 },
+  timeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  timeChip: { paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1.5, minWidth: 90, alignItems: "center" },
+  timeChipText: { fontSize: 14, fontWeight: "600" },
 });
