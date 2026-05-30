@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/index";
 import { conversations, messages, dorms, users } from "../db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
@@ -11,6 +11,8 @@ async function serializeConversation(conv: typeof conversations.$inferSelect, cu
   const otherId = conv.studentId === currentUserId ? conv.ownerId : conv.studentId;
   const other = await db.select().from(users).where(eq(users.id, otherId)).get();
   const allMsgs = await db.select().from(messages).where(eq(messages.conversationId, conv.id)).all();
+  // Sort chronologically so lastMsg is always the most recent
+  allMsgs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const lastMsg = allMsgs.length ? allMsgs[allMsgs.length - 1] : null;
   const unread = allMsgs.filter((m) => !m.isRead && m.senderId !== currentUserId).length;
 
@@ -125,7 +127,23 @@ router.get("/conversations/:conversationId/messages", requireAuth, async (req, r
   const total = allMsgs.length;
   const paginated = allMsgs.slice((page - 1) * limit, page * limit);
 
-  res.json({ messages: paginated, total, page });
+  // Enrich messages with sender info
+  const enriched = await Promise.all(
+    paginated.map(async (msg) => {
+      const sender = await db.select().from(users).where(eq(users.id, msg.senderId)).get();
+      return {
+        ...msg,
+        sender: sender ? {
+          id: sender.id,
+          fullName: sender.fullName,
+          avatarUrl: sender.avatarUrl,
+          role: sender.role,
+        } : null,
+      };
+    })
+  );
+
+  res.json({ messages: enriched, total, page });
 });
 
 router.post("/conversations/:conversationId/messages", requireAuth, async (req, res) => {
@@ -153,7 +171,18 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
 
   await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, convId));
 
-  res.status(201).json(result[0]);
+  const msg = result[0]!;
+  const sender = await db.select().from(users).where(eq(users.id, msg.senderId)).get();
+
+  res.status(201).json({
+    ...msg,
+    sender: sender ? {
+      id: sender.id,
+      fullName: sender.fullName,
+      avatarUrl: sender.avatarUrl,
+      role: sender.role,
+    } : null,
+  });
 });
 
 router.post("/conversations/:conversationId/read", requireAuth, async (req, res) => {
