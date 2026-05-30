@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AntDesign, Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
 import { useColors } from "@/hooks/useColors";
@@ -54,7 +54,7 @@ export default function VerifyScreen() {
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]}>
         {isVerified ? (
           <View style={[styles.statusCard, { backgroundColor: "#10b98115", borderRadius: colors.radius }]}>
-            <AntDesign name="checkcircle" size={56} color="#10b981" />
+            <Ionicons name="checkmark-circle" size={56} color="#10b981" />
             <Text style={[styles.statusTitle, { color: "#10b981" }]}>Identity Verified</Text>
             <Text style={[styles.statusSub, { color: colors.mutedForeground }]}>
               Your identity has been verified. You can now access all platform features.
@@ -92,7 +92,7 @@ export default function VerifyScreen() {
                   ]}
                   onPress={() => setIdType(type)}
                 >
-                  {idType === type && <AntDesign name="checkcircle" size={16} color={colors.primary} />}
+                  {idType === type && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
                   <Text style={[styles.idTypeName, { color: idType === type ? colors.primary : colors.foreground }]}>
                     {type}
                   </Text>

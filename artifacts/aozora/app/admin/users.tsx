@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AntDesign, Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -127,7 +127,7 @@ export default function AdminUsersScreen() {
                 <View style={styles.nameRow}>
                   <Text style={[styles.name, { color: colors.foreground }]}>{item.fullName}</Text>
                   {item.verificationStatus === "verified" && (
-                    <AntDesign name="checkcircle" size={15} color="#10b981" />
+                    <Ionicons name="checkmark-circle" size={15} color="#10b981" />
                   )}
                   {item.isSuspended && (
                     <View style={[styles.suspendBadge, { backgroundColor: "#ef444420" }]}>

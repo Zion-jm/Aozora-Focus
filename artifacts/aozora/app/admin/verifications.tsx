@@ -11,7 +11,7 @@ import {
   Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AntDesign, Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -160,7 +160,7 @@ export default function AdminVerificationsScreen() {
                     onPress={() => handleReview(item, "approved")}
                     disabled={review.isPending}
                   >
-                    <AntDesign name="checkcircle" size={16} color="#fff" />
+                    <Ionicons name="checkmark-circle" size={16} color="#fff" />
                     <Text style={styles.btnText}>Approve</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
