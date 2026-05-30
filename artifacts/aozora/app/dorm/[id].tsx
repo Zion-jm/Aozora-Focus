@@ -45,6 +45,9 @@ export default function DormDetailScreen() {
   const [preferredTime, setPreferredTime] = useState("");
   const [visitMessage, setVisitMessage] = useState("");
 
+  const [showMsgModal, setShowMsgModal] = useState(false);
+  const [initialMsg, setInitialMsg] = useState("");
+
   const { data: dorm, isLoading } = useGetDormById(id!, {
     query: { enabled: !!id, queryKey: getGetDormByIdQueryKey(id!) },
   });
@@ -86,6 +89,8 @@ export default function DormDetailScreen() {
     mutation: {
       onSuccess: (data: any) => {
         qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+        setShowMsgModal(false);
+        setInitialMsg("");
         router.push(`/conversation/${data.conversation?.id || data.id}`);
       },
       onError: () => Alert.alert("Error", "Could not start conversation."),
@@ -253,8 +258,7 @@ export default function DormDetailScreen() {
         >
           <TouchableOpacity
             style={[styles.secondaryBtn, { borderColor: colors.primary, borderRadius: colors.radius }]}
-            onPress={() => createConvo.mutate({ data: { dormId: Number(id) } })}
-            disabled={createConvo.isPending}
+            onPress={() => setShowMsgModal(true)}
           >
             <Feather name="message-circle" size={18} color={colors.primary} />
             <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Message</Text>
@@ -269,6 +273,52 @@ export default function DormDetailScreen() {
         </View>
       )}
 
+      {/* Message Modal */}
+      <Modal visible={showMsgModal} animationType="slide" presentationStyle="pageSheet">
+        <View style={[styles.modal, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Message Owner</Text>
+            <TouchableOpacity onPress={() => { setShowMsgModal(false); setInitialMsg(""); }}>
+              <Feather name="x" size={24} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalBody}>
+            <Text style={[styles.modalDorm, { color: colors.mutedForeground }]}>{d.name}</Text>
+            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Your message *</Text>
+            <TextInput
+              style={[styles.input, styles.textarea, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
+              placeholder="Hi, I'm interested in this dorm..."
+              placeholderTextColor={colors.mutedForeground}
+              value={initialMsg}
+              onChangeText={setInitialMsg}
+              multiline
+              numberOfLines={4}
+              autoFocus
+            />
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                { backgroundColor: colors.primary, borderRadius: colors.radius },
+                !initialMsg.trim() && { opacity: 0.5 },
+              ]}
+              disabled={!initialMsg.trim() || createConvo.isPending}
+              onPress={() => {
+                createConvo.mutate({
+                  data: { dormId: Number(id), initialMessage: initialMsg.trim() },
+                });
+              }}
+            >
+              {createConvo.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitBtnText}>Send Message</Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Book a Visit Modal */}
       <Modal visible={showBookModal} animationType="slide" presentationStyle="pageSheet">
         <View style={[styles.modal, { backgroundColor: colors.background }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>

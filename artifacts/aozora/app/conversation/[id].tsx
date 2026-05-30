@@ -21,6 +21,7 @@ import {
   getListMessagesQueryKey,
   useListMessages,
   useSendMessage,
+  useMarkConversationRead,
   getGetConversationsQueryKey,
 } from "@workspace/api-client-react";
 
@@ -38,7 +39,9 @@ export default function ConversationScreen() {
     query: { enabled: !!convId, queryKey: getListMessagesQueryKey(convId) },
   });
 
-  const messages = (data as any)?.messages || [];
+  const messages: any[] = (data as any)?.messages || [];
+
+  const markRead = useMarkConversationRead();
 
   const send = useSendMessage({
     mutation: {
@@ -51,19 +54,37 @@ export default function ConversationScreen() {
   });
 
   useEffect(() => {
+    if (convId) {
+      markRead.mutate({ conversationId: convId });
+    }
+  }, [convId]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      refetch();
+      refetch().then(() => {
+        if (convId) markRead.mutate({ conversationId: convId });
+      });
     }, 5000);
     return () => clearInterval(interval);
-  }, [refetch]);
+  }, [refetch, convId]);
 
   const handleSend = () => {
     if (!text.trim()) return;
     send.mutate({ conversationId: convId, data: { content: text.trim() } });
   };
 
-  const renderMessage = ({ item }: { item: any }) => {
+  const lastReadSentIndex = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].senderId === user?.id && messages[i].isRead) return i;
+    }
+    return -1;
+  })();
+
+  const renderMessage = ({ item, index }: { item: any; index: number }) => {
     const isMe = item.senderId === user?.id;
+    const reversedIndex = messages.length - 1 - index;
+    const isLastReadSent = isMe && reversedIndex === lastReadSentIndex;
+
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
         {!isMe && (
@@ -73,21 +94,29 @@ export default function ConversationScreen() {
             </Text>
           </View>
         )}
-        <View
-          style={[
-            styles.bubble,
-            {
-              backgroundColor: isMe ? colors.primary : colors.card,
-              borderRadius: colors.radius,
-              borderBottomRightRadius: isMe ? 4 : colors.radius,
-              borderBottomLeftRadius: isMe ? colors.radius : 4,
-            },
-          ]}
-        >
-          <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>{item.content}</Text>
-          <Text style={[styles.timeText, { color: isMe ? "rgba(255,255,255,0.7)" : colors.mutedForeground }]}>
-            {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </Text>
+        <View style={styles.bubbleWrapper}>
+          <View
+            style={[
+              styles.bubble,
+              {
+                backgroundColor: isMe ? colors.primary : colors.card,
+                borderRadius: colors.radius,
+                borderBottomRightRadius: isMe ? 4 : colors.radius,
+                borderBottomLeftRadius: isMe ? colors.radius : 4,
+              },
+            ]}
+          >
+            <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>{item.content}</Text>
+            <Text style={[styles.timeText, { color: isMe ? "rgba(255,255,255,0.7)" : colors.mutedForeground }]}>
+              {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </Text>
+          </View>
+          {isLastReadSent && (
+            <View style={styles.seenRow}>
+              <Feather name="check-circle" size={11} color={colors.primary} />
+              <Text style={[styles.seenText, { color: colors.primary }]}>Seen</Text>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -199,9 +228,12 @@ const styles = StyleSheet.create({
   msgRowMe: { flexDirection: "row-reverse" },
   avatar: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   avatarText: { fontSize: 14, fontWeight: "bold" },
-  bubble: { maxWidth: "75%", padding: 12, paddingBottom: 8 },
+  bubbleWrapper: { maxWidth: "75%", alignItems: "flex-end" },
+  bubble: { padding: 12, paddingBottom: 8 },
   bubbleText: { fontSize: 15, lineHeight: 22 },
   timeText: { fontSize: 11, marginTop: 4, textAlign: "right" },
+  seenRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3, paddingRight: 2 },
+  seenText: { fontSize: 10, fontWeight: "600" },
   empty: { paddingVertical: 60, alignItems: "center" },
   inputBar: { flexDirection: "row", alignItems: "flex-end", gap: 10, padding: 12, paddingTop: 10, borderTopWidth: 1 },
   input: { flex: 1, borderWidth: 1, padding: 12, fontSize: 15, maxHeight: 120, minHeight: 44 },
