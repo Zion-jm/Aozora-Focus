@@ -10,7 +10,7 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = ""
+runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
@@ -34,7 +34,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/api-server && PORT=8000 NODE_PATH=/home/runner/workspace/artifacts/api-server/node_modules node --enable-source-maps ./dist/index.mjs"
+args = "cd artifacts/api-server && pnpm run build && PORT=8000 node --enable-source-maps ./dist/index.mjs"
 waitForPort = 8000
 
 [[workflows.workflow]]
@@ -51,7 +51,7 @@ outputType = "webview"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
-expertMode = false
+expertMode = true
 
 [postMerge]
 path = "scripts/post-merge.sh"
@@ -64,10 +64,6 @@ externalPort = 80
 [[ports]]
 localPort = 8000
 externalPort = 8000
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
 
 [[ports]]
 localPort = 8081
@@ -84,4 +80,3 @@ channel = "stable-25_05"
 
 [userenv.shared]
 PORT = "8080"
-JWT_SECRET = "fa2c96e7aaaf1c3e70437507f25ac1fad7bf2a4cec54f306c0469c1fa5380edda0ce7393991a449bf5c7c9c428ce7c87"
