@@ -68,6 +68,26 @@ router.post("/users/me/submit-verification", requireAuth, async (req, res) => {
   res.status(201).json(result[0]);
 });
 
+router.get("/users/me/verification", requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  const records = await db
+    .select()
+    .from(verificationRecords)
+    .where(eq(verificationRecords.userId, userId))
+    .all();
+
+  if (records.length === 0) {
+    res.json(null);
+    return;
+  }
+
+  const latest = records.sort(
+    (a, b) =>
+      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+  )[0]!;
+  res.json(latest);
+});
+
 router.get("/users/:userId", async (req, res) => {
   const userId = parseInt(req.params["userId"]!);
   const user = await db.select().from(users).where(eq(users.id, userId)).get();

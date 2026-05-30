@@ -15,13 +15,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { useQuery } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import {
   useSubmitVerification,
   useUpdateProfile,
+  customFetch,
 } from "@workspace/api-client-react";
+import type { VerificationRecord } from "@workspace/api-client-react";
 
 const ID_TYPES = [
   "National ID",
@@ -120,11 +123,21 @@ export default function VerifyScreen() {
   const verificationStatus = user?.verificationStatus;
   const isVerified = verificationStatus === "verified";
   const isPending = verificationStatus === "pending";
+  const isRejected = verificationStatus === "rejected";
+  const [canResubmit, setCanResubmit] = useState(false);
+
+  const { data: latestRecord } = useQuery<VerificationRecord | null>({
+    queryKey: ["my-verification", user?.id],
+    queryFn: () => customFetch<VerificationRecord | null>("/api/users/me/verification"),
+    enabled: !!user && isRejected,
+  });
 
   const updateProfile = useUpdateProfile();
   const submitVerification = useSubmitVerification({
     mutation: {
       onSuccess: () => {
+        updateUser({ ...user!, verificationStatus: "pending" });
+        setCanResubmit(false);
         Alert.alert(
           "Submitted!",
           "Your identity verification is under review. We'll notify you once it's approved.",
@@ -341,6 +354,81 @@ export default function VerifyScreen() {
               Your ID is being reviewed. This usually takes 1–2 business days.
             </Text>
           </View>
+        ) : isRejected && !canResubmit ? (
+          <>
+            <View
+              style={[
+                styles.statusCard,
+                { backgroundColor: "#ef444415", borderRadius: colors.radius },
+              ]}
+            >
+              <Feather name="x-circle" size={56} color="#ef4444" />
+              <Text style={[styles.statusTitle, { color: "#ef4444" }]}>
+                Verification Rejected
+              </Text>
+              <Text style={[styles.statusSub, { color: colors.mutedForeground }]}>
+                Your ID submission was not approved. Review the reason below and resubmit with a clearer photo or the correct document.
+              </Text>
+            </View>
+
+            {latestRecord?.reviewNote ? (
+              <View
+                style={[
+                  styles.rejectionReasonCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: "#ef444440",
+                    borderRadius: colors.radius,
+                  },
+                ]}
+              >
+                <View style={styles.rejectionReasonHeader}>
+                  <Feather name="message-circle" size={16} color="#ef4444" />
+                  <Text style={[styles.rejectionReasonLabel, { color: "#ef4444" }]}>
+                    Reason from reviewer
+                  </Text>
+                </View>
+                <Text style={[styles.rejectionReasonText, { color: colors.foreground }]}>
+                  {latestRecord.reviewNote}
+                </Text>
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.rejectionReasonCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    borderRadius: colors.radius,
+                  },
+                ]}
+              >
+                <View style={styles.rejectionReasonHeader}>
+                  <Feather name="info" size={16} color={colors.mutedForeground} />
+                  <Text style={[styles.rejectionReasonLabel, { color: colors.mutedForeground }]}>
+                    No specific reason provided
+                  </Text>
+                </View>
+                <Text style={[styles.rejectionReasonText, { color: colors.mutedForeground }]}>
+                  Please make sure your ID photo is clear, well-lit, and shows all four corners of the document.
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.resubmitBtn,
+                { backgroundColor: colors.primary, borderRadius: colors.radius },
+              ]}
+              onPress={() => {
+                setStep("personal");
+                setCanResubmit(true);
+              }}
+            >
+              <Feather name="refresh-cw" size={18} color="#fff" />
+              <Text style={styles.resubmitBtnText}>Resubmit Verification</Text>
+            </TouchableOpacity>
+          </>
         ) : step === "personal" ? (
           <>
             <View
@@ -707,4 +795,34 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   actionBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+
+  rejectionReasonCard: {
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  rejectionReasonHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  rejectionReasonLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  rejectionReasonText: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  resubmitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 16,
+    marginTop: 4,
+  },
+  resubmitBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });
