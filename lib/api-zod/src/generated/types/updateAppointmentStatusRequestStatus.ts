@@ -12,4 +12,6 @@ export type UpdateAppointmentStatusRequestStatus = typeof UpdateAppointmentStatu
 export const UpdateAppointmentStatusRequestStatus = {
   approved: 'approved',
   rejected: 'rejected',
+  cancelled: 'cancelled',
+  noted: 'noted',
 } as const;

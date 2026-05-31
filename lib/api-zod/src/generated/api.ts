@@ -478,7 +478,7 @@ export const UpdateAppointmentStatusParams = zod.object({
 })
 
 export const UpdateAppointmentStatusBody = zod.object({
-  "status": zod.enum(['approved', 'rejected']),
+  "status": zod.enum(['approved', 'rejected', 'cancelled', 'noted']),
   "ownerNote": zod.string().optional()
 })
 

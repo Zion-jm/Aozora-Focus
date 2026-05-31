@@ -1220,7 +1220,7 @@ components:
       properties:
         status:
           type: string
-          enum: [approved, rejected]
+          enum: [approved, rejected, cancelled, noted]
         ownerNote:
           type: string
       required: [status]
