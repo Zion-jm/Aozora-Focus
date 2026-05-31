@@ -67,6 +67,7 @@ export default function PublicProfileScreen() {
   const { user: me, token } = useAuth();
 
   const [showDormPicker, setShowDormPicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"owner" | "student">("owner");
   const [isMessaging, setIsMessaging] = useState(false);
   const [showReport, setShowReport] = useState(false);
 
@@ -76,14 +77,27 @@ export default function PublicProfileScreen() {
     enabled: !!userId,
   });
 
+  // Profile user's dorms (when viewing an owner's profile)
   const { data: ownerDorms = [] } = useQuery<any[]>({
     queryKey: ["ownerDorms", userId],
     queryFn: () => fetchOwnerDorms(userId),
     enabled: !!userId && profile?.role === "owner",
   });
 
+  // Viewer's own dorms (when an owner is viewing a student's profile)
+  const { data: myDorms = [] } = useQuery<any[]>({
+    queryKey: ["myDorms", me?.id],
+    queryFn: () => fetchOwnerDorms(me!.id),
+    enabled: !!me && me.role === "owner" && profile?.role === "student" && !isOwnProfile,
+  });
+
   const isOwnProfile = me?.id === userId;
-  const canMessage = !!me && !isOwnProfile && profile?.role === "owner" && ownerDorms.length > 0;
+  // Message an owner about their dorm (student → owner)
+  const canMessageOwner = !!me && !isOwnProfile && profile?.role === "owner" && ownerDorms.length > 0;
+  // Message a student about the viewer's dorm (owner → student)
+  const canMessageStudent = !!me && !isOwnProfile && me.role === "owner" && profile?.role === "student" && myDorms.length > 0;
+  const canMessage = canMessageOwner || canMessageStudent;
+  // Phone visible only if API returned it (handled server-side by phonePublic flag)
   const canCall = !!profile?.phone;
 
   const handleCall = () => {
@@ -130,6 +144,7 @@ export default function PublicProfileScreen() {
       ? "#ef4444"
       : colors.primary;
 
+  // Student → Owner: inquire about one of the owner's dorms
   const startConversation = async (dorm: any) => {
     if (!token) return;
     setIsMessaging(true);
@@ -137,10 +152,7 @@ export default function PublicProfileScreen() {
     try {
       const res = await fetch(`${BASE_URL}/api/conversations`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           dormId: dorm.id,
           initialMessage: `Hi! I'm interested in ${dorm.name}. Is it still available?`,
@@ -156,11 +168,46 @@ export default function PublicProfileScreen() {
     }
   };
 
+  // Owner → Student: start a conversation about one of the owner's own dorms
+  const startConversationWithStudent = async (dorm: any) => {
+    if (!token) return;
+    setIsMessaging(true);
+    setShowDormPicker(false);
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          dormId: dorm.id,
+          targetStudentId: userId,
+          initialMessage: `Hi ${profile?.fullName?.split(" ")[0] ?? "there"}! I'm reaching out about ${dorm.name}.`,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to start conversation");
+      const data = await res.json();
+      router.push(`/conversation/${data.id}`);
+    } catch {
+      Alert.alert("Error", "Could not start conversation. Please try again.");
+    } finally {
+      setIsMessaging(false);
+    }
+  };
+
   const handleMessage = () => {
-    if (ownerDorms.length === 1) {
-      startConversation(ownerDorms[0]);
-    } else {
-      setShowDormPicker(true);
+    if (canMessageOwner) {
+      if (ownerDorms.length === 1) {
+        startConversation(ownerDorms[0]);
+      } else {
+        setPickerMode("owner");
+        setShowDormPicker(true);
+      }
+    } else if (canMessageStudent) {
+      if (myDorms.length === 1) {
+        startConversationWithStudent(myDorms[0]);
+      } else {
+        setPickerMode("student");
+        setShowDormPicker(true);
+      }
     }
   };
 
@@ -409,12 +456,16 @@ export default function PublicProfileScreen() {
             onStartShouldSetResponder={() => true}
           >
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Which listing are you inquiring about?</Text>
-            {ownerDorms.map((dorm: any) => (
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+              {pickerMode === "student"
+                ? `Which of your listings do you want to message ${profile?.fullName?.split(" ")[0] ?? "them"} about?`
+                : "Which listing are you inquiring about?"}
+            </Text>
+            {(pickerMode === "student" ? myDorms : ownerDorms).map((dorm: any) => (
               <TouchableOpacity
                 key={dorm.id}
                 style={[styles.pickerItem, { borderColor: colors.border }]}
-                onPress={() => startConversation(dorm)}
+                onPress={() => pickerMode === "student" ? startConversationWithStudent(dorm) : startConversation(dorm)}
                 activeOpacity={0.8}
               >
                 {dorm.coverPhotoUrl ? (

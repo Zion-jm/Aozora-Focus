@@ -165,6 +165,24 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Feather name="phone" size={14} color={colors.mutedForeground} />
               <Text style={[styles.infoText, { color: colors.foreground }]}>{user.phone}</Text>
+              {user.role === "student" && (
+                <View style={[
+                  styles.visibilityChip,
+                  { backgroundColor: (user as any).phonePublic ? "#10b98118" : colors.secondary },
+                ]}>
+                  <Feather
+                    name={(user as any).phonePublic ? "eye" : "eye-off"}
+                    size={12}
+                    color={(user as any).phonePublic ? "#10b981" : colors.mutedForeground}
+                  />
+                  <Text style={[
+                    styles.visibilityChipText,
+                    { color: (user as any).phonePublic ? "#10b981" : colors.mutedForeground },
+                  ]}>
+                    {(user as any).phonePublic ? "Public" : "Hidden"}
+                  </Text>
+                </View>
+              )}
             </View>
           ) : null}
           {user?.universityOrWorkplace ? (
@@ -270,6 +288,8 @@ const styles = StyleSheet.create({
   infoGroup: { width: "100%", gap: 10, marginTop: 4 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   infoText: { fontSize: 14, flex: 1 },
+  visibilityChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
+  visibilityChipText: { fontSize: 11, fontWeight: "600" },
   editProfileBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   editProfileBtnText: { fontSize: 13, fontWeight: "600" },
   badges: { flexDirection: "row", gap: 8, marginTop: 4 },

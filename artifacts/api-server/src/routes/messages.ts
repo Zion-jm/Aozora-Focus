@@ -135,19 +135,61 @@ router.get("/conversations", requireAuth, async (req, res) => {
 });
 
 // ─── POST /conversations — start dorm conversation ────────────────────────────
+// Supports two flows:
+//   1. Student → Owner: { dormId, initialMessage }
+//   2. Owner → Student: { dormId, targetStudentId, initialMessage } (owner picks their own dorm)
 
 router.post("/conversations", requireAuth, async (req, res) => {
-  const { dormId, initialMessage } = req.body;
+  const { dormId, initialMessage, targetStudentId } = req.body;
   const userId = req.user!.id;
 
-  if (!dormId || !initialMessage) {
-    res.status(400).json({ error: "Validation error", message: "dormId and initialMessage are required" });
+  if (!dormId) {
+    res.status(400).json({ error: "Validation error", message: "dormId is required" });
     return;
   }
 
   const dorm = await db.select().from(dorms).where(eq(dorms.id, dormId)).get();
   if (!dorm) {
     res.status(404).json({ error: "Not found", message: "Dorm not found" });
+    return;
+  }
+
+  // Flow 2: Owner initiates conversation with a specific student about their own dorm
+  if (targetStudentId) {
+    if (dorm.ownerId !== userId) {
+      res.status(403).json({ error: "Forbidden", message: "You can only message students about your own dorms" });
+      return;
+    }
+
+    let conv = await db.select().from(conversations).where(
+      and(eq(conversations.dormId, dormId), eq(conversations.studentId, targetStudentId))
+    ).get();
+
+    if (!conv) {
+      const result = await db.insert(conversations).values({
+        dormId,
+        studentId: targetStudentId,
+        ownerId: userId,
+      }).returning();
+      conv = result[0]!;
+    }
+
+    if (initialMessage) {
+      await db.insert(messages).values({
+        conversationId: conv.id,
+        senderId: userId,
+        content: initialMessage,
+        isRead: false,
+      });
+      await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conv.id));
+    }
+
+    return res.status(201).json(await serializeConversation(conv, userId));
+  }
+
+  // Flow 1: Student initiates conversation about an owner's dorm
+  if (!initialMessage) {
+    res.status(400).json({ error: "Validation error", message: "initialMessage is required" });
     return;
   }
 

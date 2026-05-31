@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -83,6 +84,7 @@ export default function EditProfileScreen() {
     user?.emergencyContactPhone ?? ""
   );
   const [bio, setBio] = useState(user?.bio ?? "");
+  const [phonePublic, setPhonePublic] = useState<boolean>(!!(user as any)?.phonePublic);
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl ?? null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
 
@@ -159,6 +161,7 @@ export default function EditProfileScreen() {
         emergencyContactName: emergencyContactName || undefined,
         emergencyContactPhone: emergencyContactPhone || undefined,
         bio: bio || undefined,
+        phonePublic: phonePublic as any,
       },
     });
   };
@@ -237,6 +240,25 @@ export default function EditProfileScreen() {
 
         <Field label="Full Name" value={fullName} onChange={setFullName} placeholder="Your full name" colors={colors} />
         <Field label="Phone Number" value={phone} onChange={setPhone} placeholder="+63 9XX XXX XXXX" keyboardType="phone-pad" colors={colors} />
+        {user?.role === "student" && (
+          <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+            <View style={styles.toggleInfo}>
+              <Feather name={phonePublic ? "eye" : "eye-off"} size={16} color={phonePublic ? "#10b981" : colors.mutedForeground} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Show number publicly</Text>
+                <Text style={[styles.toggleSub, { color: colors.mutedForeground }]}>
+                  {phonePublic ? "Your phone number is visible on your public profile" : "Your phone number is hidden from your public profile"}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={phonePublic}
+              onValueChange={setPhonePublic}
+              trackColor={{ false: colors.border, true: "#10b981" }}
+              thumbColor="#fff"
+            />
+          </View>
+        )}
         <Field
           label="Email Address"
           value={user?.email ?? ""}
@@ -378,6 +400,19 @@ const styles = StyleSheet.create({
   infoRowDivider: { width: 1 },
   infoRowLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.5 },
   infoRowValue: { fontSize: 14, fontWeight: "700" },
+
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  toggleInfo: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  toggleLabel: { fontSize: 14, fontWeight: "600" },
+  toggleSub: { fontSize: 12, marginTop: 1 },
 
   saveFooterBtn: {
     flexDirection: "row",

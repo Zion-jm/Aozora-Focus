@@ -21,6 +21,7 @@ function formatUser(user: typeof users.$inferSelect) {
     emergencyContactName: user.emergencyContactName ?? null,
     emergencyContactPhone: user.emergencyContactPhone ?? null,
     bio: user.bio ?? null,
+    phonePublic: user.phonePublic ?? false,
     createdAt: user.createdAt,
   };
 }
@@ -30,6 +31,7 @@ router.put("/users/me", requireAuth, async (req, res) => {
     fullName, phone, avatarUrl,
     birthday, universityOrWorkplace,
     emergencyContactName, emergencyContactPhone, bio,
+    phonePublic,
   } = req.body;
   const userId = req.user!.id;
 
@@ -42,6 +44,7 @@ router.put("/users/me", requireAuth, async (req, res) => {
   if (emergencyContactName !== undefined) updates.emergencyContactName = emergencyContactName;
   if (emergencyContactPhone !== undefined) updates.emergencyContactPhone = emergencyContactPhone;
   if (bio !== undefined) updates.bio = bio;
+  if (phonePublic !== undefined) updates.phonePublic = phonePublic ? 1 : 0;
 
   const result = await db.update(users).set(updates).where(eq(users.id, userId)).returning();
   res.json(formatUser(result[0]!));
@@ -97,6 +100,14 @@ router.get("/users/:userId", async (req, res) => {
     return;
   }
 
+  // Phone visibility rules:
+  // - Owners always show phone (they want to be reachable)
+  // - Students show phone only if phonePublic is enabled
+  // - Admins never show phone
+  const showPhone =
+    user.role === "owner" ||
+    (user.role === "student" && !!user.phonePublic);
+
   res.json({
     id: user.id,
     fullName: user.fullName,
@@ -106,7 +117,8 @@ router.get("/users/:userId", async (req, res) => {
     bio: user.bio ?? null,
     universityOrWorkplace: user.universityOrWorkplace ?? null,
     createdAt: user.createdAt,
-    phone: user.role === "owner" ? (user.phone ?? null) : null,
+    phone: showPhone ? (user.phone ?? null) : null,
+    phonePublic: user.phonePublic ?? false,
   });
 });
 
