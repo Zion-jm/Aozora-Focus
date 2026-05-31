@@ -247,11 +247,16 @@ export default function AdminConversationScreen() {
 
       {/* Warning banner for non-admins on a warning conv */}
       {!isAdmin && conversationType === "warning" && (
-        <View style={[styles.warningBanner, { backgroundColor: "#ef444410", borderColor: "#ef444430" }]}>
-          <Ionicons name="warning-outline" size={16} color="#ef4444" />
-          <Text style={styles.warningBannerText}>
-            This is an official message from the Aozora admin team.
-          </Text>
+        <View style={[styles.warningBanner, { backgroundColor: "#ef444415", borderColor: "#ef444440" }]}>
+          <View style={styles.warningBannerIcon}>
+            <Ionicons name="shield" size={18} color="#ef4444" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.warningBannerTitle}>Official Notice from Aozora Admin</Text>
+            <Text style={styles.warningBannerText}>
+              This is a one-way channel. You cannot reply to official notices.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -394,8 +399,10 @@ const styles = StyleSheet.create({
   warningBadgeText: { color: "#ef4444", fontSize: 11, fontWeight: "600" },
   supportBadge: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 },
   supportBadgeText: { fontSize: 11, fontWeight: "600" },
-  warningBanner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
-  warningBannerText: { flex: 1, fontSize: 13, color: "#ef4444", lineHeight: 18 },
+  warningBanner: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  warningBannerIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#ef444420", alignItems: "center", justifyContent: "center", marginTop: 1 },
+  warningBannerTitle: { fontSize: 13, fontWeight: "700", color: "#ef4444", marginBottom: 2 },
+  warningBannerText: { fontSize: 12, color: "#ef4444", lineHeight: 17, opacity: 0.85 },
   ticketBanner: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
   ticketBannerType: { fontSize: 11, fontWeight: "700", marginBottom: 1 },
   ticketBannerSubject: { fontSize: 13, fontWeight: "600" },

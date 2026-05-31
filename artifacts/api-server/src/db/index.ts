@@ -148,8 +148,7 @@ export function initializeDatabase() {
       user_id INTEGER NOT NULL REFERENCES users(id),
       conversation_type TEXT NOT NULL DEFAULT 'warning',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(admin_id, user_id)
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS admin_messages (
@@ -203,6 +202,38 @@ export function initializeDatabase() {
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }
+  }
+
+  // One-time migration: rebuild admin_conversations without UNIQUE(admin_id, user_id)
+  // so each support ticket can have its own isolated conversation thread.
+  const adminConvSql = (sqlite.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='admin_conversations'"
+  ).get() as any)?.sql ?? "";
+  if (adminConvSql.toUpperCase().includes("UNIQUE")) {
+    sqlite.pragma("foreign_keys = OFF");
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS admin_conversations_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      conversation_type TEXT NOT NULL DEFAULT 'warning',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      admin_deleted_at TEXT,
+      user_deleted_at TEXT,
+      closed_at TEXT,
+      admin_archived_at TEXT,
+      user_archived_at TEXT
+    )`);
+    sqlite.exec(`INSERT OR IGNORE INTO admin_conversations_new
+      SELECT id, admin_id, user_id,
+        COALESCE(conversation_type, 'warning'),
+        created_at, updated_at,
+        admin_deleted_at, user_deleted_at,
+        closed_at, admin_archived_at, user_archived_at
+      FROM admin_conversations`);
+    sqlite.exec(`DROP TABLE admin_conversations`);
+    sqlite.exec(`ALTER TABLE admin_conversations_new RENAME TO admin_conversations`);
+    sqlite.pragma("foreign_keys = ON");
   }
 
   // Migrate legacy 'noted' status → 'cancelled' (noted is no longer a valid status)

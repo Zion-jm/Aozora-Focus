@@ -304,7 +304,9 @@ export default function MessagesScreen() {
                         ]}
                         numberOfLines={1}
                       >
-                        {item.otherParticipant?.fullName || "Unknown"}
+                        {isSupport && item.ticket?.subject
+                          ? item.ticket.subject
+                          : item.otherParticipant?.fullName || "Unknown"}
                       </Text>
                       {isWarning && !isAdmin && (
                         <View style={[styles.adminBadge, { backgroundColor: "#f9731615" }]}>

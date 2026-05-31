@@ -63,24 +63,11 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
 
   const now = new Date().toISOString();
 
-  // Reuse existing conversation if one already exists (UNIQUE constraint on admin_id+user_id)
-  const existingConv = sqlite.prepare(
-    "SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ?"
-  ).get(adminId, userId) as any;
-
-  let convId: number | bigint;
-  if (existingConv) {
-    // Reset the conversation: set type to support and clear any closed_at so it's open again
-    sqlite.prepare(
-      "UPDATE admin_conversations SET conversation_type = 'support', closed_at = NULL, updated_at = ? WHERE id = ?"
-    ).run(now, existingConv.id);
-    convId = existingConv.id;
-  } else {
-    const convResult = sqlite.prepare(
-      "INSERT INTO admin_conversations (admin_id, user_id, conversation_type, created_at, updated_at) VALUES (?, ?, 'support', ?, ?)"
-    ).run(adminId, userId, now, now);
-    convId = convResult.lastInsertRowid;
-  }
+  // Each ticket gets its own isolated support thread — never reuse a previous conversation
+  const convResult = sqlite.prepare(
+    "INSERT INTO admin_conversations (admin_id, user_id, conversation_type, created_at, updated_at) VALUES (?, ?, 'support', ?, ?)"
+  ).run(adminId, userId, now, now);
+  const convId = convResult.lastInsertRowid;
 
   // Insert ticket
   const ticketResult = sqlite.prepare(

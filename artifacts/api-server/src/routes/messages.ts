@@ -402,7 +402,8 @@ router.post("/user/admin-conversation", requireAuth, async (req, res) => {
   });
 });
 
-// POST /admin/conversations — admin starts or retrieves existing conversation with a user
+// POST /admin/conversations — admin opens (or re-opens) the ONE warning thread for a user
+// Warning threads are one-per-admin-user-pair; support ticket threads are separate (created by tickets).
 router.post("/admin/conversations", requireAuth, requireRole("admin"), async (req, res) => {
   const { userId } = req.body;
   const adminId = req.user!.id;
@@ -418,13 +419,14 @@ router.post("/admin/conversations", requireAuth, requireRole("admin"), async (re
     return;
   }
 
+  // One warning thread per admin-user pair (application-level enforcement)
   let conv = sqlite.prepare(
-    "SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ?"
+    "SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ? AND conversation_type = 'warning'"
   ).get(adminId, userId) as any;
 
   if (!conv) {
     const result = sqlite.prepare(
-      "INSERT INTO admin_conversations (admin_id, user_id) VALUES (?, ?)"
+      "INSERT INTO admin_conversations (admin_id, user_id, conversation_type) VALUES (?, ?, 'warning')"
     ).run(adminId, userId);
     conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(result.lastInsertRowid) as any;
   }
