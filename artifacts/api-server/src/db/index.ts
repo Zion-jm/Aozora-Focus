@@ -183,6 +183,11 @@ export function initializeDatabase() {
     try { sqlite.exec(sql); } catch { /* column already exists */ }
   }
 
+  // Migrate legacy 'noted' status → 'cancelled' (noted is no longer a valid status)
+  try {
+    sqlite.exec("UPDATE appointments SET status = 'cancelled' WHERE status = 'noted'");
+  } catch { /* ignore */ }
+
   seedDatabase(sqlite);
   seedReviewsIfEmpty(sqlite);
 }

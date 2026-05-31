@@ -22,16 +22,21 @@ const STATUS_COLORS: Record<string, string> = {
   approved: "#10b981",
   rejected: "#ef4444",
   cancelled: "#6b7280",
-  noted: "#8b5cf6",
+  completed: "#0ea5e9",
+  no_show: "#f97316",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
-  approved: "Approved",
+  approved: "Scheduled",
   rejected: "Rejected",
   cancelled: "Cancelled",
-  noted: "Noted",
+  completed: "Completed",
+  no_show: "Missed",
 };
+
+const HISTORY_STATUSES = ["rejected", "cancelled", "completed", "no_show"];
+const ACTIVE_STATUSES = ["pending", "approved"];
 
 type Tab = "active" | "history";
 
@@ -51,9 +56,9 @@ export default function AppointmentsScreen() {
 
   const tabData = useMemo(() => {
     if (tab === "active") {
-      return appointments.filter((a: any) => a.status === "pending" || a.status === "approved");
+      return appointments.filter((a: any) => ACTIVE_STATUSES.includes(a.status));
     }
-    return appointments.filter((a: any) => a.status === "rejected" || a.status === "cancelled" || a.status === "noted");
+    return appointments.filter((a: any) => HISTORY_STATUSES.includes(a.status));
   }, [appointments, tab]);
 
   const filtered = useMemo(() => {
@@ -81,7 +86,7 @@ export default function AppointmentsScreen() {
       ? "Pending visit requests will appear here"
       : "Book a visit to a dorm to get started"
     : user?.role === "owner"
-    ? "Approved or rejected visits will appear here"
+    ? "Completed and past visits will appear here"
     : "Your completed and past visits will appear here";
 
   return (
@@ -202,7 +207,7 @@ export default function AppointmentsScreen() {
                       {item.preferredDate} at {item.preferredTime}
                     </Text>
                   </View>
-                  {tab === "history" && item.status === "approved" && (
+                  {tab === "history" && item.status === "completed" && (
                     <View style={styles.reviewHint}>
                       <Feather name="edit-3" size={11} color={colors.primary} />
                       <Text style={[styles.reviewHintText, { color: colors.primary }]}>

@@ -29,7 +29,6 @@ const STATUS_COLORS: Record<string, string> = {
   approved: "#10b981",
   rejected: "#ef4444",
   cancelled: "#6b7280",
-  noted: "#8b5cf6",
   completed: "#0ea5e9",
   no_show: "#f97316",
 };
@@ -39,7 +38,6 @@ const STATUS_ICONS: Record<string, string> = {
   approved: "check-circle",
   rejected: "x-circle",
   cancelled: "slash",
-  noted: "check-square",
   completed: "award",
   no_show: "user-x",
 };
@@ -89,12 +87,14 @@ export default function AppointmentDetailScreen() {
   const isPending = appt.status === "pending";
   const isCompleted = appt.status === "completed";
   const isNoShow = appt.status === "no_show";
+  const isRejected = appt.status === "rejected";
 
   const statusLabel =
     appt.status === "cancelled" ? "Cancelled"
-    : appt.status === "noted" ? "Noted by Owner"
-    : appt.status === "no_show" ? "No-Show"
+    : appt.status === "no_show" ? "Missed"
     : appt.status === "completed" ? "Visit Completed"
+    : appt.status === "approved" ? "Scheduled"
+    : appt.status === "rejected" ? "Rejected"
     : appt.status.charAt(0).toUpperCase() + appt.status.slice(1);
 
   return (
@@ -114,12 +114,22 @@ export default function AppointmentDetailScreen() {
           <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
           {isCancelled && user?.role === "student" && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
-              Waiting for the owner to acknowledge
+              You cancelled this visit
             </Text>
           )}
           {isCancelled && user?.role === "owner" && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
-              Student cancelled this visit
+              The student cancelled this visit
+            </Text>
+          )}
+          {isRejected && user?.role === "student" && (
+            <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
+              The owner declined this visit request
+            </Text>
+          )}
+          {isRejected && user?.role === "owner" && (
+            <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
+              You declined this visit request
             </Text>
           )}
           {isApproved && user?.role === "student" && (
@@ -129,7 +139,7 @@ export default function AppointmentDetailScreen() {
           )}
           {isApproved && user?.role === "owner" && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
-              After the visit, mark it as completed or record a no-show below
+              After the visit, mark it as completed or record as not shown below
             </Text>
           )}
           {isNoShow && (
@@ -255,7 +265,7 @@ export default function AppointmentDetailScreen() {
           </View>
         )}
 
-        {/* Owner actions: mark completed / no-show (approved only) */}
+        {/* Owner actions: mark completed / not shown (approved only) */}
         {user?.role === "owner" && isApproved && (
           <View style={[styles.outcomeBox, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
             <View style={styles.outcomeHeader}>
@@ -263,7 +273,7 @@ export default function AppointmentDetailScreen() {
               <Text style={[styles.outcomeTitle, { color: colors.mutedForeground }]}>RECORD VISIT OUTCOME</Text>
             </View>
             <Text style={[styles.outcomeHint, { color: colors.mutedForeground }]}>
-              After the visit date, record the outcome to unlock the review form.
+              After the visit, record the outcome to unlock the review form.
             </Text>
             <View style={styles.actions}>
               <TouchableOpacity
@@ -271,7 +281,7 @@ export default function AppointmentDetailScreen() {
                 onPress={() =>
                   Alert.alert(
                     "Mark as Completed?",
-                    "This confirms the student attended their visit. They will be able to leave a review.",
+                    "This confirms the student attended their visit. Both of you will be able to leave a review.",
                     [
                       { text: "Cancel", style: "cancel" },
                       {
@@ -296,12 +306,12 @@ export default function AppointmentDetailScreen() {
                 style={[styles.actionBtn, { backgroundColor: "#f97316", borderRadius: colors.radius, flex: 1 }]}
                 onPress={() =>
                   Alert.alert(
-                    "Mark as No-Show?",
-                    "This records that the student did not attend. The review form will remain locked.",
+                    "Mark as Not Shown?",
+                    "This records that the student did not attend the visit. The booking will be moved to history.",
                     [
                       { text: "Cancel", style: "cancel" },
                       {
-                        text: "Mark No-Show",
+                        text: "Mark Not Shown",
                         style: "destructive",
                         onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "no_show" } }),
                       },
@@ -315,43 +325,12 @@ export default function AppointmentDetailScreen() {
                 ) : (
                   <>
                     <Feather name="user-x" size={18} color="#fff" />
-                    <Text style={styles.actionBtnText}>No-Show</Text>
+                    <Text style={styles.actionBtnText}>Not Shown</Text>
                   </>
                 )}
               </TouchableOpacity>
             </View>
           </View>
-        )}
-
-        {/* Owner action: mark as noted (when student cancelled) */}
-        {user?.role === "owner" && isCancelled && (
-          <TouchableOpacity
-            style={[styles.notedBtn, { backgroundColor: "#8b5cf6" + "18", borderColor: "#8b5cf6" + "50", borderRadius: colors.radius }]}
-            onPress={() =>
-              Alert.alert(
-                "Mark as Noted?",
-                "This acknowledges that you've seen the cancellation.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Mark as Noted",
-                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "noted" } }),
-                  },
-                ]
-              )
-            }
-            disabled={update.isPending}
-            activeOpacity={0.8}
-          >
-            {update.isPending ? (
-              <ActivityIndicator size="small" color="#8b5cf6" />
-            ) : (
-              <>
-                <Feather name="check-square" size={18} color="#8b5cf6" />
-                <Text style={[styles.notedBtnText, { color: "#8b5cf6" }]}>Mark as Noted</Text>
-              </>
-            )}
-          </TouchableOpacity>
         )}
 
         {/* Student action: cancel (pending or approved only) */}
@@ -386,12 +365,12 @@ export default function AppointmentDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {/* No-show notice — review is permanently locked */}
+        {/* Missed notice — reviews are locked */}
         {isNoShow && (
           <View style={[styles.lockedNotice, { backgroundColor: "#f9731610", borderColor: "#f9731640", borderRadius: colors.radius }]}>
             <Feather name="lock" size={16} color="#f97316" />
             <Text style={[styles.lockedNoticeText, { color: "#f97316" }]}>
-              Reviews are not available for no-show visits
+              Reviews are not available for missed visits
             </Text>
           </View>
         )}
@@ -450,8 +429,6 @@ const styles = StyleSheet.create({
   outcomeHint: { fontSize: 13, lineHeight: 18 },
   cancelBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderWidth: 1, marginTop: 4 },
   cancelBtnText: { fontSize: 15, fontWeight: "600" },
-  notedBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderWidth: 1, marginTop: 4 },
-  notedBtnText: { fontSize: 15, fontWeight: "700" },
   lockedNotice: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1 },
   lockedNoticeText: { fontSize: 14, fontWeight: "600", flex: 1 },
   divider: { height: 1, marginVertical: 8 },

@@ -14,7 +14,6 @@ export const AppointmentStatus = {
   approved: 'approved',
   rejected: 'rejected',
   cancelled: 'cancelled',
-  noted: 'noted',
   completed: 'completed',
   no_show: 'no_show',
 } as const;

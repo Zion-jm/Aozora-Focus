@@ -168,17 +168,7 @@ router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
       res.status(400).json({ error: "Cannot cancel", message: "Only pending or approved appointments can be cancelled" });
       return;
     }
-  // Owners can mark a cancelled appointment as noted
-  } else if (status === "noted") {
-    if (user.role !== "owner" || dorm?.ownerId !== user.id) {
-      res.status(403).json({ error: "Forbidden", message: "Only the dorm owner can mark as noted" });
-      return;
-    }
-    if (appt.status !== "cancelled") {
-      res.status(400).json({ error: "Cannot note", message: "Only cancelled appointments can be marked as noted" });
-      return;
-    }
-  // Owners can mark an approved appointment as completed or no_show after the visit date
+  // Owners can mark an approved appointment as completed or no_show
   } else if (status === "completed" || status === "no_show") {
     if (user.role !== "owner" || dorm?.ownerId !== user.id) {
       res.status(403).json({ error: "Forbidden", message: "Only the dorm owner can mark a visit outcome" });
