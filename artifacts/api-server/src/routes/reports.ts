@@ -143,6 +143,28 @@ router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), (req, res)
   res.json({ success: true });
 });
 
+router.get("/admin/users/:userId/warnings", requireAuth, requireRole("admin"), (req, res) => {
+  const userId = parseInt(req.params["userId"]!);
+
+  const allWarned = sqlite.prepare(`
+    SELECT
+      r.id, r.target_type, r.target_id, r.reason, r.details,
+      r.status, r.warned_at, r.created_at,
+      u.full_name AS reporter_name
+    FROM reports r
+    LEFT JOIN users u ON r.reporter_id = u.id
+    WHERE r.warned_at IS NOT NULL
+    ORDER BY r.warned_at DESC
+  `).all() as any[];
+
+  const warnings = allWarned.filter((row) => {
+    const resolved = resolveTargetUserId(row.target_type, row.target_id);
+    return resolved === userId;
+  });
+
+  res.json({ warnings, total: warnings.length });
+});
+
 router.post("/admin/reports/:id/warn", requireAuth, requireRole("admin"), (req, res) => {
   const reportId = parseInt(req.params["id"]!);
   const adminId = (req as any).user.id;

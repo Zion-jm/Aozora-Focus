@@ -15,9 +15,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 import {
   useAdminGetUserDetail,
   useAdminReviewVerification,
@@ -26,6 +27,8 @@ import {
   getAdminGetUsersQueryKey,
   getAdminGetVerificationsQueryKey,
 } from "@workspace/api-client-react";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -71,6 +74,7 @@ export default function AdminUserDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { token } = useAuth();
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const uid = parseInt(userId ?? "0");
 
@@ -82,6 +86,18 @@ export default function AdminUserDetailScreen() {
     query: { queryKey: getAdminGetUserDetailQueryKey(uid) },
   });
   const user = data as any;
+
+  const { data: warningsData } = useQuery({
+    queryKey: ["adminUserWarnings", uid],
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/api/admin/users/${uid}/warnings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+    enabled: !!token && !!uid,
+  });
+  const warnings: any[] = warningsData?.warnings ?? [];
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: getAdminGetUserDetailQueryKey(uid) });
@@ -434,6 +450,68 @@ export default function AdminUserDetailScreen() {
             <Text style={[{ color: colors.mutedForeground }]}>No verification records</Text>
           </View>
         )}
+
+        {/* Warning history */}
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 4 }]}>
+          WARNING HISTORY
+          {warnings.length > 0 ? (
+            <Text style={{ color: "#f59e0b" }}> · {warnings.length}</Text>
+          ) : null}
+        </Text>
+
+        {warnings.length === 0 ? (
+          <View style={[styles.noVerif, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+            <Feather name="check-circle" size={28} color={colors.mutedForeground} />
+            <Text style={[{ color: colors.mutedForeground, fontSize: 13 }]}>No warnings issued</Text>
+          </View>
+        ) : (
+          warnings.map((w: any) => (
+            <View
+              key={w.id}
+              style={[styles.warnCard, { backgroundColor: colors.card, borderColor: "#f59e0b60", borderRadius: colors.radius }]}
+            >
+              {/* Header row */}
+              <View style={styles.warnHeader}>
+                <View style={[styles.warnIconWrap, { backgroundColor: "#f59e0b18" }]}>
+                  <Feather name="alert-triangle" size={14} color="#f59e0b" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.warnReason, { color: colors.foreground }]}>{w.reason}</Text>
+                  <Text style={[styles.warnDate, { color: colors.mutedForeground }]}>
+                    Warned on {new Date(w.warned_at).toLocaleDateString("en-PH", {
+                      year: "numeric", month: "short", day: "numeric",
+                      hour: "2-digit", minute: "2-digit",
+                    })}
+                  </Text>
+                </View>
+                <View style={[styles.warnTypePill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <Text style={[styles.warnTypeText, { color: colors.mutedForeground }]}>
+                    {w.target_type.charAt(0).toUpperCase() + w.target_type.slice(1)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Report details */}
+              {w.details ? (
+                <View style={[styles.warnDetails, { backgroundColor: "#f59e0b0a", borderColor: "#f59e0b25" }]}>
+                  <Text style={[styles.warnDetailsText, { color: colors.mutedForeground }]}>
+                    "{w.details}"
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Reporter */}
+              {w.reporter_name ? (
+                <View style={styles.warnReporter}>
+                  <Feather name="user" size={11} color={colors.mutedForeground} />
+                  <Text style={[styles.warnReporterText, { color: colors.mutedForeground }]}>
+                    Reported by <Text style={{ fontWeight: "600", color: colors.foreground }}>{w.reporter_name}</Text>
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ))
+        )}
       </ScrollView>
 
       {/* Full-screen photo viewer */}
@@ -535,6 +613,18 @@ const styles = StyleSheet.create({
   reviewNoteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
   reviewNoteText: { fontSize: 13 },
   noVerif: { borderWidth: 1, padding: 30, alignItems: "center", gap: 10 },
+
+  warnCard: { borderWidth: 1.5, padding: 14, gap: 10 },
+  warnHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  warnIconWrap: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  warnReason: { fontSize: 14, fontWeight: "700", flexShrink: 1 },
+  warnDate: { fontSize: 12, marginTop: 2 },
+  warnTypePill: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  warnTypeText: { fontSize: 11, fontWeight: "600" },
+  warnDetails: { borderWidth: 1, borderRadius: 8, padding: 10 },
+  warnDetailsText: { fontSize: 13, fontStyle: "italic", lineHeight: 18 },
+  warnReporter: { flexDirection: "row", alignItems: "center", gap: 5 },
+  warnReporterText: { fontSize: 12 },
 
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
   modalClose: { position: "absolute", top: 50, right: 20, width: 40, height: 40, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20 },
