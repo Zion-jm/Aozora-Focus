@@ -45,6 +45,8 @@ function RootLayoutNav() {
       <Stack.Screen name="admin/users" />
       <Stack.Screen name="admin/dorms" />
       <Stack.Screen name="admin/verifications" />
+      <Stack.Screen name="admin/rejected-listings" />
+      <Stack.Screen name="admin/suspended-users" />
     </Stack>
   );
 }

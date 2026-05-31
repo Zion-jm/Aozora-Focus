@@ -120,6 +120,20 @@ export default function AdminDashboard() {
                 onPress={() => router.push("/admin/reports")}
                 colors={colors}
               />
+              <NavCard
+                icon="x-circle"
+                label="Rejected Listings"
+                desc="Restore turned-down dorm listings"
+                onPress={() => router.push("/admin/rejected-listings")}
+                colors={colors}
+              />
+              <NavCard
+                icon="user-x"
+                label="Suspended Users"
+                desc="View and unsuspend blocked accounts"
+                onPress={() => router.push("/admin/suspended-users")}
+                colors={colors}
+              />
             </View>
           </>
         )}
