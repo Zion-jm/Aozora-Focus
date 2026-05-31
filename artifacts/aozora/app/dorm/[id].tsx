@@ -21,6 +21,7 @@ import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { ReportModal } from "@/components/ReportModal";
+import { useQuery } from "@tanstack/react-query";
 import {
   getGetDormByIdQueryKey,
   useGetDormById,
@@ -34,6 +35,8 @@ import {
   useCreateConversation,
   getGetConversationsQueryKey,
 } from "@workspace/api-client-react";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const WEEK_DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTH_NAMES = [
@@ -208,17 +211,36 @@ export default function DormDetailScreen() {
     },
   });
 
+  const canBookKey = ["canBook", dormIdNum];
+  const { data: canBookData, refetch: refetchCanBook } = useQuery({
+    queryKey: canBookKey,
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/api/dorms/${dormIdNum}/can-book`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+    enabled: !!token && !!dormIdNum && user?.role === "student",
+  });
+  const canBook: boolean = canBookData?.canBook ?? true;
+  const canBookReason: string | undefined = canBookData?.reason;
+  const activeApptStatus: string | undefined = canBookData?.appointmentStatus;
+
   const createAppt = useCreateAppointment({
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getGetAppointmentsQueryKey() });
+        refetchCanBook();
         setShowBookModal(false);
         setSelectedDate("");
         setSelectedTime("");
         setVisitMessage("");
         Alert.alert("Visit Requested!", "The owner will review your request.");
       },
-      onError: () => Alert.alert("Error", "Could not book visit. Try again."),
+      onError: (err: any) => {
+        const msg = err?.response?.data?.message ?? err?.message ?? "Could not book visit. Try again.";
+        Alert.alert("Booking Failed", msg);
+      },
     },
   });
 
@@ -428,13 +450,33 @@ export default function DormDetailScreen() {
             <Feather name="message-circle" size={18} color={colors.primary} />
             <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Message</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
-            onPress={() => setShowBookModal(true)}
-          >
-            <Feather name="calendar" size={18} color="#fff" />
-            <Text style={styles.primaryBtnText}>Book a Visit</Text>
-          </TouchableOpacity>
+          {canBook ? (
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+              onPress={() => setShowBookModal(true)}
+            >
+              <Feather name="calendar" size={18} color="#fff" />
+              <Text style={styles.primaryBtnText}>Book a Visit</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: activeApptStatus === "approved" ? "#10b981" : "#f59e0b", borderRadius: colors.radius, opacity: 0.85 }]}
+              onPress={() => Alert.alert(
+                activeApptStatus === "approved" ? "Visit Scheduled" : "Visit Pending",
+                canBookReason ?? "You already have an active booking for this dorm.",
+                [
+                  { text: "View Booking", onPress: () => router.push("/(tabs)/appointments") },
+                  { text: "OK", style: "cancel" },
+                ]
+              )}
+              activeOpacity={0.85}
+            >
+              <Feather name={activeApptStatus === "approved" ? "check-circle" : "clock"} size={18} color="#fff" />
+              <Text style={styles.primaryBtnText}>
+                {activeApptStatus === "approved" ? "Visit Scheduled" : "Visit Pending"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 

@@ -106,12 +106,53 @@ router.get("/appointments", requireAuth, async (req, res) => {
   res.json({ appointments: enriched, total: enriched.length });
 });
 
+router.get("/dorms/:dormId/can-book", requireAuth, (req, res) => {
+  const user = req.user!;
+  const dormId = parseInt(req.params["dormId"]!);
+
+  if (user.role !== "student") {
+    res.json({ canBook: false, reason: "Only students can book visits" });
+    return;
+  }
+
+  const active = sqlite.prepare(
+    "SELECT id, status FROM appointments WHERE student_id = ? AND dorm_id = ? AND status IN ('pending', 'approved') LIMIT 1"
+  ).get(user.id, dormId) as any;
+
+  if (active) {
+    const label = active.status === "approved" ? "scheduled" : "pending";
+    res.json({
+      canBook: false,
+      reason: `You already have a ${label} visit for this dorm`,
+      appointmentId: active.id,
+      appointmentStatus: active.status,
+    });
+    return;
+  }
+
+  res.json({ canBook: true });
+});
+
 router.post("/appointments", requireAuth, async (req, res) => {
   const { dormId, preferredDate, preferredTime, message } = req.body;
 
   if (!dormId || !preferredDate || !preferredTime) {
     res.status(400).json({ error: "Validation error", message: "dormId, preferredDate, preferredTime are required" });
     return;
+  }
+
+  if (req.user!.role === "student") {
+    const active = sqlite.prepare(
+      "SELECT id FROM appointments WHERE student_id = ? AND dorm_id = ? AND status IN ('pending', 'approved') LIMIT 1"
+    ).get(req.user!.id, dormId);
+
+    if (active) {
+      res.status(409).json({
+        error: "Active booking exists",
+        message: "You already have a pending or scheduled visit for this dorm. Please wait until it is completed, cancelled, or resolved before booking again.",
+      });
+      return;
+    }
   }
 
   const result = await db.insert(appointments).values({
