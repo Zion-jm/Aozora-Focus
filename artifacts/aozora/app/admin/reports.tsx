@@ -50,13 +50,15 @@ function formatDate(dateStr: string) {
   });
 }
 
+type ActionType = "warn" | "suspend" | "status";
+
 export default function AdminReportsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<Filter>("pending");
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [actionLoading, setActionLoading] = useState<Record<string, ActionType | null>>({});
 
   const reportsKey = ["adminReports", filter];
 
@@ -74,8 +76,12 @@ export default function AdminReportsScreen() {
 
   const reports: any[] = data?.reports ?? [];
 
+  const setLoading = (reportId: number, action: ActionType | null) => {
+    setActionLoading((prev) => ({ ...prev, [reportId]: action }));
+  };
+
   const updateStatus = async (reportId: number, newStatus: string) => {
-    setUpdatingId(reportId);
+    setLoading(reportId, "status");
     try {
       const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}`, {
         method: "PATCH",
@@ -90,14 +96,82 @@ export default function AdminReportsScreen() {
     } catch {
       Alert.alert("Error", "Could not update report status.");
     } finally {
-      setUpdatingId(null);
+      setLoading(reportId, null);
     }
+  };
+
+  const sendWarning = async (reportId: number, targetUserName: string | null) => {
+    const name = targetUserName ?? "this user";
+    Alert.alert(
+      "Send Warning",
+      `Send an official warning message to ${name}? The report details will be included automatically and the report will be marked as reviewed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Send Warning",
+          onPress: async () => {
+            setLoading(reportId, "warn");
+            try {
+              const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/warn`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error ?? "Failed to send warning");
+              }
+              qc.invalidateQueries({ queryKey: ["adminReports"] });
+              Alert.alert("Warning Sent", `A warning message has been sent to ${name}.`);
+            } catch (e: any) {
+              Alert.alert("Error", e.message ?? "Could not send warning.");
+            } finally {
+              setLoading(reportId, null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const suspendUser = async (reportId: number, targetUserName: string | null) => {
+    const name = targetUserName ?? "this user";
+    Alert.alert(
+      "Suspend User",
+      `Suspend ${name}'s account? They will immediately lose access to Aozora. The report will be marked as reviewed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Suspend",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(reportId, "suspend");
+            try {
+              const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/suspend`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error ?? "Failed to suspend user");
+              }
+              qc.invalidateQueries({ queryKey: ["adminReports"] });
+              Alert.alert("User Suspended", `${name}'s account has been suspended.`);
+            } catch (e: any) {
+              Alert.alert("Error", e.message ?? "Could not suspend user.");
+            } finally {
+              setLoading(reportId, null);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderReport = ({ item }: { item: any }) => {
     const iconName = (TARGET_ICONS[item.target_type] ?? "alert-circle") as any;
     const statusColor = STATUS_COLORS[item.status] ?? colors.mutedForeground;
-    const isUpdating = updatingId === item.id;
+    const currentAction = actionLoading[item.id] ?? null;
+    const isAnyLoading = currentAction !== null;
 
     return (
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -109,6 +183,11 @@ export default function AdminReportsScreen() {
           <View style={styles.cardHeaderText}>
             <Text style={[styles.targetLabel, { color: colors.foreground }]}>
               {item.target_type.charAt(0).toUpperCase() + item.target_type.slice(1)} #{item.target_id}
+              {item.target_user_name ? (
+                <Text style={{ color: colors.mutedForeground, fontWeight: "400" }}>
+                  {" "}· {item.target_user_name}
+                </Text>
+              ) : null}
             </Text>
             <Text style={[styles.reportDate, { color: colors.mutedForeground }]}>
               {formatDate(item.created_at)}
@@ -146,15 +225,48 @@ export default function AdminReportsScreen() {
           </Text>
         ) : null}
 
-        {/* Actions */}
+        {/* Quick action row — always visible */}
+        <View style={[styles.quickActions, { borderTopColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.quickBtn, { backgroundColor: "#f59e0b18", borderColor: "#f59e0b40" }]}
+            onPress={() => sendWarning(item.id, item.target_user_name)}
+            disabled={isAnyLoading}
+          >
+            {currentAction === "warn" ? (
+              <ActivityIndicator size="small" color="#f59e0b" />
+            ) : (
+              <>
+                <Feather name="alert-triangle" size={14} color="#f59e0b" />
+                <Text style={[styles.quickBtnText, { color: "#f59e0b" }]}>Warn</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickBtn, { backgroundColor: "#ef444418", borderColor: "#ef444440" }]}
+            onPress={() => suspendUser(item.id, item.target_user_name)}
+            disabled={isAnyLoading}
+          >
+            {currentAction === "suspend" ? (
+              <ActivityIndicator size="small" color="#ef4444" />
+            ) : (
+              <>
+                <Feather name="slash" size={14} color="#ef4444" />
+                <Text style={[styles.quickBtnText, { color: "#ef4444" }]}>Suspend</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Status actions */}
         {item.status === "pending" && (
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#10b98118", borderColor: "#10b98140" }]}
               onPress={() => updateStatus(item.id, "reviewed")}
-              disabled={isUpdating}
+              disabled={isAnyLoading}
             >
-              {isUpdating ? (
+              {currentAction === "status" ? (
                 <ActivityIndicator size="small" color="#10b981" />
               ) : (
                 <>
@@ -166,7 +278,7 @@ export default function AdminReportsScreen() {
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
               onPress={() => updateStatus(item.id, "dismissed")}
-              disabled={isUpdating}
+              disabled={isAnyLoading}
             >
               <Feather name="x" size={14} color={colors.mutedForeground} />
               <Text style={[styles.actionBtnText, { color: colors.mutedForeground }]}>Dismiss</Text>
@@ -177,6 +289,7 @@ export default function AdminReportsScreen() {
           <TouchableOpacity
             onPress={() => updateStatus(item.id, "pending")}
             style={styles.reopenBtn}
+            disabled={isAnyLoading}
           >
             <Text style={[styles.reopenText, { color: colors.mutedForeground }]}>Reopen as pending</Text>
           </TouchableOpacity>
@@ -304,7 +417,24 @@ const styles = StyleSheet.create({
   },
   reasonText: { fontSize: 13, fontWeight: "600", flex: 1 },
   details: { fontSize: 13, fontStyle: "italic", lineHeight: 18, paddingHorizontal: 2 },
-  actions: { flexDirection: "row", gap: 8, marginTop: 2 },
+  quickActions: {
+    flexDirection: "row",
+    gap: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  quickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  quickBtnText: { fontSize: 13, fontWeight: "700" },
+  actions: { flexDirection: "row", gap: 8 },
   actionBtn: {
     flex: 1,
     flexDirection: "row",

@@ -4,6 +4,21 @@ import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router = Router();
 
+function resolveTargetUserId(targetType: string, targetId: number): number | null {
+  if (targetType === "user") return targetId;
+  if (targetType === "dorm") {
+    const dorm = sqlite.prepare("SELECT owner_id FROM dorms WHERE id = ?").get(targetId) as any;
+    return dorm?.owner_id ?? null;
+  }
+  if (targetType === "review") {
+    const dr = sqlite.prepare("SELECT reviewer_id FROM dorm_reviews WHERE id = ?").get(targetId) as any;
+    if (dr) return dr.reviewer_id;
+    const ur = sqlite.prepare("SELECT reviewer_id FROM user_reviews WHERE id = ?").get(targetId) as any;
+    return ur?.reviewer_id ?? null;
+  }
+  return null;
+}
+
 const VALID_REASONS = [
   "Scam or Fraud",
   "Harassment",
@@ -87,8 +102,21 @@ router.get("/admin/reports", requireAuth, requireRole("admin"), (req, res) => {
   }
   query += " ORDER BY r.created_at DESC";
 
-  const rows = sqlite.prepare(query).all(...params);
-  res.json({ reports: rows, total: rows.length });
+  const rows = sqlite.prepare(query).all(...params) as any[];
+
+  const enriched = rows.map((row) => {
+    const userId = resolveTargetUserId(row.target_type, row.target_id);
+    const targetUser = userId
+      ? (sqlite.prepare("SELECT id, full_name FROM users WHERE id = ?").get(userId) as any)
+      : null;
+    return {
+      ...row,
+      target_user_id: targetUser?.id ?? null,
+      target_user_name: targetUser?.full_name ?? null,
+    };
+  });
+
+  res.json({ reports: enriched, total: enriched.length });
 });
 
 router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), (req, res) => {
@@ -113,6 +141,136 @@ router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), (req, res)
     .run(status, adminNote?.trim() || null, reportId);
 
   res.json({ success: true });
+});
+
+router.post("/admin/reports/:id/warn", requireAuth, requireRole("admin"), (req, res) => {
+  const reportId = parseInt(req.params["id"]!);
+  const adminId = (req as any).user.id;
+
+  const report = sqlite
+    .prepare("SELECT * FROM reports WHERE id = ?")
+    .get(reportId) as any;
+  if (!report) {
+    res.status(404).json({ error: "Report not found" });
+    return;
+  }
+
+  const targetUserId = resolveTargetUserId(report.target_type, report.target_id);
+  if (!targetUserId) {
+    res.status(422).json({ error: "Could not resolve target user for this report" });
+    return;
+  }
+
+  const targetUser = sqlite
+    .prepare("SELECT id, full_name FROM users WHERE id = ?")
+    .get(targetUserId) as any;
+  if (!targetUser) {
+    res.status(404).json({ error: "Target user not found" });
+    return;
+  }
+
+  let conv = sqlite
+    .prepare("SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ?")
+    .get(adminId, targetUserId) as any;
+
+  if (!conv) {
+    const result = sqlite
+      .prepare("INSERT INTO admin_conversations (admin_id, user_id) VALUES (?, ?)")
+      .run(adminId, targetUserId);
+    conv = sqlite
+      .prepare("SELECT * FROM admin_conversations WHERE id = ?")
+      .get(result.lastInsertRowid) as any;
+  } else {
+    sqlite
+      .prepare("UPDATE admin_conversations SET admin_deleted_at = NULL WHERE id = ?")
+      .run(conv.id);
+  }
+
+  const detailLine = report.details ? `\nDetails: "${report.details}"` : "";
+  const warningMessage =
+    `⚠️ Official Warning from Aozora Admin\n\n` +
+    `We have reviewed a report filed against your account and found a violation of our community guidelines.\n\n` +
+    `Violation: ${report.reason}${detailLine}\n\n` +
+    `Please take note that repeated violations may result in permanent account suspension. ` +
+    `If you believe this warning was issued in error, please reply to this message to appeal.`;
+
+  const msgResult = sqlite
+    .prepare(
+      "INSERT INTO admin_messages (conversation_id, sender_id, content, is_read) VALUES (?, ?, ?, 0)"
+    )
+    .run(conv.id, adminId, warningMessage);
+
+  sqlite
+    .prepare("UPDATE admin_conversations SET updated_at = ? WHERE id = ?")
+    .run(new Date().toISOString(), conv.id);
+
+  sqlite
+    .prepare(
+      "UPDATE reports SET status = 'reviewed', updated_at = datetime('now') WHERE id = ?"
+    )
+    .run(reportId);
+
+  const msg = sqlite
+    .prepare("SELECT * FROM admin_messages WHERE id = ?")
+    .get(msgResult.lastInsertRowid) as any;
+
+  res.status(201).json({
+    conversationId: conv.id,
+    targetUserId,
+    targetUserName: targetUser.full_name,
+    message: {
+      id: msg.id,
+      content: msg.content,
+      createdAt: msg.created_at,
+    },
+  });
+});
+
+router.post("/admin/reports/:id/suspend", requireAuth, requireRole("admin"), (req, res) => {
+  const reportId = parseInt(req.params["id"]!);
+
+  const report = sqlite
+    .prepare("SELECT * FROM reports WHERE id = ?")
+    .get(reportId) as any;
+  if (!report) {
+    res.status(404).json({ error: "Report not found" });
+    return;
+  }
+
+  const targetUserId = resolveTargetUserId(report.target_type, report.target_id);
+  if (!targetUserId) {
+    res.status(422).json({ error: "Could not resolve target user for this report" });
+    return;
+  }
+
+  const targetUser = sqlite
+    .prepare("SELECT id, full_name, role FROM users WHERE id = ?")
+    .get(targetUserId) as any;
+  if (!targetUser) {
+    res.status(404).json({ error: "Target user not found" });
+    return;
+  }
+
+  if (targetUser.role === "admin") {
+    res.status(403).json({ error: "Cannot suspend an admin account" });
+    return;
+  }
+
+  sqlite
+    .prepare("UPDATE users SET is_suspended = 1, updated_at = ? WHERE id = ?")
+    .run(new Date().toISOString(), targetUserId);
+
+  sqlite
+    .prepare(
+      "UPDATE reports SET status = 'reviewed', updated_at = datetime('now') WHERE id = ?"
+    )
+    .run(reportId);
+
+  res.json({
+    targetUserId,
+    targetUserName: targetUser.full_name,
+    suspended: true,
+  });
 });
 
 export default router;
