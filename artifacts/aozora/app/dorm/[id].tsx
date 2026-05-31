@@ -10,6 +10,9 @@ import {
   Alert,
   Modal,
   TextInput,
+  useWindowDimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AntDesign, Feather, Ionicons } from "@expo/vector-icons";
@@ -170,10 +173,12 @@ function InlineCalendar({ selectedValue, onSelect, colors }: CalendarProps) {
 export default function DormDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_W } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, token } = useAuth();
   const qc = useQueryClient();
 
+  const [photoIndex, setPhotoIndex] = useState(0);
   const [showBookModal, setShowBookModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
@@ -278,20 +283,81 @@ export default function DormDetailScreen() {
     : (d.amenities || []);
   const canSubmit = !!selectedDate && !!selectedTime;
 
+  const photos: string[] = (() => {
+    const urls: string[] = [];
+    if (d.coverPhotoUrl) urls.push(d.coverPhotoUrl);
+    const extra: Array<{ url: string; order: number }> = (d.photos ?? []);
+    const sorted = [...extra].sort((a, b) => a.order - b.order);
+    for (const p of sorted) {
+      if (p.url && !urls.includes(p.url)) urls.push(p.url);
+    }
+    if (urls.length === 0) {
+      urls.push("https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800");
+    }
+    return urls;
+  })();
+
+  function handlePhotoScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+    setPhotoIndex(idx);
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}>
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: d.coverPhotoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800" }}
-            style={styles.coverImage}
-          />
+          {/* Swipeable photo carousel */}
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handlePhotoScroll}
+            scrollEventThrottle={16}
+            bounces={false}
+            style={{ width: SCREEN_W, height: 280 }}
+          >
+            {photos.map((url, i) => (
+              <Image
+                key={i}
+                source={{ uri: url }}
+                style={{ width: SCREEN_W, height: 280, backgroundColor: "#e2e8f0" }}
+                resizeMode="cover"
+              />
+            ))}
+          </ScrollView>
+
+          {/* Dot indicators */}
+          {photos.length > 1 && (
+            <View style={styles.dotsRow} pointerEvents="none">
+              {photos.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    i === photoIndex ? styles.dotActive : styles.dotInactive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Photo count pill */}
+          {photos.length > 1 && (
+            <View style={styles.countPill} pointerEvents="none">
+              <Feather name="image" size={11} color="#fff" />
+              <Text style={styles.countText}>{photoIndex + 1} / {photos.length}</Text>
+            </View>
+          )}
+
+          {/* Back button */}
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: colors.card }]}
             onPress={() => router.back()}
           >
             <Feather name="arrow-left" size={20} color={colors.foreground} />
           </TouchableOpacity>
+
+          {/* Report button */}
           {user && user.id !== (d as any)?.owner?.id && (
             <TouchableOpacity
               style={[styles.reportBtn, { backgroundColor: colors.card }]}
@@ -301,6 +367,8 @@ export default function DormDetailScreen() {
               <Feather name="flag" size={17} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
+
+          {/* Favorite button */}
           {user && (
             <TouchableOpacity
               style={[styles.favBtn, { backgroundColor: colors.card }]}
@@ -620,8 +688,13 @@ export default function DormDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  imageContainer: { position: "relative" },
-  coverImage: { width: "100%", height: 280, backgroundColor: "#e2e8f0" },
+  imageContainer: { position: "relative", height: 280, overflow: "hidden" },
+  dotsRow: { position: "absolute", bottom: 12, left: 0, right: 0, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 5 },
+  dot: { height: 6, borderRadius: 3 },
+  dotActive: { width: 18, backgroundColor: "#fff" },
+  dotInactive: { width: 6, backgroundColor: "rgba(255,255,255,0.5)" },
+  countPill: { position: "absolute", bottom: 12, right: 14, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
+  countText: { color: "#fff", fontSize: 12, fontWeight: "600" },
   backBtn: { position: "absolute", top: 48, left: 16, width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
   favBtn: { position: "absolute", top: 48, right: 16, width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
   reportBtn: { position: "absolute", top: 96, right: 16, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
