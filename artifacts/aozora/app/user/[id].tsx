@@ -323,14 +323,6 @@ export default function PublicProfileScreen() {
                 <View style={styles.metaRow}>
                   <Feather name="phone" size={14} color={colors.mutedForeground} />
                   <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{profile.phone}</Text>
-                  <TouchableOpacity
-                    onPress={handleCall}
-                    style={[styles.callChip, { backgroundColor: "#10b98118" }]}
-                    activeOpacity={0.75}
-                  >
-                    <Feather name="phone-call" size={13} color="#10b981" />
-                    <Text style={[styles.callChipText, { color: "#10b981" }]}>Call</Text>
-                  </TouchableOpacity>
                 </View>
               ) : null}
             </View>
@@ -340,7 +332,7 @@ export default function PublicProfileScreen() {
               <View style={styles.actionRow}>
                 {canMessage && (
                   <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: colors.primary, flex: canCall ? 1 : undefined, minWidth: 140 }]}
+                    style={[styles.actionBtn, { backgroundColor: colors.primary, flex: 1 }]}
                     onPress={handleMessage}
                     disabled={isMessaging}
                     activeOpacity={0.85}
@@ -357,7 +349,7 @@ export default function PublicProfileScreen() {
                 )}
                 {canCall && (
                   <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: "#10b981", flex: canMessage ? 1 : undefined, minWidth: 140 }]}
+                    style={[styles.actionBtn, { backgroundColor: "#10b981", flex: 1 }]}
                     onPress={handleCall}
                     activeOpacity={0.85}
                   >
