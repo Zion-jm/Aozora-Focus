@@ -176,6 +176,7 @@ export function initializeDatabase() {
     "ALTER TABLE users ADD COLUMN average_rating REAL",
     "ALTER TABLE users ADD COLUMN total_reviews INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE reports ADD COLUMN warned_at TEXT",
+    "ALTER TABLE reports ADD COLUMN taken_down_at TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }

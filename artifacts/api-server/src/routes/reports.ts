@@ -88,6 +88,7 @@ router.get("/admin/reports", requireAuth, requireRole("admin"), (req, res) => {
     SELECT
       r.id, r.target_type, r.target_id, r.reason, r.details,
       r.status, r.admin_note, r.created_at, r.updated_at,
+      r.warned_at, r.taken_down_at,
       u.id   AS reporter_id,
       u.full_name AS reporter_name,
       u.email AS reporter_email
@@ -109,10 +110,15 @@ router.get("/admin/reports", requireAuth, requireRole("admin"), (req, res) => {
     const targetUser = userId
       ? (sqlite.prepare("SELECT id, full_name FROM users WHERE id = ?").get(userId) as any)
       : null;
+    const targetDorm = row.target_type === "dorm"
+      ? (sqlite.prepare("SELECT id, name, status FROM dorms WHERE id = ?").get(row.target_id) as any)
+      : null;
     return {
       ...row,
       target_user_id: targetUser?.id ?? null,
       target_user_name: targetUser?.full_name ?? null,
+      target_dorm_name: targetDorm?.name ?? null,
+      target_dorm_status: targetDorm?.status ?? null,
     };
   });
 
@@ -245,6 +251,52 @@ router.post("/admin/reports/:id/warn", requireAuth, requireRole("admin"), (req, 
       content: msg.content,
       createdAt: msg.created_at,
     },
+  });
+});
+
+router.post("/admin/reports/:id/takedown", requireAuth, requireRole("admin"), (req, res) => {
+  const reportId = parseInt(req.params["id"]!);
+
+  const report = sqlite
+    .prepare("SELECT * FROM reports WHERE id = ?")
+    .get(reportId) as any;
+  if (!report) {
+    res.status(404).json({ error: "Report not found" });
+    return;
+  }
+
+  if (report.target_type !== "dorm") {
+    res.status(400).json({ error: "This action is only valid for dorm reports" });
+    return;
+  }
+
+  if (report.taken_down_at) {
+    res.status(409).json({ error: "Listing has already been taken down from this report" });
+    return;
+  }
+
+  const dorm = sqlite
+    .prepare("SELECT id, name, status FROM dorms WHERE id = ?")
+    .get(report.target_id) as any;
+  if (!dorm) {
+    res.status(404).json({ error: "Dorm not found" });
+    return;
+  }
+
+  sqlite
+    .prepare("UPDATE dorms SET status = 'taken_down', updated_at = ? WHERE id = ?")
+    .run(new Date().toISOString(), dorm.id);
+
+  sqlite
+    .prepare(
+      "UPDATE reports SET status = 'reviewed', taken_down_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
+    )
+    .run(reportId);
+
+  res.json({
+    dormId: dorm.id,
+    dormName: dorm.name,
+    takenDown: true,
   });
 });
 

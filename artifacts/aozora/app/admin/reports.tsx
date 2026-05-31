@@ -50,7 +50,7 @@ function formatDate(dateStr: string) {
   });
 }
 
-type ActionType = "warn" | "suspend" | "status";
+type ActionType = "warn" | "suspend" | "takedown" | "status";
 
 export default function AdminReportsScreen() {
   const colors = useColors();
@@ -133,6 +133,40 @@ export default function AdminReportsScreen() {
     );
   };
 
+  const takeDownListing = async (reportId: number, dormName: string | null) => {
+    const name = dormName ?? "this listing";
+    Alert.alert(
+      "Take Down Listing",
+      `Remove "${name}" from Aozora? The listing will be hidden from students immediately and the report will be marked as reviewed.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Take Down",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(reportId, "takedown");
+            try {
+              const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/takedown`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error ?? "Failed to take down listing");
+              }
+              qc.invalidateQueries({ queryKey: ["adminReports"] });
+              Alert.alert("Listing Removed", `"${name}" has been taken down and is no longer visible to students.`);
+            } catch (e: any) {
+              Alert.alert("Error", e.message ?? "Could not take down listing.");
+            } finally {
+              setLoading(reportId, null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const suspendUser = async (reportId: number, targetUserName: string | null) => {
     const name = targetUserName ?? "this user";
     Alert.alert(
@@ -174,6 +208,13 @@ export default function AdminReportsScreen() {
     const isAnyLoading = currentAction !== null;
     const isDismissed = item.status === "dismissed";
     const alreadyWarned = !!item.warned_at;
+    const alreadyTakenDown = !!item.taken_down_at;
+    const isDormReport = item.target_type === "dorm";
+
+    // Subtitle shown under the target ID
+    const targetSubtitle = isDormReport
+      ? item.target_dorm_name ?? null
+      : item.target_user_name ?? null;
 
     return (
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -185,12 +226,17 @@ export default function AdminReportsScreen() {
           <View style={styles.cardHeaderText}>
             <Text style={[styles.targetLabel, { color: colors.foreground }]}>
               {item.target_type.charAt(0).toUpperCase() + item.target_type.slice(1)} #{item.target_id}
-              {item.target_user_name ? (
+              {targetSubtitle ? (
                 <Text style={{ color: colors.mutedForeground, fontWeight: "400" }}>
-                  {" "}· {item.target_user_name}
+                  {" "}· {targetSubtitle}
                 </Text>
               ) : null}
             </Text>
+            {isDormReport && item.target_user_name ? (
+              <Text style={[styles.dormOwnerLine, { color: colors.mutedForeground }]}>
+                Owner: {item.target_user_name}
+              </Text>
+            ) : null}
             <Text style={[styles.reportDate, { color: colors.mutedForeground }]}>
               {formatDate(item.created_at)}
             </Text>
@@ -227,71 +273,121 @@ export default function AdminReportsScreen() {
           </Text>
         ) : null}
 
-        {/* Quick action row — always visible */}
+        {/* Quick action row — buttons differ by report type */}
         <View style={[styles.quickActions, { borderTopColor: colors.border }]}>
-          {/* Warn button — greyed out if already warned or report is dismissed */}
-          <TouchableOpacity
-            style={[
-              styles.quickBtn,
-              isDismissed || alreadyWarned
-                ? { backgroundColor: colors.secondary, borderColor: colors.border }
-                : { backgroundColor: "#f59e0b18", borderColor: "#f59e0b40" },
-            ]}
-            onPress={() => sendWarning(item.id, item.target_user_name)}
-            disabled={isAnyLoading || isDismissed || alreadyWarned}
-          >
-            {currentAction === "warn" ? (
-              <ActivityIndicator size="small" color={colors.mutedForeground} />
-            ) : (
-              <>
-                <Feather
-                  name="alert-triangle"
-                  size={14}
-                  color={isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b"}
-                />
-                <Text
-                  style={[
-                    styles.quickBtnText,
-                    { color: isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b" },
-                  ]}
-                >
-                  {alreadyWarned ? "Warned" : "Warn"}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {isDormReport ? (
+            <>
+              {/* Warn Owner — locks after first use */}
+              <TouchableOpacity
+                style={[
+                  styles.quickBtn,
+                  isDismissed || alreadyWarned
+                    ? { backgroundColor: colors.secondary, borderColor: colors.border }
+                    : { backgroundColor: "#f59e0b18", borderColor: "#f59e0b40" },
+                ]}
+                onPress={() => sendWarning(item.id, item.target_user_name)}
+                disabled={isAnyLoading || isDismissed || alreadyWarned}
+              >
+                {currentAction === "warn" ? (
+                  <ActivityIndicator size="small" color={colors.mutedForeground} />
+                ) : (
+                  <>
+                    <Feather
+                      name="alert-triangle"
+                      size={14}
+                      color={isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b"}
+                    />
+                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b" }]}>
+                      {alreadyWarned ? "Owner Warned" : "Warn Owner"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
 
-          {/* Suspend button — disabled if report is dismissed */}
-          <TouchableOpacity
-            style={[
-              styles.quickBtn,
-              isDismissed
-                ? { backgroundColor: colors.secondary, borderColor: colors.border }
-                : { backgroundColor: "#ef444418", borderColor: "#ef444440" },
-            ]}
-            onPress={() => suspendUser(item.id, item.target_user_name)}
-            disabled={isAnyLoading || isDismissed}
-          >
-            {currentAction === "suspend" ? (
-              <ActivityIndicator size="small" color={isDismissed ? colors.mutedForeground : "#ef4444"} />
-            ) : (
-              <>
-                <Feather
-                  name="slash"
-                  size={14}
-                  color={isDismissed ? colors.mutedForeground : "#ef4444"}
-                />
-                <Text
-                  style={[
-                    styles.quickBtnText,
-                    { color: isDismissed ? colors.mutedForeground : "#ef4444" },
-                  ]}
-                >
-                  Suspend
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+              {/* Take Down Listing — locks after first use */}
+              <TouchableOpacity
+                style={[
+                  styles.quickBtn,
+                  isDismissed || alreadyTakenDown
+                    ? { backgroundColor: colors.secondary, borderColor: colors.border }
+                    : { backgroundColor: "#ef444418", borderColor: "#ef444440" },
+                ]}
+                onPress={() => takeDownListing(item.id, item.target_dorm_name)}
+                disabled={isAnyLoading || isDismissed || alreadyTakenDown}
+              >
+                {currentAction === "takedown" ? (
+                  <ActivityIndicator size="small" color={isDismissed || alreadyTakenDown ? colors.mutedForeground : "#ef4444"} />
+                ) : (
+                  <>
+                    <Feather
+                      name="trash-2"
+                      size={14}
+                      color={isDismissed || alreadyTakenDown ? colors.mutedForeground : "#ef4444"}
+                    />
+                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyTakenDown ? colors.mutedForeground : "#ef4444" }]}>
+                      {alreadyTakenDown ? "Taken Down" : "Take Down"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {/* Warn — locks after first use */}
+              <TouchableOpacity
+                style={[
+                  styles.quickBtn,
+                  isDismissed || alreadyWarned
+                    ? { backgroundColor: colors.secondary, borderColor: colors.border }
+                    : { backgroundColor: "#f59e0b18", borderColor: "#f59e0b40" },
+                ]}
+                onPress={() => sendWarning(item.id, item.target_user_name)}
+                disabled={isAnyLoading || isDismissed || alreadyWarned}
+              >
+                {currentAction === "warn" ? (
+                  <ActivityIndicator size="small" color={colors.mutedForeground} />
+                ) : (
+                  <>
+                    <Feather
+                      name="alert-triangle"
+                      size={14}
+                      color={isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b"}
+                    />
+                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b" }]}>
+                      {alreadyWarned ? "Warned" : "Warn"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Suspend — disabled if dismissed */}
+              <TouchableOpacity
+                style={[
+                  styles.quickBtn,
+                  isDismissed
+                    ? { backgroundColor: colors.secondary, borderColor: colors.border }
+                    : { backgroundColor: "#ef444418", borderColor: "#ef444440" },
+                ]}
+                onPress={() => suspendUser(item.id, item.target_user_name)}
+                disabled={isAnyLoading || isDismissed}
+              >
+                {currentAction === "suspend" ? (
+                  <ActivityIndicator size="small" color={isDismissed ? colors.mutedForeground : "#ef4444"} />
+                ) : (
+                  <>
+                    <Feather
+                      name="slash"
+                      size={14}
+                      color={isDismissed ? colors.mutedForeground : "#ef4444"}
+                    />
+                    <Text style={[styles.quickBtnText, { color: isDismissed ? colors.mutedForeground : "#ef4444" }]}>
+                      Suspend
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* Status actions */}
@@ -438,6 +534,7 @@ const styles = StyleSheet.create({
   typeIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   cardHeaderText: { flex: 1 },
   targetLabel: { fontSize: 14, fontWeight: "700" },
+  dormOwnerLine: { fontSize: 12, marginTop: 1 },
   reportDate: { fontSize: 12, marginTop: 1 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText: { fontSize: 12, fontWeight: "700" },
