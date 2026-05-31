@@ -308,8 +308,9 @@ export default function AdminConversationScreen() {
         >
           <Feather name="check-circle" size={16} color="#10b981" />
           <Text style={[styles.oneWayText, { color: "#10b981" }]}>
-            This ticket has been resolved. The conversation is now closed.
-            {isAdmin ? " Reopen the ticket to continue chatting." : " Contact support again if you need further help."}
+            {isAdmin
+              ? "This ticket has been resolved. The thread is now read-only. Reopen the ticket to continue chatting."
+              : "This ticket has been resolved and archived. If you need further assistance, please open a new ticket."}
           </Text>
         </View>
       ) : isOneWay ? (

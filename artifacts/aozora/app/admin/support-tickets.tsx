@@ -51,7 +51,7 @@ export default function AdminSupportTicketsScreen() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<"all" | "pending" | "resolved">("all");
+  const [filter, setFilter] = useState<"pending" | "resolved">("pending");
   const [search, setSearch] = useState("");
 
   const fetchTickets = async () => {
@@ -89,7 +89,7 @@ export default function AdminSupportTicketsScreen() {
   };
 
   const filtered = tickets.filter((t) => {
-    const matchStatus = filter === "all" || t.status === filter;
+    const matchStatus = t.status === filter;
     const q = search.toLowerCase();
     const matchSearch = !q
       || (t.user?.fullName ?? t.guestName ?? "").toLowerCase().includes(q)
@@ -207,18 +207,24 @@ export default function AdminSupportTicketsScreen() {
           />
         </View>
         <View style={styles.filterTabs}>
-          {(["all", "pending", "resolved"] as const).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterTab, filter === f && { backgroundColor: colors.primary + "18" }]}
-              onPress={() => setFilter(f)}
-            >
-              <Text style={[styles.filterTabText, { color: filter === f ? colors.primary : colors.mutedForeground }]}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-                {f === "pending" && pendingCount > 0 ? ` (${pendingCount})` : ""}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            style={[styles.filterTab, filter === "pending" && { backgroundColor: "#f9731618" }]}
+            onPress={() => setFilter("pending")}
+          >
+            <Feather name="clock" size={13} color={filter === "pending" ? "#f97316" : colors.mutedForeground} />
+            <Text style={[styles.filterTabText, { color: filter === "pending" ? "#f97316" : colors.mutedForeground }]}>
+              Active Queue{pendingCount > 0 ? ` (${pendingCount})` : ""}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterTab, filter === "resolved" && { backgroundColor: "#10b98118" }]}
+            onPress={() => setFilter("resolved")}
+          >
+            <Feather name="archive" size={13} color={filter === "resolved" ? "#10b981" : colors.mutedForeground} />
+            <Text style={[styles.filterTabText, { color: filter === "resolved" ? "#10b981" : colors.mutedForeground }]}>
+              Resolved History
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -235,9 +241,14 @@ export default function AdminSupportTicketsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTickets(); }} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Feather name="inbox" size={40} color={colors.mutedForeground} />
+              <Feather name={filter === "resolved" ? "archive" : "inbox"} size={40} color={colors.mutedForeground} />
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                {filter === "all" ? "No tickets yet." : `No ${filter} tickets.`}
+                {filter === "pending" ? "No active tickets." : "No resolved tickets yet."}
+              </Text>
+              <Text style={[styles.emptySubText, { color: colors.mutedForeground }]}>
+                {filter === "pending"
+                  ? "New support requests from users will appear here."
+                  : "Resolved tickets are archived here as read-only records."}
               </Text>
             </View>
           }
@@ -259,13 +270,14 @@ const styles = StyleSheet.create({
   searchRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1 },
   searchInput: { flex: 1, fontSize: 14 },
   filterTabs: { flexDirection: "row", gap: 4 },
-  filterTab: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
+  filterTab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
   filterTabText: { fontSize: 13, fontWeight: "600" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { padding: 14, gap: 12 },
   listEmpty: { flex: 1 },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingVertical: 60 },
-  emptyText: { fontSize: 15 },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 60 },
+  emptyText: { fontSize: 16, fontWeight: "600" },
+  emptySubText: { fontSize: 13, textAlign: "center", paddingHorizontal: 32 },
   ticketCard: { borderWidth: 1.5, padding: 14, gap: 10 },
   ticketTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   typeTag: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },

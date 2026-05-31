@@ -52,14 +52,25 @@ export default function MessagesScreen() {
   const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
 
   const archivedCount = useMemo(
-    () => conversations.filter((c: any) => !!c.archived).length,
+    () => conversations.filter((c: any) => !!c.archived && c.conversationType !== "warning").length,
     [conversations]
   );
 
   const filtered = useMemo(() => {
-    const folderFiltered = conversations.filter((c: any) =>
-      folder === "archive" ? !!c.archived : !c.archived
-    );
+    // Warnings are always in Inbox (they are permanent notices, not archived)
+    // Support threads with archived=true move to Archive
+    const folderFiltered = conversations.filter((c: any) => {
+      if (c.type !== "admin") {
+        // Regular dorm conversations: never archived
+        return folder === "inbox";
+      }
+      if (c.conversationType === "warning") {
+        // Warnings always in inbox
+        return folder === "inbox";
+      }
+      // Support threads: inbox when not archived, archive when archived
+      return folder === "archive" ? !!c.archived : !c.archived;
+    });
     if (!search.trim()) return folderFiltered;
     const q = search.toLowerCase();
     return folderFiltered.filter(
@@ -187,8 +198,18 @@ export default function MessagesScreen() {
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
           renderItem={({ item }: { item: any }) => {
             const isAdminConv = item.type === "admin";
-            const avatarBg = isAdminConv ? "#ef444422" : colors.primary + "22";
-            const avatarColor = isAdminConv ? "#ef4444" : colors.primary;
+            const isWarning = isAdminConv && item.conversationType === "warning";
+            const isSupport = isAdminConv && item.conversationType === "support";
+            const isArchived = !!item.archived;
+
+            // Colour scheme per conversation type
+            const avatarBg = isWarning
+              ? "#f9731622"
+              : isSupport
+              ? "#8b5cf622"
+              : colors.primary + "22";
+            const avatarColor = isWarning ? "#f97316" : isSupport ? "#8b5cf6" : colors.primary;
+            const unreadDotColor = isWarning ? "#f97316" : isSupport ? "#8b5cf6" : colors.primary;
 
             const isDeleting = deletingId === `${item.type}-${item.id}`;
             return (
@@ -196,7 +217,7 @@ export default function MessagesScreen() {
                 style={[
                   styles.item,
                   { backgroundColor: colors.card, borderBottomColor: colors.border },
-                  item.unreadCount > 0 && { backgroundColor: colors.primary + "08" },
+                  item.unreadCount > 0 && { backgroundColor: avatarColor + "08" },
                   isDeleting && { opacity: 0.5 },
                 ]}
                 onPress={() => handleOpen(item)}
@@ -206,7 +227,13 @@ export default function MessagesScreen() {
               >
                 {isAdminConv ? (
                   <View style={[styles.avatarWrap, { backgroundColor: avatarBg }]}>
-                    <Ionicons name="shield" size={22} color={avatarColor} />
+                    {isWarning ? (
+                      <Feather name="alert-triangle" size={22} color={avatarColor} />
+                    ) : isSupport ? (
+                      <Feather name="help-circle" size={22} color={avatarColor} />
+                    ) : (
+                      <Ionicons name="shield" size={22} color={avatarColor} />
+                    )}
                   </View>
                 ) : (
                   <UserAvatar
@@ -232,10 +259,18 @@ export default function MessagesScreen() {
                       >
                         {item.otherParticipant?.fullName || "Unknown"}
                       </Text>
-                      {isAdminConv && !isAdmin && (
-                        <View style={[styles.adminBadge, { backgroundColor: "#ef444415" }]}>
-                          <Ionicons name="shield" size={10} color="#ef4444" />
-                          <Text style={styles.adminBadgeText}>Admin</Text>
+                      {isWarning && !isAdmin && (
+                        <View style={[styles.adminBadge, { backgroundColor: "#f9731615" }]}>
+                          <Feather name="alert-triangle" size={10} color="#f97316" />
+                          <Text style={[styles.adminBadgeText, { color: "#f97316" }]}>Official Notice</Text>
+                        </View>
+                      )}
+                      {isSupport && !isAdmin && (
+                        <View style={[styles.adminBadge, { backgroundColor: isArchived ? "#10b98115" : "#8b5cf615" }]}>
+                          <Feather name={isArchived ? "check-circle" : "help-circle"} size={10} color={isArchived ? "#10b981" : "#8b5cf6"} />
+                          <Text style={[styles.adminBadgeText, { color: isArchived ? "#10b981" : "#8b5cf6" }]}>
+                            {isArchived ? "Resolved" : "Support"}
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -255,7 +290,7 @@ export default function MessagesScreen() {
                       {item.lastMessage?.content || (isAdminConv ? "Admin conversation" : item.dorm?.name || "Start a conversation")}
                     </Text>
                     {item.unreadCount > 0 && (
-                      <View style={[styles.unreadDot, { backgroundColor: isAdminConv ? "#ef4444" : colors.primary }]}>
+                      <View style={[styles.unreadDot, { backgroundColor: unreadDotColor }]}>
                         <Text style={styles.unreadDotText}>{item.unreadCount}</Text>
                       </View>
                     )}
