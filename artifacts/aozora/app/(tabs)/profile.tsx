@@ -165,24 +165,22 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Feather name="phone" size={14} color={colors.mutedForeground} />
               <Text style={[styles.infoText, { color: colors.foreground }]}>{user.phone}</Text>
-              {user.role === "student" && (
-                <View style={[
-                  styles.visibilityChip,
-                  { backgroundColor: (user as any).phonePublic ? "#10b98118" : colors.secondary },
+              <View style={[
+                styles.visibilityChip,
+                { backgroundColor: (user as any).phonePublic ? "#10b98118" : colors.secondary },
+              ]}>
+                <Feather
+                  name={(user as any).phonePublic ? "eye" : "eye-off"}
+                  size={12}
+                  color={(user as any).phonePublic ? "#10b981" : colors.mutedForeground}
+                />
+                <Text style={[
+                  styles.visibilityChipText,
+                  { color: (user as any).phonePublic ? "#10b981" : colors.mutedForeground },
                 ]}>
-                  <Feather
-                    name={(user as any).phonePublic ? "eye" : "eye-off"}
-                    size={12}
-                    color={(user as any).phonePublic ? "#10b981" : colors.mutedForeground}
-                  />
-                  <Text style={[
-                    styles.visibilityChipText,
-                    { color: (user as any).phonePublic ? "#10b981" : colors.mutedForeground },
-                  ]}>
-                    {(user as any).phonePublic ? "Public" : "Hidden"}
-                  </Text>
-                </View>
-              )}
+                  {(user as any).phonePublic ? "Public" : "Hidden"}
+                </Text>
+              </View>
             </View>
           ) : null}
           {user?.universityOrWorkplace ? (

@@ -240,25 +240,23 @@ export default function EditProfileScreen() {
 
         <Field label="Full Name" value={fullName} onChange={setFullName} placeholder="Your full name" colors={colors} />
         <Field label="Phone Number" value={phone} onChange={setPhone} placeholder="+63 9XX XXX XXXX" keyboardType="phone-pad" colors={colors} />
-        {user?.role === "student" && (
-          <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-            <View style={styles.toggleInfo}>
-              <Feather name={phonePublic ? "eye" : "eye-off"} size={16} color={phonePublic ? "#10b981" : colors.mutedForeground} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Show number publicly</Text>
-                <Text style={[styles.toggleSub, { color: colors.mutedForeground }]}>
-                  {phonePublic ? "Your phone number is visible on your public profile" : "Your phone number is hidden from your public profile"}
-                </Text>
-              </View>
+        <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <View style={styles.toggleInfo}>
+            <Feather name={phonePublic ? "eye" : "eye-off"} size={16} color={phonePublic ? "#10b981" : colors.mutedForeground} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Show number publicly</Text>
+              <Text style={[styles.toggleSub, { color: colors.mutedForeground }]}>
+                {phonePublic ? "Your phone number is visible on your public profile" : "Your phone number is hidden from your public profile"}
+              </Text>
             </View>
-            <Switch
-              value={phonePublic}
-              onValueChange={setPhonePublic}
-              trackColor={{ false: colors.border, true: "#10b981" }}
-              thumbColor="#fff"
-            />
           </View>
-        )}
+          <Switch
+            value={phonePublic}
+            onValueChange={setPhonePublic}
+            trackColor={{ false: colors.border, true: "#10b981" }}
+            thumbColor="#fff"
+          />
+        </View>
         <Field
           label="Email Address"
           value={user?.email ?? ""}
