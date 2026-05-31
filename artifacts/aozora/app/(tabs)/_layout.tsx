@@ -34,6 +34,12 @@ function NativeTabLayout() {
         <Icon sf={{ default: "message", selected: "message.fill" }} />
         <Label>Messages</Label>
       </NativeTabs.Trigger>
+      {isAdmin && (
+        <NativeTabs.Trigger name="admin">
+          <Icon sf={{ default: "shield", selected: "shield.fill" }} />
+          <Label>Admin</Label>
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>Profile</Label>
@@ -128,6 +134,19 @@ function ClassicTabLayout() {
               <SymbolView name="message" tintColor={color} size={24} />
             ) : (
               <Feather name="message-square" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: "Admin",
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="shield" tintColor={color} size={24} />
+            ) : (
+              <Feather name="shield" size={22} color={color} />
             ),
         }}
       />

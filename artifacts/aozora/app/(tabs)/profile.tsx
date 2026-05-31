@@ -207,9 +207,6 @@ export default function ProfileScreen() {
         {user?.role === "owner" && (
           <MenuItem icon="home" label="My Listings" onPress={() => router.push("/profile/my-dorms")} colors={colors} />
         )}
-        {user?.role === "admin" && (
-          <MenuItem icon="settings" label="Admin Panel" onPress={() => router.push("/admin")} colors={colors} />
-        )}
       </View>
 
       <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card, marginTop: 12 }]}>
