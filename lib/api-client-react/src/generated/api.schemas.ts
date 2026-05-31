@@ -227,6 +227,10 @@ export const AppointmentStatus = {
   pending: 'pending',
   approved: 'approved',
   rejected: 'rejected',
+  cancelled: 'cancelled',
+  noted: 'noted',
+  completed: 'completed',
+  no_show: 'no_show',
 } as const;
 
 export interface Appointment {
@@ -264,6 +268,8 @@ export const UpdateAppointmentStatusRequestStatus = {
   rejected: 'rejected',
   cancelled: 'cancelled',
   noted: 'noted',
+  completed: 'completed',
+  no_show: 'no_show',
 } as const;
 
 export interface UpdateAppointmentStatusRequest {

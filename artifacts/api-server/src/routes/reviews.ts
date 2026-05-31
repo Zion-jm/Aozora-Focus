@@ -42,11 +42,11 @@ router.get("/dorms/:dormId/reviews/can-review", requireAuth, (req, res) => {
   }
 
   const appt = sqlite.prepare(
-    "SELECT id FROM appointments WHERE dorm_id = ? AND student_id = ? AND status = 'approved' LIMIT 1"
+    "SELECT id FROM appointments WHERE dorm_id = ? AND student_id = ? AND status = 'completed' LIMIT 1"
   ).get(dormId, userId);
 
   if (!appt) {
-    res.json({ canReview: false, reason: "You need an approved visit to review this dorm" });
+    res.json({ canReview: false, reason: "Your visit must be marked as completed before you can leave a review", requiresCompletedVisit: true });
     return;
   }
 
@@ -77,11 +77,11 @@ router.post("/dorms/:dormId/reviews", requireAuth, (req, res) => {
   }
 
   const appt = sqlite.prepare(
-    "SELECT id FROM appointments WHERE dorm_id = ? AND student_id = ? AND status = 'approved' LIMIT 1"
+    "SELECT id FROM appointments WHERE dorm_id = ? AND student_id = ? AND status = 'completed' LIMIT 1"
   ).get(dormId, userId);
 
   if (!appt) {
-    res.status(403).json({ error: "You need an approved visit to review this dorm" });
+    res.status(403).json({ error: "Your visit must be marked as completed before you can leave a review" });
     return;
   }
 
@@ -153,12 +153,12 @@ router.get("/users/:userId/reviews/can-review", requireAuth, (req, res) => {
   const appt = sqlite.prepare(`
     SELECT a.id FROM appointments a
     JOIN dorms d ON a.dorm_id = d.id
-    WHERE d.owner_id = ? AND a.student_id = ? AND a.status = 'approved'
+    WHERE d.owner_id = ? AND a.student_id = ? AND a.status = 'completed'
     LIMIT 1
   `).get(reviewerId, targetId);
 
   if (!appt) {
-    res.json({ canReview: false, reason: "You need to have approved a visit from this student first" });
+    res.json({ canReview: false, reason: "The student's visit must be marked as completed before you can leave a review", requiresCompletedVisit: true });
     return;
   }
 
@@ -191,12 +191,12 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
   const appt = sqlite.prepare(`
     SELECT a.id FROM appointments a
     JOIN dorms d ON a.dorm_id = d.id
-    WHERE d.owner_id = ? AND a.student_id = ? AND a.status = 'approved'
+    WHERE d.owner_id = ? AND a.student_id = ? AND a.status = 'completed'
     LIMIT 1
   `).get(reviewerId, targetId);
 
   if (!appt) {
-    res.status(403).json({ error: "You need to have approved a visit from this student first" });
+    res.status(403).json({ error: "The student's visit must be marked as completed before you can leave a review" });
     return;
   }
 

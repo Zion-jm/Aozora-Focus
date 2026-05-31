@@ -77,7 +77,7 @@ export const appointments = sqliteTable("appointments", {
   preferredDate: text("preferred_date").notNull(),
   preferredTime: text("preferred_time").notNull(),
   message: text("message"),
-  status: text("status", { enum: ["pending", "approved", "rejected", "cancelled", "noted"] }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "approved", "rejected", "cancelled", "noted", "completed", "no_show"] }).notNull().default("pending"),
   ownerNote: text("owner_note"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
@@ -124,4 +124,17 @@ export const userReviews = sqliteTable("user_reviews", {
   rating: integer("rating").notNull(),
   comment: text("comment"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
+export const reports = sqliteTable("reports", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  reporterId: integer("reporter_id").notNull().references(() => users.id),
+  targetType: text("target_type", { enum: ["user", "dorm", "review"] }).notNull(),
+  targetId: integer("target_id").notNull(),
+  reason: text("reason").notNull(),
+  details: text("details"),
+  status: text("status", { enum: ["pending", "reviewed", "dismissed"] }).notNull().default("pending"),
+  adminNote: text("admin_note"),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });

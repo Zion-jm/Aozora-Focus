@@ -129,6 +129,19 @@ export function initializeDatabase() {
       UNIQUE(reviewed_user_id, reviewer_id)
     );
 
+    CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reporter_id INTEGER NOT NULL REFERENCES users(id),
+      target_type TEXT NOT NULL,
+      target_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      details TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      admin_note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS admin_conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       admin_id INTEGER NOT NULL REFERENCES users(id),
@@ -162,6 +175,8 @@ export function initializeDatabase() {
     "ALTER TABLE dorms ADD COLUMN nearby_landmark TEXT",
     "ALTER TABLE users ADD COLUMN average_rating REAL",
     "ALTER TABLE users ADD COLUMN total_reviews INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE reports ADD COLUMN warned_at TEXT",
+    "ALTER TABLE reports ADD COLUMN taken_down_at TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }

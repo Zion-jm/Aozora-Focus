@@ -15,6 +15,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 
 import { UserAvatar } from "@/components/UserAvatar";
+import { ReportModal } from "@/components/ReportModal";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -79,6 +80,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [reportingReviewId, setReportingReviewId] = useState<number | null>(null);
 
   const { data: reviewsData, isLoading } = useQuery({
     queryKey: reviewsKey,
@@ -113,6 +115,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
   const total: number = reviewsData?.total ?? 0;
   const canReview: boolean = canReviewData?.canReview ?? false;
   const canReviewReason: string | undefined = canReviewData?.reason;
+  const requiresCompletedVisit: boolean = canReviewData?.requiresCompletedVisit ?? false;
 
   const visibleReviews = expanded ? reviews : reviews.slice(0, 3);
 
@@ -185,11 +188,26 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
         )}
       </View>
 
+      {/* Locked gate banner — shown when visit is not yet completed */}
+      {!canReview && requiresCompletedVisit && token && (
+        <View style={[styles.lockedBanner, { backgroundColor: "#f59e0b10", borderColor: "#f59e0b40" }]}>
+          <View style={styles.lockedIconWrap}>
+            <Feather name="lock" size={18} color="#f59e0b" />
+          </View>
+          <View style={styles.lockedTextWrap}>
+            <Text style={[styles.lockedTitle, { color: colors.foreground }]}>Review locked</Text>
+            <Text style={[styles.lockedReason, { color: colors.mutedForeground }]}>
+              {canReviewReason ?? "Your visit must be marked as completed before you can leave a review."}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {reviews.length === 0 ? (
         <View style={[styles.emptyBox, { backgroundColor: colors.secondary, borderRadius: 12 }]}>
           <Feather name="message-square" size={28} color={colors.mutedForeground} />
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No reviews yet</Text>
-          {!canReview && canReviewReason && (
+          {!canReview && !requiresCompletedVisit && canReviewReason && (
             <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>{canReviewReason}</Text>
           )}
         </View>
@@ -222,12 +240,31 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
                     </Text>
                   </View>
                 </View>
+                {token && (
+                  <TouchableOpacity
+                    onPress={() => setReportingReviewId(review.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.reviewFlagBtn}
+                  >
+                    <Feather name="flag" size={13} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                )}
               </View>
               {review.comment ? (
                 <Text style={[styles.commentText, { color: colors.foreground }]}>{review.comment}</Text>
               ) : null}
             </View>
           ))}
+
+          <ReportModal
+            visible={reportingReviewId !== null}
+            onClose={() => setReportingReviewId(null)}
+            targetType="review"
+            targetId={reportingReviewId ?? 0}
+            targetLabel="this review"
+            token={token}
+            colors={colors}
+          />
 
           {reviews.length > 3 && (
             <TouchableOpacity
@@ -324,6 +361,12 @@ const styles = StyleSheet.create({
   writeBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   writeBtnText: { fontSize: 13, fontWeight: "600" },
 
+  lockedBanner: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 12, borderWidth: 1 },
+  lockedIconWrap: { paddingTop: 2 },
+  lockedTextWrap: { flex: 1, gap: 3 },
+  lockedTitle: { fontSize: 14, fontWeight: "700" },
+  lockedReason: { fontSize: 13, lineHeight: 18 },
+
   emptyBox: { alignItems: "center", padding: 24, gap: 8 },
   emptyText: { fontSize: 15, fontWeight: "500" },
   emptyHint: { fontSize: 13, textAlign: "center" },
@@ -331,6 +374,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
   cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   cardMeta: { flex: 1, gap: 3 },
+  reviewFlagBtn: { padding: 4, alignSelf: "flex-start", marginTop: 2 },
   reviewerName: { fontSize: 14, fontWeight: "600" },
   starsDate: { flexDirection: "row", alignItems: "center", gap: 4 },
   dateText: { fontSize: 12 },

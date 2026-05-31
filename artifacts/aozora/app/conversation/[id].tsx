@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ReportModal } from "@/components/ReportModal";
 import {
   getListMessagesQueryKey,
   useListMessages,
@@ -37,6 +38,7 @@ export default function ConversationScreen() {
   const { user, token } = useAuth();
   const qc = useQueryClient();
   const [text, setText] = useState("");
+  const [showReport, setShowReport] = useState(false);
   const flatRef = useRef<FlatList>(null);
 
   const { data, isLoading, refetch } = useListMessages(convId, {
@@ -102,6 +104,11 @@ export default function ConversationScreen() {
       ]
     );
   };
+
+  const otherUser = useMemo(() => {
+    const m = messages.find((msg: any) => msg.senderId !== user?.id);
+    return m?.sender ?? null;
+  }, [messages, user?.id]);
 
   const lastReadSentIndex = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -177,10 +184,33 @@ export default function ConversationScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
           Conversation
         </Text>
-        <TouchableOpacity onPress={handleDelete} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Feather name="trash-2" size={20} color={colors.destructive} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+          {otherUser && (
+            <TouchableOpacity
+              onPress={() => setShowReport(true)}
+              style={styles.backBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="flag" size={18} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleDelete} style={styles.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="trash-2" size={20} color={colors.destructive} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {otherUser && (
+        <ReportModal
+          visible={showReport}
+          onClose={() => setShowReport(false)}
+          targetType="user"
+          targetId={otherUser.id}
+          targetLabel={otherUser.fullName}
+          token={token}
+          colors={colors}
+        />
+      )}
 
       {isLoading ? (
         <View style={styles.center}>
