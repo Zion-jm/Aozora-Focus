@@ -84,6 +84,11 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
   const [expanded, setExpanded] = useState(false);
   const [reportingReviewId, setReportingReviewId] = useState<number | null>(null);
 
+  const [editingReview, setEditingReview] = useState<any | null>(null);
+  const [editRating, setEditRating] = useState(0);
+  const [editComment, setEditComment] = useState("");
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
   const { data: reviewsData, isLoading } = useQuery({
     queryKey: reviewsKey,
     queryFn: async () => {
@@ -155,10 +160,82 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
     }
   };
 
+  const openEdit = (review: any) => {
+    setEditingReview(review);
+    setEditRating(review.rating);
+    setEditComment(review.comment ?? "");
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingReview || !token) return;
+    if (editRating === 0) {
+      Alert.alert("Rating required", "Please select a star rating.");
+      return;
+    }
+    setIsEditSubmitting(true);
+    try {
+      const url =
+        type === "dorm"
+          ? `${BASE_URL}/api/dorms/${targetId}/reviews/${editingReview.id}`
+          : `${BASE_URL}/api/users/${targetId}/reviews/${editingReview.id}`;
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ rating: editRating, comment: editComment.trim() || null }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to update review");
+      }
+      qc.invalidateQueries({ queryKey: reviewsKey });
+      setEditingReview(null);
+      Alert.alert("Review updated!", "Your review has been saved.");
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "Could not update review.");
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  const handleDelete = (review: any) => {
+    Alert.alert(
+      "Delete Review",
+      "Are you sure you want to delete your review? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const url =
+                type === "dorm"
+                  ? `${BASE_URL}/api/dorms/${targetId}/reviews/${review.id}`
+                  : `${BASE_URL}/api/users/${targetId}/reviews/${review.id}`;
+              const res = await fetch(url, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Failed to delete review");
+              }
+              qc.invalidateQueries({ queryKey: reviewsKey });
+              qc.invalidateQueries({ queryKey: canReviewKey });
+            } catch (e: any) {
+              Alert.alert("Error", e.message ?? "Could not delete review.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (isLoading) return null;
 
   const reviewLabel = type === "dorm" ? "Tenant Reviews" : "Student Reviews";
   const writeLabel = type === "dorm" ? "Review this Dorm" : "Review this Student";
+  const editLabel = type === "dorm" ? "Edit Your Review" : "Edit Your Review";
   const placeholder =
     type === "dorm"
       ? "Share your experience living here..."
@@ -215,48 +292,75 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
         </View>
       ) : (
         <>
-          {visibleReviews.map((review) => (
-            <View
-              key={review.id}
-              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <View style={styles.cardTop}>
-                <UserAvatar
-                  name={review.reviewer.fullName}
-                  avatarUrl={review.reviewer.avatarUrl}
-                  size={36}
-                  color={colors.primary}
-                  backgroundColor={colors.primary + "22"}
-                  userId={review.reviewer.id}
-                />
-                <View style={styles.cardMeta}>
-                  <TouchableOpacity onPress={() => review.reviewer.id === currentUser?.id ? router.push("/(tabs)/profile") : router.push(`/user/${review.reviewer.id}`)}>
-                    <Text style={[styles.reviewerName, { color: colors.foreground }]} numberOfLines={1}>
-                      {review.reviewer.fullName}
-                    </Text>
-                  </TouchableOpacity>
-                  <View style={styles.starsDate}>
-                    <StarRow rating={review.rating} size={13} />
-                    <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
-                      · {formatTimeAgo(review.createdAt)}
-                    </Text>
+          {visibleReviews.map((review) => {
+            const isOwnReview = currentUser?.id === review.reviewer.id;
+            return (
+              <View
+                key={review.id}
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+              >
+                <View style={styles.cardTop}>
+                  <UserAvatar
+                    name={review.reviewer.fullName}
+                    avatarUrl={review.reviewer.avatarUrl}
+                    size={36}
+                    color={colors.primary}
+                    backgroundColor={colors.primary + "22"}
+                    userId={review.reviewer.id}
+                  />
+                  <View style={styles.cardMeta}>
+                    <TouchableOpacity onPress={() => review.reviewer.id === currentUser?.id ? router.push("/(tabs)/profile") : router.push(`/user/${review.reviewer.id}`)}>
+                      <Text style={[styles.reviewerName, { color: colors.foreground }]} numberOfLines={1}>
+                        {review.reviewer.fullName}
+                        {isOwnReview && (
+                          <Text style={[styles.youBadge, { color: colors.mutedForeground }]}> · You</Text>
+                        )}
+                      </Text>
+                    </TouchableOpacity>
+                    <View style={styles.starsDate}>
+                      <StarRow rating={review.rating} size={13} />
+                      <Text style={[styles.dateText, { color: colors.mutedForeground }]}>
+                        · {formatTimeAgo(review.createdAt)}
+                      </Text>
+                    </View>
                   </View>
+
+                  {/* Own review: show edit + delete. Other's review: show report flag. */}
+                  {isOwnReview ? (
+                    <View style={styles.ownActions}>
+                      <TouchableOpacity
+                        onPress={() => openEdit(review)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={styles.actionBtn}
+                      >
+                        <Feather name="edit-2" size={13} color={colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleDelete(review)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={styles.actionBtn}
+                      >
+                        <Feather name="trash-2" size={13} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    token && (
+                      <TouchableOpacity
+                        onPress={() => setReportingReviewId(review.id)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={styles.reviewFlagBtn}
+                      >
+                        <Feather name="flag" size={13} color={colors.mutedForeground} />
+                      </TouchableOpacity>
+                    )
+                  )}
                 </View>
-                {token && (
-                  <TouchableOpacity
-                    onPress={() => setReportingReviewId(review.id)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={styles.reviewFlagBtn}
-                  >
-                    <Feather name="flag" size={13} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                )}
+                {review.comment ? (
+                  <Text style={[styles.commentText, { color: colors.foreground }]}>{review.comment}</Text>
+                ) : null}
               </View>
-              {review.comment ? (
-                <Text style={[styles.commentText, { color: colors.foreground }]}>{review.comment}</Text>
-              ) : null}
-            </View>
-          ))}
+            );
+          })}
 
           <ReportModal
             visible={reportingReviewId !== null}
@@ -348,6 +452,72 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
           </View>
         </View>
       </Modal>
+
+      {/* Edit Review Modal */}
+      <Modal visible={editingReview !== null} transparent animationType="slide" onRequestClose={() => setEditingReview(null)}>
+        <View style={styles.overlay}>
+          <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+            <View style={styles.sheetHandle}>
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
+            </View>
+            <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{editLabel}</Text>
+
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Your rating *</Text>
+            <View style={styles.starPicker}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <TouchableOpacity key={n} onPress={() => setEditRating(n)} activeOpacity={0.7}>
+                  <Feather
+                    name="star"
+                    size={36}
+                    color={n <= editRating ? "#f59e0b" : colors.border}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            {editRating > 0 && (
+              <Text style={[styles.ratingLabel, { color: "#f59e0b" }]}>
+                {["", "Poor", "Fair", "Good", "Very Good", "Excellent"][editRating]}
+              </Text>
+            )}
+
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 16 }]}>Comment (optional)</Text>
+            <TextInput
+              style={[styles.commentInput, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.background }]}
+              placeholder={placeholder}
+              placeholderTextColor={colors.mutedForeground}
+              value={editComment}
+              onChangeText={setEditComment}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.sheetActions}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                onPress={() => setEditingReview(null)}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  { backgroundColor: colors.primary },
+                  (editRating === 0 || isEditSubmitting) && { opacity: 0.5 },
+                ]}
+                disabled={editRating === 0 || isEditSubmitting}
+                onPress={handleEditSubmit}
+              >
+                {isEditSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Save Changes</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -377,7 +547,10 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   cardMeta: { flex: 1, gap: 3 },
   reviewFlagBtn: { padding: 4, alignSelf: "flex-start", marginTop: 2 },
+  ownActions: { flexDirection: "row", gap: 4, alignSelf: "flex-start", marginTop: 2 },
+  actionBtn: { padding: 4 },
   reviewerName: { fontSize: 14, fontWeight: "600" },
+  youBadge: { fontSize: 13, fontWeight: "400" },
   starsDate: { flexDirection: "row", alignItems: "center", gap: 4 },
   dateText: { fontSize: 12 },
   commentText: { fontSize: 14, lineHeight: 20, opacity: 0.9 },

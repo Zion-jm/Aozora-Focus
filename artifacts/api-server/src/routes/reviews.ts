@@ -226,6 +226,148 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
   res.status(201).json({ success: true });
 });
 
+// ─── EDIT / DELETE DORM REVIEW ────────────────────────────────────────────────
+
+router.patch("/dorms/:dormId/reviews/:reviewId", requireAuth, (req, res) => {
+  const dormId = parseInt(req.params["dormId"]!);
+  const reviewId = parseInt(req.params["reviewId"]!);
+  const userId = req.user!.id;
+  const { rating, comment } = req.body;
+
+  const review = sqlite.prepare(
+    "SELECT id, reviewer_id FROM dorm_reviews WHERE id = ? AND dorm_id = ?"
+  ).get(reviewId, dormId) as any;
+
+  if (!review) {
+    res.status(404).json({ error: "Review not found" });
+    return;
+  }
+  if (review.reviewer_id !== userId) {
+    res.status(403).json({ error: "You can only edit your own reviews" });
+    return;
+  }
+  if (rating !== undefined && (rating < 1 || rating > 5)) {
+    res.status(400).json({ error: "Rating must be between 1 and 5" });
+    return;
+  }
+
+  sqlite.prepare(
+    "UPDATE dorm_reviews SET rating = COALESCE(?, rating), comment = ?, updated_at = datetime('now') WHERE id = ?"
+  ).run(rating ?? null, comment?.trim() ?? null, reviewId);
+
+  const stats = sqlite.prepare(
+    "SELECT ROUND(AVG(rating), 1) as avg, COUNT(*) as count FROM dorm_reviews WHERE dorm_id = ?"
+  ).get(dormId) as any;
+  sqlite.prepare(
+    "UPDATE dorms SET average_rating = ?, total_reviews = ? WHERE id = ?"
+  ).run(stats.avg, stats.count, dormId);
+
+  res.json({ success: true });
+});
+
+router.delete("/dorms/:dormId/reviews/:reviewId", requireAuth, (req, res) => {
+  const dormId = parseInt(req.params["dormId"]!);
+  const reviewId = parseInt(req.params["reviewId"]!);
+  const userId = req.user!.id;
+
+  const review = sqlite.prepare(
+    "SELECT id, reviewer_id FROM dorm_reviews WHERE id = ? AND dorm_id = ?"
+  ).get(reviewId, dormId) as any;
+
+  if (!review) {
+    res.status(404).json({ error: "Review not found" });
+    return;
+  }
+  if (review.reviewer_id !== userId) {
+    res.status(403).json({ error: "You can only delete your own reviews" });
+    return;
+  }
+
+  sqlite.prepare("DELETE FROM dorm_reviews WHERE id = ?").run(reviewId);
+
+  const stats = sqlite.prepare(
+    "SELECT ROUND(AVG(rating), 1) as avg, COUNT(*) as count FROM dorm_reviews WHERE dorm_id = ?"
+  ).get(dormId) as any;
+  sqlite.prepare(
+    "UPDATE dorms SET average_rating = ?, total_reviews = ? WHERE id = ?"
+  ).run(stats.avg ?? null, stats.count, dormId);
+
+  res.json({ success: true });
+});
+
+// ─── EDIT / DELETE USER REVIEW ────────────────────────────────────────────────
+
+router.patch("/users/:userId/reviews/:reviewId", requireAuth, (req, res) => {
+  const targetUserId = parseInt(req.params["userId"]!);
+  const reviewId = parseInt(req.params["reviewId"]!);
+  const reviewerId = req.user!.id;
+  const { rating, comment } = req.body;
+
+  const review = sqlite.prepare(
+    "SELECT id, reviewer_id FROM user_reviews WHERE id = ? AND reviewed_user_id = ?"
+  ).get(reviewId, targetUserId) as any;
+
+  if (!review) {
+    res.status(404).json({ error: "Review not found" });
+    return;
+  }
+  if (review.reviewer_id !== reviewerId) {
+    res.status(403).json({ error: "You can only edit your own reviews" });
+    return;
+  }
+  if (rating !== undefined && (rating < 1 || rating > 5)) {
+    res.status(400).json({ error: "Rating must be between 1 and 5" });
+    return;
+  }
+
+  sqlite.prepare(
+    "UPDATE user_reviews SET rating = COALESCE(?, rating), comment = ?, updated_at = datetime('now') WHERE id = ?"
+  ).run(rating ?? null, comment?.trim() ?? null, reviewId);
+
+  const stats = sqlite.prepare(
+    "SELECT ROUND(AVG(rating), 1) as avg, COUNT(*) as count FROM user_reviews WHERE reviewed_user_id = ?"
+  ).get(targetUserId) as any;
+  try {
+    sqlite.prepare(
+      "UPDATE users SET average_rating = ?, total_reviews = ? WHERE id = ?"
+    ).run(stats.avg ?? null, stats.count, targetUserId);
+  } catch { /* column might not exist */ }
+
+  res.json({ success: true });
+});
+
+router.delete("/users/:userId/reviews/:reviewId", requireAuth, (req, res) => {
+  const targetUserId = parseInt(req.params["userId"]!);
+  const reviewId = parseInt(req.params["reviewId"]!);
+  const reviewerId = req.user!.id;
+
+  const review = sqlite.prepare(
+    "SELECT id, reviewer_id FROM user_reviews WHERE id = ? AND reviewed_user_id = ?"
+  ).get(reviewId, targetUserId) as any;
+
+  if (!review) {
+    res.status(404).json({ error: "Review not found" });
+    return;
+  }
+  if (review.reviewer_id !== reviewerId) {
+    res.status(403).json({ error: "You can only delete your own reviews" });
+    return;
+  }
+
+  sqlite.prepare("DELETE FROM user_reviews WHERE id = ?").run(reviewId);
+
+  const stats = sqlite.prepare(
+    "SELECT ROUND(AVG(rating), 1) as avg, COUNT(*) as count FROM user_reviews WHERE reviewed_user_id = ?"
+  ).get(targetUserId) as any;
+  try {
+    sqlite.prepare(
+      "UPDATE users SET average_rating = ?, total_reviews = ? WHERE id = ?"
+    ).run(stats.avg ?? null, stats.count, targetUserId);
+  } catch { /* column might not exist */ }
+
+  res.json({ success: true });
+});
+
 // ─── MY REVIEWS (current user) ────────────────────────────────────────────────
 
 router.get("/reviews/my-sent", requireAuth, (req, res) => {

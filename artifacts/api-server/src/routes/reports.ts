@@ -56,6 +56,32 @@ router.post("/reports", requireAuth, (req, res) => {
     return;
   }
 
+  if (targetType === "dorm") {
+    const dorm = sqlite.prepare("SELECT owner_id FROM dorms WHERE id = ?").get(targetId) as any;
+    if (!dorm) {
+      res.status(404).json({ error: "Dorm not found." });
+      return;
+    }
+    if (dorm.owner_id === user.id) {
+      res.status(400).json({ error: "You cannot report your own listing." });
+      return;
+    }
+  }
+
+  if (targetType === "review") {
+    const dr = sqlite.prepare("SELECT reviewer_id FROM dorm_reviews WHERE id = ?").get(targetId) as any;
+    const ur = dr ? null : (sqlite.prepare("SELECT reviewer_id FROM user_reviews WHERE id = ?").get(targetId) as any);
+    const reviewerId = dr?.reviewer_id ?? ur?.reviewer_id ?? null;
+    if (reviewerId === null) {
+      res.status(404).json({ error: "Review not found." });
+      return;
+    }
+    if (reviewerId === user.id) {
+      res.status(400).json({ error: "You cannot report your own review." });
+      return;
+    }
+  }
+
   const existing = sqlite
     .prepare(
       "SELECT id FROM reports WHERE reporter_id = ? AND target_type = ? AND target_id = ? AND status = 'pending'"
