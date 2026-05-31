@@ -196,6 +196,10 @@ export function initializeDatabase() {
     "ALTER TABLE reports ADD COLUMN taken_down_at TEXT",
     "ALTER TABLE users ADD COLUMN phone_public INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE admin_conversations ADD COLUMN closed_at TEXT",
+    "ALTER TABLE conversations ADD COLUMN student_archived_at TEXT",
+    "ALTER TABLE conversations ADD COLUMN owner_archived_at TEXT",
+    "ALTER TABLE admin_conversations ADD COLUMN admin_archived_at TEXT",
+    "ALTER TABLE admin_conversations ADD COLUMN user_archived_at TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }

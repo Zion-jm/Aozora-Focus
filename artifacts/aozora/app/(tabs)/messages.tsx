@@ -40,7 +40,7 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const qc = useQueryClient();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actioningId, setActioningId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [folder, setFolder] = useState<"inbox" | "archive">("inbox");
 
@@ -52,25 +52,14 @@ export default function MessagesScreen() {
   const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
 
   const archivedCount = useMemo(
-    () => conversations.filter((c: any) => !!c.archived && c.conversationType !== "warning").length,
+    () => conversations.filter((c: any) => !!c.archived).length,
     [conversations]
   );
 
   const filtered = useMemo(() => {
-    // Warnings are always in Inbox (they are permanent notices, not archived)
-    // Support threads with archived=true move to Archive
-    const folderFiltered = conversations.filter((c: any) => {
-      if (c.type !== "admin") {
-        // Regular dorm conversations: never archived
-        return folder === "inbox";
-      }
-      if (c.conversationType === "warning") {
-        // Warnings always in inbox
-        return folder === "inbox";
-      }
-      // Support threads: inbox when not archived, archive when archived
-      return folder === "archive" ? !!c.archived : !c.archived;
-    });
+    const folderFiltered = conversations.filter((c: any) =>
+      folder === "archive" ? !!c.archived : !c.archived
+    );
     if (!search.trim()) return folderFiltered;
     const q = search.toLowerCase();
     return folderFiltered.filter(
@@ -89,36 +78,95 @@ export default function MessagesScreen() {
     }
   };
 
-  const handleLongPress = (item: any) => {
+  const apiCall = async (endpoint: string) => {
+    await fetch(`${BASE_URL}${endpoint}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+  };
+
+  const handleArchive = async (item: any) => {
+    const key = `${item.type}-${item.id}`;
+    setActioningId(key);
+    try {
+      const ep = item.type === "admin"
+        ? `/api/admin-conversations/${item.id}/archive`
+        : `/api/conversations/${item.id}/archive`;
+      await apiCall(ep);
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleUnarchive = async (item: any) => {
+    const key = `${item.type}-${item.id}`;
+    setActioningId(key);
+    try {
+      const ep = item.type === "admin"
+        ? `/api/admin-conversations/${item.id}/unarchive`
+        : `/api/conversations/${item.id}/unarchive`;
+      await apiCall(ep);
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  const handleDelete = async (item: any) => {
     const endpoint = item.type === "admin"
       ? `/api/admin-conversations/${item.id}`
       : `/api/conversations/${item.id}`;
+    const key = `${item.type}-${item.id}`;
+    setActioningId(key);
+    try {
+      await fetch(`${BASE_URL}${endpoint}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+    } catch {
+      Alert.alert("Error", "Could not delete conversation. Please try again.");
+    } finally {
+      setActioningId(null);
+    }
+  };
 
-    Alert.alert(
-      "Delete Conversation",
-      "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setDeletingId(`${item.type}-${item.id}`);
-              await fetch(`${BASE_URL}${endpoint}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
-            } catch {
-              Alert.alert("Error", "Could not delete conversation. Please try again.");
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ]
-    );
+  const handleLongPress = (item: any) => {
+    const isArchived = !!item.archived;
+    // Resolved support tickets can't be manually unarchived — admin controls that
+    const isResolvedTicket = !!(item.closedAt);
+    const canUnarchive = isArchived && !isResolvedTicket;
+
+    const buttons: any[] = [];
+
+    if (!isArchived) {
+      buttons.push({
+        text: "Archive",
+        onPress: () => handleArchive(item),
+      });
+    }
+    if (canUnarchive) {
+      buttons.push({
+        text: "Move to Inbox",
+        onPress: () => handleUnarchive(item),
+      });
+    }
+    buttons.push({
+      text: "Delete",
+      style: "destructive",
+      onPress: () =>
+        Alert.alert(
+          "Delete Conversation",
+          "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Delete", style: "destructive", onPress: () => handleDelete(item) },
+          ]
+        ),
+    });
+    buttons.push({ text: "Cancel", style: "cancel" });
+
+    Alert.alert("Conversation Options", "", buttons);
   };
 
   const isAdmin = user?.role === "admin";
@@ -201,8 +249,8 @@ export default function MessagesScreen() {
             const isWarning = isAdminConv && item.conversationType === "warning";
             const isSupport = isAdminConv && item.conversationType === "support";
             const isArchived = !!item.archived;
+            const isActioning = actioningId === `${item.type}-${item.id}`;
 
-            // Colour scheme per conversation type
             const avatarBg = isWarning
               ? "#f9731622"
               : isSupport
@@ -211,14 +259,13 @@ export default function MessagesScreen() {
             const avatarColor = isWarning ? "#f97316" : isSupport ? "#8b5cf6" : colors.primary;
             const unreadDotColor = isWarning ? "#f97316" : isSupport ? "#8b5cf6" : colors.primary;
 
-            const isDeleting = deletingId === `${item.type}-${item.id}`;
             return (
               <TouchableOpacity
                 style={[
                   styles.item,
                   { backgroundColor: colors.card, borderBottomColor: colors.border },
                   item.unreadCount > 0 && { backgroundColor: avatarColor + "08" },
-                  isDeleting && { opacity: 0.5 },
+                  isActioning && { opacity: 0.5 },
                 ]}
                 onPress={() => handleOpen(item)}
                 onLongPress={() => handleLongPress(item)}
@@ -274,9 +321,14 @@ export default function MessagesScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={[styles.timeText, { color: colors.mutedForeground }]}>
-                      {item.lastMessage?.createdAt ? timeAgo(item.lastMessage.createdAt) : ""}
-                    </Text>
+                    <View style={styles.itemTopRight}>
+                      {isArchived && !item.closedAt && (
+                        <Feather name="archive" size={12} color={colors.mutedForeground} style={{ marginRight: 4 }} />
+                      )}
+                      <Text style={[styles.timeText, { color: colors.mutedForeground }]}>
+                        {item.lastMessage?.createdAt ? timeAgo(item.lastMessage.createdAt) : ""}
+                      </Text>
+                    </View>
                   </View>
                   <View style={styles.itemBottom}>
                     <Text
@@ -318,7 +370,7 @@ export default function MessagesScreen() {
                 {search.trim()
                   ? "Try a different name or keyword"
                   : folder === "archive"
-                  ? "Resolved support tickets will appear here."
+                  ? "Hold down any conversation in your inbox to archive it."
                   : isAdmin
                   ? "Go to Users to start a conversation with a student or owner."
                   : "Browse dorms and message an owner to start chatting."}
@@ -348,13 +400,13 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 20 },
   item: { flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, gap: 14 },
   avatarWrap: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 20, fontWeight: "bold" },
   itemContent: { flex: 1 },
   itemTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1, marginRight: 8 },
   participantName: { fontSize: 16, fontWeight: "600", flexShrink: 1 },
   adminBadge: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
   adminBadgeText: { color: "#ef4444", fontSize: 10, fontWeight: "700" },
+  itemTopRight: { flexDirection: "row", alignItems: "center" },
   timeText: { fontSize: 12 },
   itemBottom: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
   lastMessage: { fontSize: 14, flex: 1, marginRight: 8 },

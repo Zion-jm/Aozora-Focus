@@ -16,6 +16,10 @@ async function serializeConversation(conv: typeof conversations.$inferSelect, cu
   const lastMsg = allMsgs.length ? allMsgs[allMsgs.length - 1] : null;
   const unread = allMsgs.filter((m) => !m.isRead && m.senderId !== currentUserId).length;
 
+  const convRaw = sqlite.prepare("SELECT student_archived_at, owner_archived_at FROM conversations WHERE id = ?").get(conv.id) as any;
+  const isStudent = conv.studentId === currentUserId;
+  const myArchivedAt = isStudent ? convRaw?.student_archived_at : convRaw?.owner_archived_at;
+
   return {
     type: "dorm",
     id: conv.id,
@@ -24,6 +28,7 @@ async function serializeConversation(conv: typeof conversations.$inferSelect, cu
     ownerId: conv.ownerId,
     createdAt: conv.createdAt,
     updatedAt: conv.updatedAt,
+    archived: !!myArchivedAt,
     dorm: dorm ? {
       id: dorm.id,
       ownerId: dorm.ownerId,
@@ -67,6 +72,10 @@ function serializeAdminConversation(conv: any, currentUserId: number) {
 
   const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE conversation_id = ?").get(conv.id) as any;
 
+  // archived = resolved support ticket OR manually archived by this participant
+  const myArchivedAt = isAdmin ? conv.admin_archived_at : conv.user_archived_at;
+  const archived = !!conv.closed_at || !!myArchivedAt;
+
   return {
     type: "admin",
     id: conv.id,
@@ -78,7 +87,7 @@ function serializeAdminConversation(conv: any, currentUserId: number) {
     createdAt: conv.created_at,
     updatedAt: conv.updated_at,
     closedAt: conv.closed_at || null,
-    archived: !!conv.closed_at,
+    archived,
     otherParticipant: other ? {
       id: other.id,
       fullName: other.full_name,
@@ -289,7 +298,10 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
     isRead: false,
   }).returning();
 
-  await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, convId));
+  const now = new Date().toISOString();
+  await db.update(conversations).set({ updatedAt: now }).where(eq(conversations.id, convId));
+  // Auto-unarchive for both participants when a message is sent
+  sqlite.prepare("UPDATE conversations SET student_archived_at = NULL, owner_archived_at = NULL WHERE id = ?").run(convId);
 
   res.status(201).json(result[0]);
 });
@@ -315,6 +327,49 @@ router.delete("/conversations/:conversationId", requireAuth, async (req, res) =>
   }
 
   res.json({ message: "Conversation deleted" });
+});
+
+// ─── POST /conversations/:id/archive — per-user archive ──────────────────────
+
+router.post("/conversations/:conversationId/archive", requireAuth, async (req, res) => {
+  const convId = parseInt(req.params["conversationId"]!);
+  const userId = req.user!.id;
+
+  const conv = sqlite.prepare("SELECT * FROM conversations WHERE id = ?").get(convId) as any;
+  if (!conv || (conv.student_id !== userId && conv.owner_id !== userId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  if (conv.student_id === userId) {
+    sqlite.prepare("UPDATE conversations SET student_archived_at = ? WHERE id = ?").run(now, convId);
+  } else {
+    sqlite.prepare("UPDATE conversations SET owner_archived_at = ? WHERE id = ?").run(now, convId);
+  }
+
+  res.json({ message: "Conversation archived" });
+});
+
+// ─── POST /conversations/:id/unarchive ───────────────────────────────────────
+
+router.post("/conversations/:conversationId/unarchive", requireAuth, async (req, res) => {
+  const convId = parseInt(req.params["conversationId"]!);
+  const userId = req.user!.id;
+
+  const conv = sqlite.prepare("SELECT * FROM conversations WHERE id = ?").get(convId) as any;
+  if (!conv || (conv.student_id !== userId && conv.owner_id !== userId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  if (conv.student_id === userId) {
+    sqlite.prepare("UPDATE conversations SET student_archived_at = NULL WHERE id = ?").run(convId);
+  } else {
+    sqlite.prepare("UPDATE conversations SET owner_archived_at = NULL WHERE id = ?").run(convId);
+  }
+
+  res.json({ message: "Conversation unarchived" });
 });
 
 // ─── POST /conversations/:id/read ────────────────────────────────────────────
@@ -456,6 +511,47 @@ router.delete("/admin-conversations/:id", requireAuth, async (req, res) => {
   res.json({ message: "Conversation deleted" });
 });
 
+// POST /admin-conversations/:id/archive — per-user archive
+router.post("/admin-conversations/:id/archive", requireAuth, async (req, res) => {
+  const convId = parseInt(req.params["id"]!);
+  const userId = req.user!.id;
+
+  const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
+  if (!conv || (conv.admin_id !== userId && conv.user_id !== userId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  if (conv.admin_id === userId) {
+    sqlite.prepare("UPDATE admin_conversations SET admin_archived_at = ? WHERE id = ?").run(now, convId);
+  } else {
+    sqlite.prepare("UPDATE admin_conversations SET user_archived_at = ? WHERE id = ?").run(now, convId);
+  }
+
+  res.json({ message: "Conversation archived" });
+});
+
+// POST /admin-conversations/:id/unarchive
+router.post("/admin-conversations/:id/unarchive", requireAuth, async (req, res) => {
+  const convId = parseInt(req.params["id"]!);
+  const userId = req.user!.id;
+
+  const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
+  if (!conv || (conv.admin_id !== userId && conv.user_id !== userId)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  if (conv.admin_id === userId) {
+    sqlite.prepare("UPDATE admin_conversations SET admin_archived_at = NULL WHERE id = ?").run(convId);
+  } else {
+    sqlite.prepare("UPDATE admin_conversations SET user_archived_at = NULL WHERE id = ?").run(convId);
+  }
+
+  res.json({ message: "Conversation unarchived" });
+});
+
 // POST /admin-conversations/:id/messages
 router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) => {
   const convId = parseInt(req.params["id"]!);
@@ -490,9 +586,8 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
     "INSERT INTO admin_messages (conversation_id, sender_id, content, is_read) VALUES (?, ?, ?, 0)"
   ).run(convId, userId, content);
 
-  sqlite.prepare(
-    "UPDATE admin_conversations SET updated_at = ? WHERE id = ?"
-  ).run(new Date().toISOString(), convId);
+  const nowTs = new Date().toISOString();
+  sqlite.prepare("UPDATE admin_conversations SET updated_at = ?, admin_archived_at = NULL, user_archived_at = NULL WHERE id = ?").run(nowTs, convId);
 
   const msg = sqlite.prepare("SELECT * FROM admin_messages WHERE id = ?").get(result.lastInsertRowid) as any;
 
