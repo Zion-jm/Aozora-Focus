@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../db/index";
+import { db, sqlite } from "../db/index";
 import { appointments, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
@@ -82,7 +82,24 @@ router.get("/appointments", requireAuth, async (req, res) => {
     allAppointments.map(async (appt) => {
       const student = await db.select().from(users).where(eq(users.id, appt.studentId)).get();
       const dorm = await db.select().from(dorms).where(eq(dorms.id, appt.dormId)).get();
-      return serializeAppointment(appt, student, dorm);
+      const base = serializeAppointment(appt, student, dorm);
+
+      let hasReview = false;
+      if (appt.status === "completed") {
+        if (user.role === "student") {
+          const r = sqlite.prepare(
+            "SELECT id FROM dorm_reviews WHERE dorm_id = ? AND reviewer_id = ? LIMIT 1"
+          ).get(appt.dormId, user.id);
+          hasReview = !!r;
+        } else if (user.role === "owner") {
+          const r = sqlite.prepare(
+            "SELECT id FROM user_reviews WHERE reviewed_user_id = ? AND reviewer_id = ? LIMIT 1"
+          ).get(appt.studentId, user.id);
+          hasReview = !!r;
+        }
+      }
+
+      return { ...base, hasReview };
     })
   );
 

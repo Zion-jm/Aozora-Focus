@@ -209,10 +209,21 @@ export default function AppointmentsScreen() {
                   </View>
                   {tab === "history" && item.status === "completed" && (
                     <View style={styles.reviewHint}>
-                      <Feather name="edit-3" size={11} color={colors.primary} />
-                      <Text style={[styles.reviewHintText, { color: colors.primary }]}>
-                        {user?.role === "owner" ? "Tap to review tenant" : "Tap to review dorm"}
-                      </Text>
+                      {item.hasReview ? (
+                        <>
+                          <Feather name="check-circle" size={11} color="#10b981" />
+                          <Text style={[styles.reviewHintText, { color: "#10b981" }]}>
+                            {user?.role === "owner" ? "Tenant reviewed" : "Review submitted"}
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Feather name="edit-3" size={11} color={colors.primary} />
+                          <Text style={[styles.reviewHintText, { color: colors.primary }]}>
+                            {user?.role === "owner" ? "Tap to review tenant" : "Tap to review dorm"}
+                          </Text>
+                        </>
+                      )}
                     </View>
                   )}
                 </View>
