@@ -238,6 +238,9 @@ export default function ProfileScreen() {
 
       <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card, marginTop: 12 }]}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>SUPPORT</Text>
+        {user?.role !== "admin" && (
+          <MenuItem icon="inbox" label="My Support Tickets" onPress={() => router.push("/my-tickets")} colors={colors} />
+        )}
         <MenuItem icon="help-circle" label="Help Center" onPress={() => router.push("/help-center")} colors={colors} />
         <MenuItem icon="info" label="About Aozora" onPress={() => router.push("/about")} colors={colors} />
       </View>

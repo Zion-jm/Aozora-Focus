@@ -4,13 +4,53 @@ import { requireAuth, requireRole } from "../middlewares/auth";
 
 const router = Router();
 
+// ─── GET /support-tickets/my — current user's own tickets ────────────────────
+router.get("/support-tickets/my", requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+
+  const tickets = sqlite.prepare(
+    "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC"
+  ).all(userId) as any[];
+
+  const result = tickets.map((t: any) => ({
+    id: t.id,
+    conversationId: t.conversation_id,
+    ticketType: t.ticket_type,
+    subject: t.subject,
+    message: t.message,
+    status: t.status,
+    createdAt: t.created_at,
+    updatedAt: t.updated_at,
+  }));
+
+  res.json({ tickets: result });
+});
+
 // ─── POST /support-tickets — authenticated user submits a ticket ──────────────
 router.post("/support-tickets", requireAuth, async (req, res) => {
   const userId = req.user!.id;
+  const userRole = req.user!.role;
   const { ticketType, subject, message, attachmentUrl } = req.body;
+
+  if (userRole === "admin") {
+    res.status(403).json({ error: "Forbidden", message: "Admins cannot submit support tickets." });
+    return;
+  }
 
   if (!ticketType || !subject || !message) {
     res.status(400).json({ error: "Validation error", message: "ticketType, subject, and message are required" });
+    return;
+  }
+
+  // One active ticket at a time per user
+  const existing = sqlite.prepare(
+    "SELECT id FROM support_tickets WHERE user_id = ? AND status = 'pending' LIMIT 1"
+  ).get(userId) as any;
+  if (existing) {
+    res.status(409).json({
+      error: "Active ticket exists",
+      message: "You already have an open support ticket. Please wait for it to be resolved before submitting a new one.",
+    });
     return;
   }
 
@@ -21,8 +61,6 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
   }
   const adminId = admin.id;
 
-  // Each user can have multiple support tickets — check for existing support conv or create new
-  // Support tickets always create a fresh conversation (not deduped like warnings)
   const now = new Date().toISOString();
   const convResult = sqlite.prepare(
     "INSERT INTO admin_conversations (admin_id, user_id, conversation_type, created_at, updated_at) VALUES (?, ?, 'support', ?, ?)"

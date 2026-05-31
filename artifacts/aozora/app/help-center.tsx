@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -47,8 +47,30 @@ export default function HelpCenterScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const [checkingExisting, setCheckingExisting] = useState(false);
+  const [activeTicket, setActiveTicket] = useState<{ id: number; subject: string; conversationId: number | null } | null>(null);
+
   const isGuest = !user || !token;
+  const isAdmin = user?.role === "admin";
   const selectedType = TICKET_TYPES.find((t) => t.value === ticketType);
+
+  // Check for existing pending ticket (authenticated non-admin users only)
+  useEffect(() => {
+    if (!token || isAdmin || isGuest) return;
+    setCheckingExisting(true);
+    fetch(`${BASE_URL}/api/support-tickets/my`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        const pending = (data.tickets ?? []).find((t: any) => t.status === "pending");
+        if (pending) {
+          setActiveTicket({ id: pending.id, subject: pending.subject, conversationId: pending.conversationId });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingExisting(false));
+  }, [token, isAdmin, isGuest]);
 
   const handleSubmit = async () => {
     if (!ticketType) { Alert.alert("Required", "Please select a ticket type."); return; }
@@ -87,6 +109,106 @@ export default function HelpCenterScreen() {
     }
   };
 
+  // ── Admin: not allowed ──────────────────────────────────────────────────────
+  if (isAdmin) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Help Center</Text>
+          <View style={styles.backBtn} />
+        </View>
+        <View style={styles.blockedContainer}>
+          <View style={[styles.blockedIcon, { backgroundColor: colors.muted }]}>
+            <Feather name="shield" size={36} color={colors.mutedForeground} />
+          </View>
+          <Text style={[styles.blockedTitle, { color: colors.foreground }]}>Not Available</Text>
+          <Text style={[styles.blockedSub, { color: colors.mutedForeground }]}>
+            Support tickets are for users and owners only. As an admin, you manage the ticket queue directly.
+          </Text>
+          <TouchableOpacity
+            style={[styles.adminTicketsBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+            onPress={() => router.push("/admin/support-tickets")}
+            activeOpacity={0.85}
+          >
+            <Feather name="inbox" size={16} color="#fff" />
+            <Text style={styles.adminTicketsBtnText}>Go to Support Queue</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Loading check ────────────────────────────────────────────────────────────
+  if (checkingExisting) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Help Center</Text>
+          <View style={styles.backBtn} />
+        </View>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Already has an active ticket ─────────────────────────────────────────────
+  if (activeTicket) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Help Center</Text>
+          <View style={styles.backBtn} />
+        </View>
+        <View style={styles.blockedContainer}>
+          <View style={[styles.blockedIcon, { backgroundColor: "#f9731618" }]}>
+            <Feather name="clock" size={36} color="#f97316" />
+          </View>
+          <Text style={[styles.blockedTitle, { color: colors.foreground }]}>Active Ticket Pending</Text>
+          <Text style={[styles.blockedSub, { color: colors.mutedForeground }]}>
+            You already have an open support request. Please wait for it to be resolved before submitting a new one.
+          </Text>
+          <View style={[styles.activeTicketCard, { backgroundColor: colors.card, borderColor: "#f97316" + "50" }]}>
+            <View style={[styles.activeTicketBadge, { backgroundColor: "#f97316" }]}>
+              <Text style={styles.activeTicketBadgeText}>OPEN</Text>
+            </View>
+            <Text style={[styles.activeTicketSubject, { color: colors.foreground }]} numberOfLines={2}>
+              {activeTicket.subject}
+            </Text>
+          </View>
+          {activeTicket.conversationId ? (
+            <TouchableOpacity
+              style={[styles.adminTicketsBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+              onPress={() => router.push(`/admin-conversation/${activeTicket.conversationId}`)}
+              activeOpacity={0.85}
+            >
+              <Feather name="message-circle" size={16} color="#fff" />
+              <Text style={styles.adminTicketsBtnText}>View Ticket Thread</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={[styles.myTicketsBtn, { borderColor: colors.border, borderRadius: colors.radius }]}
+            onPress={() => router.push("/my-tickets")}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.myTicketsBtnText, { color: colors.foreground }]}>See All My Tickets</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Success ──────────────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -105,8 +227,17 @@ export default function HelpCenterScreen() {
           <Text style={[styles.successSub, { color: colors.mutedForeground }]}>
             {isGuest
               ? "Your request has been submitted. Our team will reach out to you via email."
-              : "Your support ticket has been received. You can track the conversation in your Messages."}
+              : "Your support ticket has been received. You can track it in My Support Tickets."}
           </Text>
+          {!isGuest && (
+            <TouchableOpacity
+              style={[styles.doneBtn, { backgroundColor: colors.secondary, borderRadius: colors.radius }]}
+              onPress={() => router.push("/my-tickets")}
+            >
+              <Feather name="inbox" size={16} color={colors.foreground} />
+              <Text style={[styles.doneBtnText, { color: colors.foreground }]}>View My Tickets</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.doneBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
             onPress={() => router.back()}
@@ -118,6 +249,7 @@ export default function HelpCenterScreen() {
     );
   }
 
+  // ── Main form ────────────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -257,6 +389,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
   headerTitle: { fontSize: 18, fontWeight: "700" },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   body: { padding: 16, gap: 6 },
   introBanner: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 8 },
   introText: { flex: 1, fontSize: 14, lineHeight: 20 },
@@ -270,11 +403,11 @@ const styles = StyleSheet.create({
   typeIconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   submitBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16, marginTop: 16 },
   submitBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
-  successContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 },
+  successContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
   successIcon: { width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center" },
   successTitle: { fontSize: 24, fontWeight: "800" },
   successSub: { fontSize: 15, textAlign: "center", lineHeight: 22 },
-  doneBtn: { paddingVertical: 14, paddingHorizontal: 40, marginTop: 8 },
+  doneBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 40, marginTop: 4, width: "100%" },
   doneBtnText: { fontSize: 16, fontWeight: "700" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   modalSheet: { borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 32, gap: 8 },
@@ -282,4 +415,16 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 17, fontWeight: "700", marginBottom: 8 },
   typeOption: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 2 },
   typeOptionText: { flex: 1, fontSize: 15 },
+  blockedContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 14 },
+  blockedIcon: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  blockedTitle: { fontSize: 22, fontWeight: "800" },
+  blockedSub: { fontSize: 15, textAlign: "center", lineHeight: 22 },
+  adminTicketsBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 32, marginTop: 8, width: "100%" },
+  adminTicketsBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  myTicketsBtn: { paddingVertical: 12, paddingHorizontal: 32, borderWidth: 1, width: "100%", alignItems: "center" },
+  myTicketsBtnText: { fontSize: 15, fontWeight: "600" },
+  activeTicketCard: { width: "100%", padding: 14, borderRadius: 12, borderWidth: 1.5, gap: 8 },
+  activeTicketBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, alignSelf: "flex-start" },
+  activeTicketBadgeText: { fontSize: 11, fontWeight: "700", color: "#fff" },
+  activeTicketSubject: { fontSize: 15, fontWeight: "600", lineHeight: 21 },
 });
