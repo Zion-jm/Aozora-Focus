@@ -113,6 +113,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
   const total: number = reviewsData?.total ?? 0;
   const canReview: boolean = canReviewData?.canReview ?? false;
   const canReviewReason: string | undefined = canReviewData?.reason;
+  const requiresCompletedVisit: boolean = canReviewData?.requiresCompletedVisit ?? false;
 
   const visibleReviews = expanded ? reviews : reviews.slice(0, 3);
 
@@ -185,11 +186,26 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
         )}
       </View>
 
+      {/* Locked gate banner — shown when visit is not yet completed */}
+      {!canReview && requiresCompletedVisit && token && (
+        <View style={[styles.lockedBanner, { backgroundColor: "#f59e0b10", borderColor: "#f59e0b40" }]}>
+          <View style={styles.lockedIconWrap}>
+            <Feather name="lock" size={18} color="#f59e0b" />
+          </View>
+          <View style={styles.lockedTextWrap}>
+            <Text style={[styles.lockedTitle, { color: colors.foreground }]}>Review locked</Text>
+            <Text style={[styles.lockedReason, { color: colors.mutedForeground }]}>
+              {canReviewReason ?? "Your visit must be marked as completed before you can leave a review."}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {reviews.length === 0 ? (
         <View style={[styles.emptyBox, { backgroundColor: colors.secondary, borderRadius: 12 }]}>
           <Feather name="message-square" size={28} color={colors.mutedForeground} />
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No reviews yet</Text>
-          {!canReview && canReviewReason && (
+          {!canReview && !requiresCompletedVisit && canReviewReason && (
             <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>{canReviewReason}</Text>
           )}
         </View>
@@ -323,6 +339,12 @@ const styles = StyleSheet.create({
   totalText: { fontSize: 13 },
   writeBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   writeBtnText: { fontSize: 13, fontWeight: "600" },
+
+  lockedBanner: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14, borderRadius: 12, borderWidth: 1 },
+  lockedIconWrap: { paddingTop: 2 },
+  lockedTextWrap: { flex: 1, gap: 3 },
+  lockedTitle: { fontSize: 14, fontWeight: "700" },
+  lockedReason: { fontSize: 13, lineHeight: 18 },
 
   emptyBox: { alignItems: "center", padding: 24, gap: 8 },
   emptyText: { fontSize: 15, fontWeight: "500" },

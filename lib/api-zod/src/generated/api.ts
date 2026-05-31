@@ -377,7 +377,7 @@ export const GetAppointmentsResponse = zod.object({
   "preferredDate": zod.string(),
   "preferredTime": zod.string(),
   "message": zod.string().nullish(),
-  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'cancelled', 'noted', 'completed', 'no_show']),
   "ownerNote": zod.string().nullish(),
   "student": zod.object({
   "id": zod.number(),
@@ -437,7 +437,7 @@ export const GetAppointmentByIdResponse = zod.object({
   "preferredDate": zod.string(),
   "preferredTime": zod.string(),
   "message": zod.string().nullish(),
-  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'cancelled', 'noted', 'completed', 'no_show']),
   "ownerNote": zod.string().nullish(),
   "student": zod.object({
   "id": zod.number(),
@@ -478,7 +478,7 @@ export const UpdateAppointmentStatusParams = zod.object({
 })
 
 export const UpdateAppointmentStatusBody = zod.object({
-  "status": zod.enum(['approved', 'rejected', 'cancelled', 'noted']),
+  "status": zod.enum(['approved', 'rejected', 'cancelled', 'noted', 'completed', 'no_show']),
   "ownerNote": zod.string().optional()
 })
 
@@ -489,7 +489,7 @@ export const UpdateAppointmentStatusResponse = zod.object({
   "preferredDate": zod.string(),
   "preferredTime": zod.string(),
   "message": zod.string().nullish(),
-  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'cancelled', 'noted', 'completed', 'no_show']),
   "ownerNote": zod.string().nullish(),
   "student": zod.object({
   "id": zod.number(),

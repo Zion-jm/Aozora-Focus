@@ -1177,7 +1177,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: [pending, approved, rejected]
+          enum: [pending, approved, rejected, cancelled, noted, completed, no_show]
         ownerNote:
           type: string
           nullable: true
@@ -1220,7 +1220,7 @@ components:
       properties:
         status:
           type: string
-          enum: [approved, rejected, cancelled, noted]
+          enum: [approved, rejected, cancelled, noted, completed, no_show]
         ownerNote:
           type: string
       required: [status]
