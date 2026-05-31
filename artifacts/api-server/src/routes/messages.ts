@@ -418,7 +418,21 @@ router.get("/admin-conversations/:id/messages", requireAuth, async (req, res) =>
     };
   });
 
-  res.json({ messages: result, total: result.length, page: 1 });
+  const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE conversation_id = ?").get(convId) as any;
+
+  res.json({
+    messages: result,
+    total: result.length,
+    page: 1,
+    closedAt: conv.closed_at || null,
+    conversationType: conv.conversation_type || "warning",
+    ticket: ticket ? {
+      id: ticket.id,
+      ticketType: ticket.ticket_type,
+      subject: ticket.subject,
+      status: ticket.status,
+    } : null,
+  });
 });
 
 // DELETE /admin-conversations/:id — soft-delete for current user

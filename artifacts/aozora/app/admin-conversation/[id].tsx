@@ -59,6 +59,10 @@ export default function AdminConversationScreen() {
       if (msgsRes.ok) {
         const data = await msgsRes.json();
         setMessages(data.messages || []);
+        // Read closedAt and ticket info directly from the messages endpoint (always accurate)
+        setClosedAt(data.closedAt || null);
+        if (data.conversationType) setConversationType(data.conversationType);
+        if (data.ticket !== undefined) setTicketInfo(data.ticket || null);
       }
 
       if (convRes.ok) {
@@ -66,9 +70,12 @@ export default function AdminConversationScreen() {
         const conv = (data.conversations || []).find((c: any) => c.type === "admin" && c.id === convId);
         if (conv) {
           setOtherUser(conv.otherParticipant);
-          setConversationType(conv.conversationType || "warning");
-          setTicketInfo(conv.ticket || null);
-          setClosedAt(conv.closedAt || null);
+          // Only use conversations list as fallback for fields not in messages endpoint
+          if (!conv.closedAt) {
+            // already set from msgsRes above; keep it
+          } else {
+            setClosedAt(conv.closedAt);
+          }
         }
       }
 
