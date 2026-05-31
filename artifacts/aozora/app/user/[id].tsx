@@ -321,6 +321,7 @@ export default function PublicProfileScreen() {
               ) : null}
               {canCall ? (
                 <View style={styles.metaRow}>
+                  <Feather name="phone" size={14} color={colors.mutedForeground} />
                   <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{profile.phone}</Text>
                 </View>
               ) : null}
