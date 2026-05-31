@@ -21,7 +21,8 @@ import { useAuth } from "@/context/AuthContext";
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const TICKET_TYPES = [
-  { value: "Appeal Suspension", label: "Appeal Suspension", icon: "user-x" as const, color: "#ef4444" },
+  { value: "Appeal Rejection", label: "Appeal Rejection", icon: "shield-off" as const, color: "#ef4444" },
+  { value: "Appeal Suspension", label: "Appeal Suspension", icon: "user-x" as const, color: "#dc2626" },
   { value: "Report a Technical Bug", label: "Report a Technical Bug", icon: "tool" as const, color: "#f97316" },
   { value: "General Question", label: "General Question", icon: "help-circle" as const, color: "#0ea5e9" },
   { value: "Payment/Listing Help", label: "Payment / Listing Help", icon: "home" as const, color: "#10b981" },

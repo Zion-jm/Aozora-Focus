@@ -106,28 +106,9 @@ function Field({
 export default function VerifyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, updateUser, token } = useAuth();
-  const [isAppealing, setIsAppealing] = useState(false);
-
-  const handleAppeal = async () => {
-    if (!token) return;
-    setIsAppealing(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/user/admin-conversation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      router.push(`/admin-conversation/${data.id}`);
-    } catch {
-      Alert.alert("Error", "Could not open admin chat. Please try again.");
-    } finally {
-      setIsAppealing(false);
-    }
+  const { user, updateUser } = useAuth();
+  const handleAppeal = () => {
+    router.push("/help-center?type=appeal_rejection");
   };
 
   const [step, setStep] = useState<Step>("personal");
@@ -460,17 +441,10 @@ export default function VerifyScreen() {
                 { borderColor: "#ef444460", borderRadius: colors.radius },
               ]}
               onPress={handleAppeal}
-              disabled={isAppealing}
               activeOpacity={0.8}
             >
-              {isAppealing ? (
-                <ActivityIndicator color="#ef4444" />
-              ) : (
-                <>
-                  <Feather name="message-circle" size={18} color="#ef4444" />
-                  <Text style={styles.appealVerifyBtnText}>Appeal to Admin</Text>
-                </>
-              )}
+              <Feather name="message-circle" size={18} color="#ef4444" />
+              <Text style={styles.appealVerifyBtnText}>Appeal to Admin</Text>
             </TouchableOpacity>
           </>
         ) : step === "personal" ? (

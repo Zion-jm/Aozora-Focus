@@ -67,7 +67,7 @@ export default function ProfileScreen() {
   };
 
   const handleAppeal = () => {
-    router.push("/help-center?type=appeal_suspension");
+    router.push("/help-center?type=appeal_rejection");
   };
 
   const verificationColor =
