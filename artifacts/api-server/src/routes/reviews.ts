@@ -252,7 +252,7 @@ router.patch("/dorms/:dormId/reviews/:reviewId", requireAuth, (req, res) => {
   }
 
   sqlite.prepare(
-    "UPDATE dorm_reviews SET rating = COALESCE(?, rating), comment = ?, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE dorm_reviews SET rating = COALESCE(?, rating), comment = ? WHERE id = ?"
   ).run(rating ?? null, comment?.trim() ?? null, reviewId);
 
   const stats = sqlite.prepare(
@@ -321,7 +321,7 @@ router.patch("/users/:userId/reviews/:reviewId", requireAuth, (req, res) => {
   }
 
   sqlite.prepare(
-    "UPDATE user_reviews SET rating = COALESCE(?, rating), comment = ?, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE user_reviews SET rating = COALESCE(?, rating), comment = ? WHERE id = ?"
   ).run(rating ?? null, comment?.trim() ?? null, reviewId);
 
   const stats = sqlite.prepare(
