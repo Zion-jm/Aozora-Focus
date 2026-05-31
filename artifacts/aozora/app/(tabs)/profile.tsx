@@ -139,7 +139,15 @@ export default function ProfileScreen() {
             {user.universityOrWorkplace}
           </Text>
         ) : null}
-        <Text style={[styles.email, { color: colors.mutedForeground }]}>{user?.email || user?.phone || ""}</Text>
+        {user?.email ? (
+          <Text style={[styles.email, { color: colors.mutedForeground }]}>{user.email}</Text>
+        ) : null}
+        {user?.phone ? (
+          <Text style={[styles.email, { color: colors.mutedForeground }]}>{user.phone}</Text>
+        ) : null}
+        {user?.bio ? (
+          <Text style={[styles.bio, { color: colors.mutedForeground }]}>{user.bio}</Text>
+        ) : null}
         <View style={styles.badges}>
           <View style={[styles.roleBadge, { backgroundColor: colors.primary + "18" }]}>
             <Text style={[styles.roleBadgeText, { color: colors.primary }]}>
@@ -232,6 +240,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: "bold" },
   subInfo: { fontSize: 13 },
   email: { fontSize: 15 },
+  bio: { fontSize: 14, lineHeight: 20, textAlign: "center", marginTop: 2 },
   editProfileBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   editProfileBtnText: { fontSize: 13, fontWeight: "600" },
   badges: { flexDirection: "row", gap: 8, marginTop: 4 },
