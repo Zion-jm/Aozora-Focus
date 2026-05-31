@@ -206,7 +206,7 @@ router.post("/admin/reports/:id/warn", requireAuth, requireRole("admin"), (req, 
 
   sqlite
     .prepare(
-      "UPDATE reports SET status = 'reviewed', updated_at = datetime('now') WHERE id = ?"
+      "UPDATE reports SET status = 'reviewed', warned_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
     )
     .run(reportId);
 
