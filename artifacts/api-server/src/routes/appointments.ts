@@ -146,6 +146,7 @@ router.get("/appointments/:appointmentId", requireAuth, async (req, res) => {
 });
 
 router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
+  const user = req.user!;
   const id = parseInt(req.params["appointmentId"]!);
   const { status, ownerNote } = req.body;
 
@@ -156,9 +157,33 @@ router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
   }
 
   const dorm = await db.select().from(dorms).where(eq(dorms.id, appt.dormId)).get();
-  if (!dorm || dorm.ownerId !== req.user!.id) {
-    res.status(403).json({ error: "Forbidden" });
-    return;
+
+  // Students can cancel their own pending or approved appointments
+  if (status === "cancelled") {
+    if (user.role !== "student" || appt.studentId !== user.id) {
+      res.status(403).json({ error: "Forbidden", message: "Only the student can cancel their appointment" });
+      return;
+    }
+    if (appt.status !== "pending" && appt.status !== "approved") {
+      res.status(400).json({ error: "Cannot cancel", message: "Only pending or approved appointments can be cancelled" });
+      return;
+    }
+  // Owners can mark a cancelled appointment as noted
+  } else if (status === "noted") {
+    if (user.role !== "owner" || dorm?.ownerId !== user.id) {
+      res.status(403).json({ error: "Forbidden", message: "Only the dorm owner can mark as noted" });
+      return;
+    }
+    if (appt.status !== "cancelled") {
+      res.status(400).json({ error: "Cannot note", message: "Only cancelled appointments can be marked as noted" });
+      return;
+    }
+  // Owners handle approve / reject
+  } else {
+    if (!dorm || dorm.ownerId !== user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
   }
 
   const result = await db.update(appointments).set({

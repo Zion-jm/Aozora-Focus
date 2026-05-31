@@ -77,7 +77,7 @@ export const appointments = sqliteTable("appointments", {
   preferredDate: text("preferred_date").notNull(),
   preferredTime: text("preferred_time").notNull(),
   message: text("message"),
-  status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "approved", "rejected", "cancelled", "noted"] }).notNull().default("pending"),
   ownerNote: text("owner_note"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),

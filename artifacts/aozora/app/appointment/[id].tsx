@@ -28,6 +28,16 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "#f59e0b",
   approved: "#10b981",
   rejected: "#ef4444",
+  cancelled: "#6b7280",
+  noted: "#8b5cf6",
+};
+
+const STATUS_ICONS: Record<string, string> = {
+  pending: "clock",
+  approved: "check-circle",
+  rejected: "x-circle",
+  cancelled: "slash",
+  noted: "check-square",
 };
 
 export default function AppointmentDetailScreen() {
@@ -69,7 +79,16 @@ export default function AppointmentDetailScreen() {
   }
 
   const statusColor = STATUS_COLORS[appt.status] || colors.mutedForeground;
+  const statusIcon = STATUS_ICONS[appt.status] || "calendar";
   const isApproved = appt.status === "approved";
+  const isCancelled = appt.status === "cancelled";
+  const isPending = appt.status === "pending";
+  const isTerminal = appt.status === "rejected" || appt.status === "noted";
+
+  const statusLabel =
+    appt.status === "cancelled" ? "Cancelled"
+    : appt.status === "noted" ? "Noted by Owner"
+    : appt.status.charAt(0).toUpperCase() + appt.status.slice(1);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -82,13 +101,23 @@ export default function AppointmentDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]}>
+        {/* Status banner */}
         <View style={[styles.statusCard, { backgroundColor: statusColor + "15", borderRadius: colors.radius }]}>
-          <Feather name="calendar" size={28} color={statusColor} />
-          <Text style={[styles.statusLabel, { color: statusColor }]}>
-            {appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
-          </Text>
+          <Feather name={statusIcon as any} size={28} color={statusColor} />
+          <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+          {isCancelled && user?.role === "student" && (
+            <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
+              Waiting for the owner to acknowledge
+            </Text>
+          )}
+          {isCancelled && user?.role === "owner" && (
+            <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
+              Student cancelled this visit
+            </Text>
+          )}
         </View>
 
+        {/* Dorm */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           <Text style={[styles.cardTitle, { color: colors.mutedForeground }]}>DORM</Text>
           <Text style={[styles.cardValue, { color: colors.foreground }]}>{appt.dorm?.name || "—"}</Text>
@@ -131,6 +160,7 @@ export default function AppointmentDetailScreen() {
           </View>
         )}
 
+        {/* Date & time */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           <Text style={[styles.cardTitle, { color: colors.mutedForeground }]}>DATE & TIME</Text>
           <View style={styles.iconRow}>
@@ -157,7 +187,8 @@ export default function AppointmentDetailScreen() {
           </View>
         ) : null}
 
-        {user?.role === "owner" && appt.status === "pending" && (
+        {/* Owner actions: approve / reject (pending only) */}
+        {user?.role === "owner" && isPending && (
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#10b981", borderRadius: colors.radius }]}
@@ -193,6 +224,69 @@ export default function AppointmentDetailScreen() {
               <Text style={styles.actionBtnText}>Reject</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Owner action: mark as noted (when student cancelled) */}
+        {user?.role === "owner" && isCancelled && (
+          <TouchableOpacity
+            style={[styles.notedBtn, { backgroundColor: "#8b5cf6" + "18", borderColor: "#8b5cf6" + "50", borderRadius: colors.radius }]}
+            onPress={() =>
+              Alert.alert(
+                "Mark as Noted?",
+                "This acknowledges that you've seen the cancellation.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Mark as Noted",
+                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "noted" } }),
+                  },
+                ]
+              )
+            }
+            disabled={update.isPending}
+            activeOpacity={0.8}
+          >
+            {update.isPending ? (
+              <ActivityIndicator size="small" color="#8b5cf6" />
+            ) : (
+              <>
+                <Feather name="check-square" size={18} color="#8b5cf6" />
+                <Text style={[styles.notedBtnText, { color: "#8b5cf6" }]}>Mark as Noted</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* Student action: cancel (pending or approved only) */}
+        {user?.role === "student" && (isPending || isApproved) && (
+          <TouchableOpacity
+            style={[styles.cancelBtn, { borderColor: colors.destructive + "60", borderRadius: colors.radius }]}
+            onPress={() =>
+              Alert.alert(
+                "Cancel Visit?",
+                "The owner will be notified of your cancellation.",
+                [
+                  { text: "Keep Visit", style: "cancel" },
+                  {
+                    text: "Cancel Visit",
+                    style: "destructive",
+                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "cancelled" } }),
+                  },
+                ]
+              )
+            }
+            disabled={update.isPending}
+            activeOpacity={0.8}
+          >
+            {update.isPending ? (
+              <ActivityIndicator size="small" color={colors.destructive} />
+            ) : (
+              <>
+                <Feather name="slash" size={16} color={colors.destructive} />
+                <Text style={[styles.cancelBtnText, { color: colors.destructive }]}>Cancel Visit</Text>
+              </>
+            )}
+          </TouchableOpacity>
         )}
 
         {/* Review sections for approved visits */}
@@ -231,8 +325,9 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
   body: { padding: 16, gap: 12 },
-  statusCard: { alignItems: "center", padding: 32, gap: 12 },
+  statusCard: { alignItems: "center", padding: 28, gap: 8 },
   statusLabel: { fontSize: 22, fontWeight: "bold" },
+  statusHint: { fontSize: 13, textAlign: "center" },
   card: { borderWidth: 1, padding: 16, gap: 8 },
   cardTitle: { fontSize: 11, fontWeight: "600", letterSpacing: 0.8, marginBottom: 4 },
   cardValue: { fontSize: 17, fontWeight: "600" },
@@ -242,5 +337,9 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: 12, marginTop: 8 },
   actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
   actionBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  cancelBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderWidth: 1, marginTop: 4 },
+  cancelBtnText: { fontSize: 15, fontWeight: "600" },
+  notedBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderWidth: 1, marginTop: 4 },
+  notedBtnText: { fontSize: 15, fontWeight: "700" },
   divider: { height: 1, marginVertical: 8 },
 });

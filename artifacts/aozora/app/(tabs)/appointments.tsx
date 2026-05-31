@@ -21,12 +21,16 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "#f59e0b",
   approved: "#10b981",
   rejected: "#ef4444",
+  cancelled: "#6b7280",
+  noted: "#8b5cf6",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   approved: "Approved",
   rejected: "Rejected",
+  cancelled: "Cancelled",
+  noted: "Noted",
 };
 
 type Tab = "active" | "history";
@@ -47,9 +51,9 @@ export default function AppointmentsScreen() {
 
   const tabData = useMemo(() => {
     if (tab === "active") {
-      return appointments.filter((a: any) => a.status === "pending");
+      return appointments.filter((a: any) => a.status === "pending" || a.status === "approved");
     }
-    return appointments.filter((a: any) => a.status === "approved" || a.status === "rejected");
+    return appointments.filter((a: any) => a.status === "rejected" || a.status === "cancelled" || a.status === "noted");
   }, [appointments, tab]);
 
   const filtered = useMemo(() => {
