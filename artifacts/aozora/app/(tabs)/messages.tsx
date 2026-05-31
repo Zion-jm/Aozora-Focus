@@ -42,6 +42,7 @@ export default function MessagesScreen() {
   const qc = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [folder, setFolder] = useState<"inbox" | "archive">("inbox");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetConversations({
     query: { queryKey: getGetConversationsQueryKey() },
@@ -50,16 +51,24 @@ export default function MessagesScreen() {
   const conversations = (data as any)?.conversations || [];
   const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
 
+  const archivedCount = useMemo(
+    () => conversations.filter((c: any) => !!c.archived).length,
+    [conversations]
+  );
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return conversations;
+    const folderFiltered = conversations.filter((c: any) =>
+      folder === "archive" ? !!c.archived : !c.archived
+    );
+    if (!search.trim()) return folderFiltered;
     const q = search.toLowerCase();
-    return conversations.filter(
+    return folderFiltered.filter(
       (c: any) =>
         c.otherParticipant?.fullName?.toLowerCase().includes(q) ||
         c.dorm?.name?.toLowerCase().includes(q) ||
         c.lastMessage?.content?.toLowerCase().includes(q)
     );
-  }, [conversations, search]);
+  }, [conversations, search, folder]);
 
   const handleOpen = (item: any) => {
     if (item.type === "admin") {
@@ -138,6 +147,24 @@ export default function MessagesScreen() {
               <Feather name="x" size={16} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
+        </View>
+        <View style={styles.folderTabs}>
+          <TouchableOpacity
+            style={[styles.folderTab, folder === "inbox" && { backgroundColor: colors.primary + "18", borderRadius: colors.radius }]}
+            onPress={() => setFolder("inbox")}
+          >
+            <Feather name="inbox" size={14} color={folder === "inbox" ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.folderTabText, { color: folder === "inbox" ? colors.primary : colors.mutedForeground }]}>Inbox</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.folderTab, folder === "archive" && { backgroundColor: colors.primary + "18", borderRadius: colors.radius }]}
+            onPress={() => setFolder("archive")}
+          >
+            <Feather name="archive" size={14} color={folder === "archive" ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.folderTabText, { color: folder === "archive" ? colors.primary : colors.mutedForeground }]}>
+              Archive{archivedCount > 0 ? ` (${archivedCount})` : ""}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -244,13 +271,19 @@ export default function MessagesScreen() {
           }}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Feather name="message-square" size={48} color={colors.mutedForeground} />
+              <Feather name={folder === "archive" ? "archive" : "message-square"} size={48} color={colors.mutedForeground} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                {search.trim() ? `No results for "${search}"` : "No conversations yet"}
+                {search.trim()
+                  ? `No results for "${search}"`
+                  : folder === "archive"
+                  ? "No archived conversations"
+                  : "No conversations yet"}
               </Text>
               <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
                 {search.trim()
                   ? "Try a different name or keyword"
+                  : folder === "archive"
+                  ? "Resolved support tickets will appear here."
                   : isAdmin
                   ? "Go to Users to start a conversation with a student or owner."
                   : "Browse dorms and message an owner to start chatting."}
@@ -273,6 +306,9 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 15, marginTop: 4, marginBottom: 12 },
   searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   searchInput: { flex: 1, fontSize: 15, padding: 0 },
+  folderTabs: { flexDirection: "row", gap: 6, marginTop: 10 },
+  folderTab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 7 },
+  folderTabText: { fontSize: 13, fontWeight: "600" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   listContent: { paddingBottom: 20 },
   item: { flexDirection: "row", alignItems: "center", padding: 16, borderBottomWidth: 1, gap: 14 },

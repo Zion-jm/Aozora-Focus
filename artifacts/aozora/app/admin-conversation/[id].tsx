@@ -46,6 +46,7 @@ export default function AdminConversationScreen() {
   const [ticketInfo, setTicketInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [closedAt, setClosedAt] = useState<string | null>(null);
 
   const fetchMessages = async () => {
     if (!token || !convId) return;
@@ -67,6 +68,7 @@ export default function AdminConversationScreen() {
           setOtherUser(conv.otherParticipant);
           setConversationType(conv.conversationType || "warning");
           setTicketInfo(conv.ticket || null);
+          setClosedAt(conv.closedAt || null);
         }
       }
 
@@ -184,6 +186,7 @@ export default function AdminConversationScreen() {
 
   const isAdmin = user?.role === "admin";
   const isOneWay = conversationType === "warning" && !isAdmin;
+  const isClosed = !!closedAt;
 
   return (
     <KeyboardAvoidingView
@@ -295,7 +298,21 @@ export default function AdminConversationScreen() {
       )}
 
       {/* Input area */}
-      {isOneWay ? (
+      {isClosed ? (
+        /* Resolved ticket — conversation locked for everyone */
+        <View
+          style={[
+            styles.oneWayBar,
+            { backgroundColor: "#10b98110", borderTopColor: "#10b98130", paddingBottom: insets.bottom || 16 },
+          ]}
+        >
+          <Feather name="check-circle" size={16} color="#10b981" />
+          <Text style={[styles.oneWayText, { color: "#10b981" }]}>
+            This ticket has been resolved. The conversation is now closed.
+            {isAdmin ? " Reopen the ticket to continue chatting." : " Contact support again if you need further help."}
+          </Text>
+        </View>
+      ) : isOneWay ? (
         /* One-way notice — user cannot reply to warnings */
         <View
           style={[

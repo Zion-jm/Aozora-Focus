@@ -171,6 +171,15 @@ router.patch("/admin/support-tickets/:id", requireAuth, requireRole("admin"), as
   const now = new Date().toISOString();
   sqlite.prepare("UPDATE support_tickets SET status = ?, updated_at = ? WHERE id = ?").run(status, now, ticketId);
 
+  // Sync conversation closed_at with ticket status
+  if (ticket.conversation_id) {
+    if (status === "resolved") {
+      sqlite.prepare("UPDATE admin_conversations SET closed_at = ? WHERE id = ?").run(now, ticket.conversation_id);
+    } else {
+      sqlite.prepare("UPDATE admin_conversations SET closed_at = NULL WHERE id = ?").run(ticket.conversation_id);
+    }
+  }
+
   const updated = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketId) as any;
   res.json({ id: updated.id, status: updated.status, updatedAt: updated.updated_at });
 });

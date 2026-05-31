@@ -77,6 +77,8 @@ function serializeAdminConversation(conv: any, currentUserId: number) {
     dorm: null,
     createdAt: conv.created_at,
     updatedAt: conv.updated_at,
+    closedAt: conv.closed_at || null,
+    archived: !!conv.closed_at,
     otherParticipant: other ? {
       id: other.id,
       fullName: other.full_name,
@@ -454,6 +456,12 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
   const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
   if (!conv || (conv.admin_id !== userId && conv.user_id !== userId)) {
     res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  // Block messaging on closed (resolved) support conversations
+  if (conv.closed_at) {
+    res.status(423).json({ error: "Conversation closed", message: "This support ticket has been resolved. The conversation is closed." });
     return;
   }
 

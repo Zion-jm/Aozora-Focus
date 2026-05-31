@@ -195,6 +195,7 @@ export function initializeDatabase() {
     "ALTER TABLE reports ADD COLUMN warned_at TEXT",
     "ALTER TABLE reports ADD COLUMN taken_down_at TEXT",
     "ALTER TABLE users ADD COLUMN phone_public INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE admin_conversations ADD COLUMN closed_at TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }
