@@ -121,6 +121,7 @@ export default function ConversationScreen() {
     const isMe = item.senderId === user?.id;
     const reversedIndex = messages.length - 1 - index;
     const isLastReadSent = isMe && reversedIndex === lastReadSentIndex;
+    const senderName = isMe ? "You" : (item.sender?.fullName ?? "Unknown");
 
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
@@ -134,7 +135,10 @@ export default function ConversationScreen() {
             userId={item.sender?.id}
           />
         )}
-        <View style={styles.bubbleWrapper}>
+        <View style={[styles.bubbleWrapper, isMe && styles.bubbleWrapperMe]}>
+          <Text style={[styles.senderName, isMe && styles.senderNameMe, { color: colors.mutedForeground }]}>
+            {senderName}
+          </Text>
           <View
             style={[
               styles.bubble,
@@ -293,7 +297,10 @@ const styles = StyleSheet.create({
   msgRowMe: { flexDirection: "row-reverse" },
   avatar: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   avatarText: { fontSize: 14, fontWeight: "bold" },
-  bubbleWrapper: { maxWidth: "75%", alignItems: "flex-end" },
+  bubbleWrapper: { maxWidth: "75%", alignItems: "flex-start" },
+  bubbleWrapperMe: { alignItems: "flex-end" },
+  senderName: { fontSize: 11, fontWeight: "600", marginBottom: 3, marginLeft: 2 },
+  senderNameMe: { textAlign: "right", marginRight: 2, marginLeft: 0 },
   bubble: { padding: 12, paddingBottom: 8 },
   bubbleText: { fontSize: 15, lineHeight: 22 },
   timeText: { fontSize: 11, marginTop: 4, textAlign: "right" },

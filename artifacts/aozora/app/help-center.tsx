@@ -225,7 +225,7 @@ export default function HelpCenterScreen() {
     );
   }
 
-  // ── Success ──────────────────────────────────────────────────────────────────
+  // ── Success — show confirmation + active ticket card ─────────────────────────
   if (submitted) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -236,32 +236,65 @@ export default function HelpCenterScreen() {
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Help Center</Text>
           <View style={styles.backBtn} />
         </View>
-        <View style={styles.successContainer}>
-          <View style={[styles.successIcon, { backgroundColor: "#10b98118" }]}>
-            <Feather name="check-circle" size={44} color="#10b981" />
+        <ScrollView contentContainerStyle={[styles.successScroll, { paddingBottom: insets.bottom + 40 }]}>
+          {/* Confirmation banner */}
+          <View style={[styles.confirmBanner, { backgroundColor: "#10b98112", borderColor: "#10b98130" }]}>
+            <View style={[styles.confirmIconWrap, { backgroundColor: "#10b98120" }]}>
+              <Feather name="check-circle" size={36} color="#10b981" />
+            </View>
+            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Ticket Submitted!</Text>
+            <Text style={[styles.confirmSub, { color: colors.mutedForeground }]}>
+              {isGuest
+                ? "Your request has been submitted. Our team will reach out to you via email."
+                : "Your support ticket has been received. A dedicated thread has been created in your Messages."}
+            </Text>
           </View>
-          <Text style={[styles.successTitle, { color: colors.foreground }]}>Ticket Submitted!</Text>
-          <Text style={[styles.successSub, { color: colors.mutedForeground }]}>
-            {isGuest
-              ? "Your request has been submitted. Our team will reach out to you via email."
-              : "Your support ticket has been received. You can track it in My Support Tickets."}
-          </Text>
-          {!isGuest && (
-            <TouchableOpacity
-              style={[styles.doneBtn, { backgroundColor: colors.secondary, borderRadius: colors.radius }]}
-              onPress={() => router.push("/my-tickets")}
-            >
-              <Feather name="inbox" size={16} color={colors.foreground} />
-              <Text style={[styles.doneBtnText, { color: colors.foreground }]}>View My Tickets</Text>
-            </TouchableOpacity>
+
+          {/* Active ticket card */}
+          {activeTicket && (
+            <View style={[styles.pendingSection, { borderColor: colors.border }]}>
+              <Text style={[styles.pendingSectionLabel, { color: colors.mutedForeground }]}>YOUR ACTIVE TICKET</Text>
+              <View style={[styles.pendingCard, { backgroundColor: colors.card, borderColor: "#f9731640" }]}>
+                <View style={styles.pendingCardTop}>
+                  <View style={[styles.openBadge, { backgroundColor: "#f97316" }]}>
+                    <Text style={styles.openBadgeText}>OPEN</Text>
+                  </View>
+                  <View style={styles.pendingDot} />
+                  <Text style={[styles.pendingWaiting, { color: colors.mutedForeground }]}>Awaiting admin response</Text>
+                </View>
+                <Text style={[styles.pendingSubject, { color: colors.foreground }]} numberOfLines={2}>
+                  {activeTicket.subject}
+                </Text>
+                {activeTicket.conversationId && (
+                  <TouchableOpacity
+                    style={[styles.openThreadBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+                    onPress={() => router.push(`/admin-conversation/${activeTicket.conversationId}`)}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="message-circle" size={16} color="#fff" />
+                    <Text style={styles.openThreadBtnText}>Open Ticket Thread</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity
+                style={[styles.myTicketsLink, { borderColor: colors.border, borderRadius: colors.radius }]}
+                onPress={() => router.push("/my-tickets")}
+                activeOpacity={0.8}
+              >
+                <Feather name="inbox" size={15} color={colors.foreground} />
+                <Text style={[styles.myTicketsLinkText, { color: colors.foreground }]}>See All My Tickets</Text>
+              </TouchableOpacity>
+            </View>
           )}
+
+          {/* Done */}
           <TouchableOpacity
-            style={[styles.doneBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+            style={[styles.doneBtn, { backgroundColor: isGuest || !activeTicket ? colors.primary : colors.secondary, borderRadius: colors.radius, marginHorizontal: 24 }]}
             onPress={() => router.back()}
           >
-            <Text style={[styles.doneBtnText, { color: "#fff" }]}>Done</Text>
+            <Text style={[styles.doneBtnText, { color: isGuest || !activeTicket ? "#fff" : colors.foreground }]}>Done</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
     );
   }
@@ -420,10 +453,24 @@ const styles = StyleSheet.create({
   typeIconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   submitBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16, marginTop: 16 },
   submitBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
-  successContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 12 },
-  successIcon: { width: 88, height: 88, borderRadius: 44, alignItems: "center", justifyContent: "center" },
-  successTitle: { fontSize: 24, fontWeight: "800" },
-  successSub: { fontSize: 15, textAlign: "center", lineHeight: 22 },
+  successScroll: { padding: 24, gap: 20 },
+  confirmBanner: { borderRadius: 16, borderWidth: 1, padding: 24, alignItems: "center", gap: 12 },
+  confirmIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
+  confirmTitle: { fontSize: 22, fontWeight: "800" },
+  confirmSub: { fontSize: 14, textAlign: "center", lineHeight: 21 },
+  pendingSection: { gap: 10 },
+  pendingSectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  pendingCard: { borderRadius: 14, borderWidth: 1.5, padding: 16, gap: 10 },
+  pendingCardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  openBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  openBadgeText: { fontSize: 10, fontWeight: "800", color: "#fff" },
+  pendingDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#f97316" },
+  pendingWaiting: { fontSize: 12 },
+  pendingSubject: { fontSize: 15, fontWeight: "600", lineHeight: 21 },
+  openThreadBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13, marginTop: 2 },
+  openThreadBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  myTicketsLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderWidth: 1 },
+  myTicketsLinkText: { fontSize: 14, fontWeight: "600" },
   doneBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 40, marginTop: 4, width: "100%" },
   doneBtnText: { fontSize: 16, fontWeight: "700" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },

@@ -148,6 +148,9 @@ export default function AdminConversationScreen() {
     const isMe = item.senderId === user?.id;
     const reversedIndex = messages.length - 1 - index;
     const isLastReadSent = isMe && reversedIndex === lastReadSentIndex;
+    const senderLabel = isMe
+      ? "You"
+      : (item.sender?.fullName ?? otherUser?.fullName ?? (isAdmin ? "User" : "Aozora Support"));
 
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
@@ -161,7 +164,10 @@ export default function AdminConversationScreen() {
             userId={item.sender?.id ?? otherUser?.id}
           />
         )}
-        <View style={styles.bubbleWrapper}>
+        <View style={[styles.bubbleWrapper, isMe && styles.bubbleWrapperMe]}>
+          <Text style={[styles.senderLabel, isMe && styles.senderLabelMe, { color: colors.mutedForeground }]}>
+            {senderLabel}
+          </Text>
           <View
             style={[
               styles.bubble,
@@ -194,6 +200,33 @@ export default function AdminConversationScreen() {
   const isAdmin = user?.role === "admin";
   const isOneWay = conversationType === "warning" && !isAdmin;
   const isClosed = !!closedAt;
+
+  const handleTicketAction = () => {
+    if (!ticketInfo || !isAdmin) return;
+    const isPending = ticketInfo.status === "pending";
+    Alert.alert(
+      ticketInfo.subject,
+      `Type: ${ticketInfo.ticketType}\nStatus: ${isPending ? "Open" : "Resolved"}`,
+      [
+        {
+          text: isPending ? "Mark as Resolved" : "Reopen Ticket",
+          onPress: async () => {
+            try {
+              const newStatus = isPending ? "resolved" : "pending";
+              const res = await apiFetch(`/api/admin/support-tickets/${ticketInfo.id}`, token!, {
+                method: "PATCH",
+                body: JSON.stringify({ status: newStatus }),
+              });
+              if (res.ok) await fetchMessages();
+            } catch {
+              Alert.alert("Error", "Could not update ticket status.");
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
 
   return (
     <KeyboardAvoidingView
@@ -260,20 +293,27 @@ export default function AdminConversationScreen() {
         </View>
       )}
 
-      {/* Support ticket info banner for admin */}
+      {/* Support ticket info banner for admin — tap to resolve/reopen */}
       {isAdmin && ticketInfo && (
-        <View style={[styles.ticketBanner, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "30" }]}>
+        <TouchableOpacity
+          style={[styles.ticketBanner, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "30" }]}
+          onPress={handleTicketAction}
+          activeOpacity={0.75}
+        >
           <Feather name="life-buoy" size={15} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.ticketBannerType, { color: colors.primary }]}>{ticketInfo.ticketType}</Text>
             <Text style={[styles.ticketBannerSubject, { color: colors.foreground }]}>{ticketInfo.subject}</Text>
           </View>
-          <View style={[styles.ticketStatusChip, { backgroundColor: ticketInfo.status === "resolved" ? "#10b981" + "18" : "#f97316" + "18" }]}>
-            <Text style={[styles.ticketStatusText, { color: ticketInfo.status === "resolved" ? "#10b981" : "#f97316" }]}>
-              {ticketInfo.status === "resolved" ? "Resolved" : "Pending"}
-            </Text>
+          <View style={{ alignItems: "flex-end", gap: 4 }}>
+            <View style={[styles.ticketStatusChip, { backgroundColor: ticketInfo.status === "resolved" ? "#10b98118" : "#f9731618" }]}>
+              <Text style={[styles.ticketStatusText, { color: ticketInfo.status === "resolved" ? "#10b981" : "#f97316" }]}>
+                {ticketInfo.status === "resolved" ? "Resolved" : "Open"}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 10, color: colors.primary, fontWeight: "600" }}>Tap to update ›</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       )}
 
       {isLoading ? (
@@ -411,7 +451,10 @@ const styles = StyleSheet.create({
   listContent: { padding: 16, gap: 12 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginVertical: 2 },
   msgRowMe: { flexDirection: "row-reverse" },
-  bubbleWrapper: { maxWidth: "75%", alignItems: "flex-end" },
+  bubbleWrapper: { maxWidth: "75%", alignItems: "flex-start" },
+  bubbleWrapperMe: { alignItems: "flex-end" },
+  senderLabel: { fontSize: 11, fontWeight: "600", marginBottom: 3, marginLeft: 2 },
+  senderLabelMe: { textAlign: "right", marginRight: 2, marginLeft: 0 },
   bubble: { padding: 12, paddingBottom: 8 },
   bubbleText: { fontSize: 15, lineHeight: 22 },
   timeText: { fontSize: 11, marginTop: 4, textAlign: "right" },
