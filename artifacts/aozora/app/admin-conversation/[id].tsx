@@ -47,6 +47,8 @@ export default function AdminConversationScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [closedAt, setClosedAt] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
 
   const fetchMessages = async () => {
     if (!token || !convId) return;
@@ -59,8 +61,9 @@ export default function AdminConversationScreen() {
       if (msgsRes.ok) {
         const data = await msgsRes.json();
         setMessages(data.messages || []);
-        // Read closedAt and ticket info directly from the messages endpoint (always accurate)
+        // Read closedAt, startedAt and ticket info directly from the messages endpoint (always accurate)
         setClosedAt(data.closedAt || null);
+        setStartedAt(data.startedAt || null);
         if (data.conversationType) setConversationType(data.conversationType);
         if (data.ticket !== undefined) setTicketInfo(data.ticket || null);
       }
@@ -200,6 +203,21 @@ export default function AdminConversationScreen() {
   const isAdmin = user?.role === "admin";
   const isOneWay = conversationType === "warning" && !isAdmin;
   const isClosed = !!closedAt;
+  const isNotStarted = conversationType === "support" && !startedAt;
+
+  const handleStartConversation = async () => {
+    if (!token || isStarting) return;
+    setIsStarting(true);
+    try {
+      const res = await apiFetch(`/api/admin-conversations/${convId}/start`, token, { method: "POST" });
+      if (res.ok) await fetchMessages();
+      else Alert.alert("Error", "Could not start conversation. Please try again.");
+    } catch {
+      Alert.alert("Error", "Could not start conversation. Please try again.");
+    } finally {
+      setIsStarting(false);
+    }
+  };
 
   const handleTicketAction = () => {
     if (!ticketInfo || !isAdmin) return;
@@ -365,6 +383,49 @@ export default function AdminConversationScreen() {
               : "This ticket has been resolved and archived. If you need further assistance, please open a new ticket."}
           </Text>
         </View>
+      ) : isAdmin && isNotStarted ? (
+        /* Admin hasn't started yet — show "Start Conversation" CTA */
+        <View
+          style={[
+            styles.startConvBar,
+            { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom || 16 },
+          ]}
+        >
+          <View style={styles.startConvInfo}>
+            <Feather name="message-circle" size={15} color={colors.primary} />
+            <Text style={[styles.startConvText, { color: colors.mutedForeground }]}>
+              Click below to open the chat with this user.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.startConvBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+            onPress={handleStartConversation}
+            disabled={isStarting}
+            activeOpacity={0.85}
+          >
+            {isStarting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Feather name="message-circle" size={16} color="#fff" />
+                <Text style={styles.startConvBtnText}>Start Conversation</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : !isAdmin && isNotStarted ? (
+        /* User — waiting for admin to start */
+        <View
+          style={[
+            styles.oneWayBar,
+            { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom || 16 },
+          ]}
+        >
+          <Ionicons name="lock-closed-outline" size={16} color={colors.mutedForeground} />
+          <Text style={[styles.oneWayText, { color: colors.mutedForeground }]}>
+            Waiting for an admin to review your ticket before the chat opens.
+          </Text>
+        </View>
       ) : isOneWay ? (
         /* One-way notice — user cannot reply to warnings */
         <View
@@ -466,4 +527,9 @@ const styles = StyleSheet.create({
   inputBar: { flexDirection: "row", alignItems: "flex-end", gap: 10, padding: 12, paddingTop: 10, borderTopWidth: 1 },
   input: { flex: 1, borderWidth: 1, padding: 12, fontSize: 15, maxHeight: 120, minHeight: 44 },
   sendBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  startConvBar: { paddingHorizontal: 16, paddingTop: 12, gap: 10, borderTopWidth: 1 },
+  startConvInfo: { flexDirection: "row", alignItems: "center", gap: 8 },
+  startConvText: { fontSize: 13, flex: 1 },
+  startConvBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13 },
+  startConvBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 });

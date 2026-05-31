@@ -19,7 +19,8 @@ import { UserAvatar } from "@/components/UserAvatar";
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const TICKET_TYPE_COLORS: Record<string, string> = {
-  "Appeal Suspension": "#ef4444",
+  "Appeal Rejection": "#ef4444",
+  "Appeal Suspension": "#dc2626",
   "Report a Technical Bug": "#f97316",
   "General Question": "#0ea5e9",
   "Payment/Listing Help": "#10b981",
@@ -27,6 +28,7 @@ const TICKET_TYPE_COLORS: Record<string, string> = {
 };
 
 const TICKET_TYPE_ICONS: Record<string, React.ComponentProps<typeof Feather>["name"]> = {
+  "Appeal Rejection": "shield-off",
   "Appeal Suspension": "user-x",
   "Report a Technical Bug": "tool",
   "General Question": "help-circle",

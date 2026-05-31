@@ -482,6 +482,7 @@ router.get("/admin-conversations/:id/messages", requireAuth, async (req, res) =>
     total: result.length,
     page: 1,
     closedAt: conv.closed_at || null,
+    startedAt: conv.started_at || null,
     conversationType: conv.conversation_type || "warning",
     ticket: ticket ? {
       id: ticket.id,
@@ -577,8 +578,15 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
     return;
   }
 
-  // Enforce one-way: non-admins cannot reply to warning conversations
   const senderRole = req.user!.role;
+
+  // Block users from messaging support tickets until admin starts the conversation
+  if (conv.conversation_type === "support" && senderRole !== "admin" && !conv.started_at) {
+    res.status(423).json({ error: "Conversation not started", message: "An admin has not yet started this conversation. Please wait." });
+    return;
+  }
+
+  // Enforce one-way: non-admins cannot reply to warning conversations
   if ((conv.conversation_type || "warning") === "warning" && senderRole !== "admin") {
     res.status(403).json({ error: "This is a one-way official notice. You cannot reply to this message." });
     return;
@@ -601,6 +609,33 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
     isRead: !!msg.is_read,
     createdAt: msg.created_at,
   });
+});
+
+// POST /admin-conversations/:id/start — admin starts a support conversation
+router.post("/admin-conversations/:id/start", requireAuth, async (req, res) => {
+  const convId = parseInt(req.params["id"]!);
+  const userId = req.user!.id;
+
+  if (req.user!.role !== "admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
+  if (!conv || conv.admin_id !== userId) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  if (conv.conversation_type !== "support") {
+    res.status(400).json({ error: "Only support conversations can be started this way." });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  sqlite.prepare("UPDATE admin_conversations SET started_at = ?, updated_at = ? WHERE id = ?").run(now, now, convId);
+
+  res.json({ startedAt: now });
 });
 
 // POST /admin-conversations/:id/read
