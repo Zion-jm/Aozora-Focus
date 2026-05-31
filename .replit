@@ -1,5 +1,5 @@
 guessImports = false
-modules = ["web", "bash", "nodejs-24", "python-3.11"]
+modules = ["nodejs-20", "web", "nix"]
 
 [deployment]
 router = "application"
