@@ -7,6 +7,10 @@ import { initializeDatabase } from "./db/index";
 
 const app: Express = express();
 
+// Disable ETags so API responses are never served from cache (304s would hide
+// state changes like closed_at being updated when a ticket is resolved)
+app.set("etag", false);
+
 initializeDatabase();
 
 app.use(
