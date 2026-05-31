@@ -14,7 +14,7 @@ if (!existsSync(BINARY)) {
   console.log("[ensure-sqlite] Native binding missing — rebuilding better-sqlite3...");
   const orig = process.cwd();
   process.chdir(SQLITE3_DIR);
-  execSync("npx node-gyp rebuild --release", { stdio: "inherit" });
+  execSync("npx --yes node-gyp rebuild --release", { stdio: "inherit" });
   process.chdir(orig);
   console.log("[ensure-sqlite] Rebuild complete.");
 } else {
