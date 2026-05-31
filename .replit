@@ -1,5 +1,5 @@
 guessImports = false
-modules = ["nodejs-20", "web", "nix"]
+modules = ["nodejs-20", "web", "nix", "python-3.11"]
 
 [deployment]
 router = "application"
@@ -25,13 +25,13 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node dev-proxy.js"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash start.sh"
+waitForPort = 5000
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -44,10 +44,6 @@ timeoutMs = 20000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
 
 [[ports]]
 localPort = 8080
