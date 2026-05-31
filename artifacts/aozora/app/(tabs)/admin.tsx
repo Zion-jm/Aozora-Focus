@@ -396,6 +396,14 @@ export default function AdminTabScreen() {
                   onPress={() => router.push("/admin/suspended-users")}
                   colors={colors}
                 />
+                <QuickAction
+                  icon="life-buoy"
+                  label="Support & Appeals"
+                  desc="Review help tickets and user appeals"
+                  badge={s?.pendingSupportTickets > 0 ? s.pendingSupportTickets : null}
+                  onPress={() => router.push("/admin/support-tickets")}
+                  colors={colors}
+                />
               </View>
             </>
           )}

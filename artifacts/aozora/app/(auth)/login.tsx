@@ -104,6 +104,17 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </Link>
         </View>
+
+        <TouchableOpacity
+          style={[styles.helpBtn, { borderColor: colors.border }]}
+          onPress={() => router.push("/help-center")}
+          activeOpacity={0.75}
+        >
+          <Feather name="life-buoy" size={15} color={colors.mutedForeground} />
+          <Text style={[styles.helpBtnText, { color: colors.mutedForeground }]}>
+            Need help or suspended? Contact Support
+          </Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -175,5 +186,19 @@ const styles = StyleSheet.create({
   link: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  helpBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  helpBtnText: {
+    fontSize: 14,
   },
 });

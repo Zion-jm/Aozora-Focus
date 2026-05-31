@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -51,8 +50,7 @@ function MenuItem({
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, token } = useAuth();
-  const [isAppealing, setIsAppealing] = useState(false);
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     Alert.alert("Log out", "Are you sure you want to log out?", [
@@ -68,25 +66,8 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleAppeal = async () => {
-    if (!token) return;
-    setIsAppealing(true);
-    try {
-      const res = await fetch(`${BASE_URL}/api/user/admin-conversation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      router.push(`/admin-conversation/${data.id}`);
-    } catch {
-      Alert.alert("Error", "Could not open admin chat. Please try again.");
-    } finally {
-      setIsAppealing(false);
-    }
+  const handleAppeal = () => {
+    router.push("/help-center?type=appeal_suspension");
   };
 
   const verificationColor =
@@ -232,18 +213,11 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={[styles.appealBtn, { backgroundColor: "#ef4444" }]}
             onPress={handleAppeal}
-            disabled={isAppealing}
             activeOpacity={0.85}
           >
-            {isAppealing ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Feather name="message-circle" size={16} color="#fff" />
-                <Text style={styles.appealBtnText}>Appeal Rejection</Text>
-                <Feather name="arrow-right" size={15} color="rgba(255,255,255,0.8)" />
-              </>
-            )}
+            <Feather name="message-circle" size={16} color="#fff" />
+            <Text style={styles.appealBtnText}>Appeal Rejection</Text>
+            <Feather name="arrow-right" size={15} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         </View>
       )}
@@ -264,7 +238,7 @@ export default function ProfileScreen() {
 
       <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card, marginTop: 12 }]}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>SUPPORT</Text>
-        <MenuItem icon="help-circle" label="Help Center" onPress={() => {}} colors={colors} />
+        <MenuItem icon="help-circle" label="Help Center" onPress={() => router.push("/help-center")} colors={colors} />
         <MenuItem icon="info" label="About Aozora" onPress={() => router.push("/about")} colors={colors} />
       </View>
 

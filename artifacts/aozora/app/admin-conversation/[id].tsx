@@ -42,6 +42,8 @@ export default function AdminConversationScreen() {
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
+  const [conversationType, setConversationType] = useState<"warning" | "support">("warning");
+  const [ticketInfo, setTicketInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
@@ -61,10 +63,13 @@ export default function AdminConversationScreen() {
       if (convRes.ok) {
         const data = await convRes.json();
         const conv = (data.conversations || []).find((c: any) => c.type === "admin" && c.id === convId);
-        if (conv) setOtherUser(conv.otherParticipant);
+        if (conv) {
+          setOtherUser(conv.otherParticipant);
+          setConversationType(conv.conversationType || "warning");
+          setTicketInfo(conv.ticket || null);
+        }
       }
 
-      // Mark as read
       await apiFetch(`/api/admin-conversations/${convId}/read`, token, { method: "POST" });
     } catch {
       // ignore
@@ -85,7 +90,7 @@ export default function AdminConversationScreen() {
   const handleDelete = () => {
     Alert.alert(
       "Delete Conversation",
-      "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
+      "This will remove the conversation from your view.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -142,8 +147,8 @@ export default function AdminConversationScreen() {
             name={item.sender?.fullName ?? otherUser?.fullName}
             avatarUrl={item.sender?.avatarUrl ?? otherUser?.avatarUrl}
             size={32}
-            color="#ef4444"
-            backgroundColor="#ef444422"
+            color={conversationType === "support" ? colors.primary : "#ef4444"}
+            backgroundColor={conversationType === "support" ? colors.primary + "22" : "#ef444422"}
             userId={item.sender?.id ?? otherUser?.id}
           />
         )}
@@ -178,6 +183,7 @@ export default function AdminConversationScreen() {
   };
 
   const isAdmin = user?.role === "admin";
+  const isOneWay = conversationType === "warning" && !isAdmin;
 
   return (
     <KeyboardAvoidingView
@@ -185,6 +191,7 @@ export default function AdminConversationScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -196,15 +203,28 @@ export default function AdminConversationScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-            {otherUser?.fullName || "…"}
+            {conversationType === "support" && ticketInfo
+              ? ticketInfo.subject
+              : otherUser?.fullName || "…"}
           </Text>
-          {!isAdmin && (
+          {!isAdmin && conversationType === "warning" && (
             <View style={styles.warningBadge}>
               <Ionicons name="shield" size={11} color="#ef4444" />
-              <Text style={styles.warningBadgeText}>Admin Message</Text>
+              <Text style={styles.warningBadgeText}>Official Notice</Text>
             </View>
           )}
-          {isAdmin && (
+          {!isAdmin && conversationType === "support" && (
+            <View style={[styles.supportBadge, { backgroundColor: colors.primary + "18" }]}>
+              <Feather name="life-buoy" size={11} color={colors.primary} />
+              <Text style={[styles.supportBadgeText, { color: colors.primary }]}>Support Ticket</Text>
+            </View>
+          )}
+          {isAdmin && ticketInfo && (
+            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+              {ticketInfo.ticketType}
+            </Text>
+          )}
+          {isAdmin && !ticketInfo && (
             <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
               {otherUser?.role ? otherUser.role.charAt(0).toUpperCase() + otherUser.role.slice(1) : ""}
             </Text>
@@ -215,12 +235,29 @@ export default function AdminConversationScreen() {
         </TouchableOpacity>
       </View>
 
-      {!isAdmin && (
+      {/* Warning banner for non-admins on a warning conv */}
+      {!isAdmin && conversationType === "warning" && (
         <View style={[styles.warningBanner, { backgroundColor: "#ef444410", borderColor: "#ef444430" }]}>
           <Ionicons name="warning-outline" size={16} color="#ef4444" />
           <Text style={styles.warningBannerText}>
             This is an official message from the Aozora admin team.
           </Text>
+        </View>
+      )}
+
+      {/* Support ticket info banner for admin */}
+      {isAdmin && ticketInfo && (
+        <View style={[styles.ticketBanner, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "30" }]}>
+          <Feather name="life-buoy" size={15} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.ticketBannerType, { color: colors.primary }]}>{ticketInfo.ticketType}</Text>
+            <Text style={[styles.ticketBannerSubject, { color: colors.foreground }]}>{ticketInfo.subject}</Text>
+          </View>
+          <View style={[styles.ticketStatusChip, { backgroundColor: ticketInfo.status === "resolved" ? "#10b981" + "18" : "#f97316" + "18" }]}>
+            <Text style={[styles.ticketStatusText, { color: ticketInfo.status === "resolved" ? "#10b981" : "#f97316" }]}>
+              {ticketInfo.status === "resolved" ? "Resolved" : "Pending"}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -238,16 +275,40 @@ export default function AdminConversationScreen() {
           contentContainerStyle={[styles.listContent, { paddingBottom: 16 }]}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="shield-outline" size={40} color={colors.mutedForeground} />
+              <Ionicons
+                name={conversationType === "support" ? "help-circle-outline" : "shield-outline"}
+                size={40}
+                color={colors.mutedForeground}
+              />
               <Text style={[{ color: colors.mutedForeground, fontSize: 15, marginTop: 12, textAlign: "center" }]}>
-                {isAdmin ? "Send a warning or notice to this user." : "No messages yet from admin."}
+                {isAdmin
+                  ? conversationType === "support"
+                    ? "Start the support conversation."
+                    : "Send a warning or notice to this user."
+                  : conversationType === "support"
+                  ? "Your ticket has been received. An admin will respond shortly."
+                  : "No messages yet from admin."}
               </Text>
             </View>
           }
         />
       )}
 
-      {(isAdmin || true) && (
+      {/* Input area */}
+      {isOneWay ? (
+        /* One-way notice — user cannot reply to warnings */
+        <View
+          style={[
+            styles.oneWayBar,
+            { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom || 16 },
+          ]}
+        >
+          <Ionicons name="lock-closed-outline" size={16} color={colors.mutedForeground} />
+          <Text style={[styles.oneWayText, { color: colors.mutedForeground }]}>
+            This is a one-way official notice. You cannot reply to this message.
+          </Text>
+        </View>
+      ) : (
         <View
           style={[
             styles.inputBar,
@@ -264,7 +325,11 @@ export default function AdminConversationScreen() {
                 borderRadius: colors.radius,
               },
             ]}
-            placeholder={isAdmin ? "Type a warning or message…" : "Reply to admin…"}
+            placeholder={
+              isAdmin
+                ? conversationType === "support" ? "Reply to ticket…" : "Type a warning or message…"
+                : "Reply to admin…"
+            }
             placeholderTextColor={colors.mutedForeground}
             value={text}
             onChangeText={setText}
@@ -302,13 +367,18 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 12, marginTop: 1 },
   warningBadge: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
   warningBadgeText: { color: "#ef4444", fontSize: 11, fontWeight: "600" },
+  supportBadge: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 },
+  supportBadgeText: { fontSize: 11, fontWeight: "600" },
   warningBanner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
   warningBannerText: { flex: 1, fontSize: 13, color: "#ef4444", lineHeight: 18 },
+  ticketBanner: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  ticketBannerType: { fontSize: 11, fontWeight: "700", marginBottom: 1 },
+  ticketBannerSubject: { fontSize: 13, fontWeight: "600" },
+  ticketStatusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  ticketStatusText: { fontSize: 12, fontWeight: "700" },
   listContent: { padding: 16, gap: 12 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginVertical: 2 },
   msgRowMe: { flexDirection: "row-reverse" },
-  avatar: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 14, fontWeight: "bold" },
   bubbleWrapper: { maxWidth: "75%", alignItems: "flex-end" },
   bubble: { padding: 12, paddingBottom: 8 },
   bubbleText: { fontSize: 15, lineHeight: 22 },
@@ -316,6 +386,8 @@ const styles = StyleSheet.create({
   seenRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3, paddingRight: 2 },
   seenText: { fontSize: 10, fontWeight: "600" },
   empty: { paddingVertical: 60, alignItems: "center" },
+  oneWayBar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 20, paddingTop: 14, borderTopWidth: 1 },
+  oneWayText: { fontSize: 13, textAlign: "center", lineHeight: 18, flex: 1 },
   inputBar: { flexDirection: "row", alignItems: "flex-end", gap: 10, padding: 12, paddingTop: 10, borderTopWidth: 1 },
   input: { flex: 1, borderWidth: 1, padding: 12, fontSize: 15, maxHeight: 120, minHeight: 44 },
   sendBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },

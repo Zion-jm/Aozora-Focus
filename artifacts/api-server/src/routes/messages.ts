@@ -65,11 +65,14 @@ function serializeAdminConversation(conv: any, currentUserId: number) {
   const lastMsg = allMsgs.length ? allMsgs[allMsgs.length - 1] : null;
   const unread = allMsgs.filter((m: any) => !m.is_read && m.sender_id !== currentUserId).length;
 
+  const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE conversation_id = ?").get(conv.id) as any;
+
   return {
     type: "admin",
     id: conv.id,
     adminId: conv.admin_id,
     userId: conv.user_id,
+    conversationType: conv.conversation_type || "warning",
     dormId: null,
     dorm: null,
     createdAt: conv.created_at,
@@ -90,6 +93,12 @@ function serializeAdminConversation(conv: any, currentUserId: number) {
       createdAt: lastMsg.created_at,
     } : null,
     unreadCount: unread,
+    ticket: ticket ? {
+      id: ticket.id,
+      ticketType: ticket.ticket_type,
+      subject: ticket.subject,
+      status: ticket.status,
+    } : null,
   };
 }
 
@@ -329,37 +338,11 @@ router.post("/conversations/:conversationId/read", requireAuth, async (req, res)
 
 // ─── ADMIN CONVERSATIONS ──────────────────────────────────────────────────────
 
-// POST /user/admin-conversation — any authenticated user starts/retrieves their conversation with the admin
+// POST /user/admin-conversation — disabled; users must use the Help Center to contact admin
 router.post("/user/admin-conversation", requireAuth, async (req, res) => {
-  const userId = req.user!.id;
-
-  if (req.user!.role === "admin") {
-    res.status(400).json({ error: "Admins cannot open an appeal with themselves" });
-    return;
-  }
-
-  const admin = sqlite.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get() as any;
-  if (!admin) {
-    res.status(404).json({ error: "No admin found" });
-    return;
-  }
-  const adminId = admin.id;
-
-  let conv = sqlite.prepare(
-    "SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ?"
-  ).get(adminId, userId) as any;
-
-  if (!conv) {
-    const result = sqlite.prepare(
-      "INSERT INTO admin_conversations (admin_id, user_id) VALUES (?, ?)"
-    ).run(adminId, userId);
-    conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(result.lastInsertRowid) as any;
-  } else if (conv.user_deleted_at) {
-    sqlite.prepare("UPDATE admin_conversations SET user_deleted_at = NULL WHERE id = ?").run(conv.id);
-    conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(conv.id) as any;
-  }
-
-  res.status(201).json(serializeAdminConversation(conv, userId));
+  res.status(400).json({
+    error: "Direct admin conversations are disabled. Please use the Help Center to submit a support ticket.",
+  });
 });
 
 // POST /admin/conversations — admin starts or retrieves existing conversation with a user
@@ -471,6 +454,13 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
   const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
   if (!conv || (conv.admin_id !== userId && conv.user_id !== userId)) {
     res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
+  // Enforce one-way: non-admins cannot reply to warning conversations
+  const senderRole = req.user!.role;
+  if ((conv.conversation_type || "warning") === "warning" && senderRole !== "admin") {
+    res.status(403).json({ error: "This is a one-way official notice. You cannot reply to this message." });
     return;
   }
 

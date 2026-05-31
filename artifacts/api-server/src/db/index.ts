@@ -146,6 +146,7 @@ export function initializeDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       admin_id INTEGER NOT NULL REFERENCES users(id),
       user_id INTEGER NOT NULL REFERENCES users(id),
+      conversation_type TEXT NOT NULL DEFAULT 'warning',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(admin_id, user_id)
@@ -159,6 +160,21 @@ export function initializeDatabase() {
       is_read INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS support_tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      conversation_id INTEGER REFERENCES admin_conversations(id),
+      user_id INTEGER REFERENCES users(id),
+      guest_name TEXT,
+      guest_email TEXT,
+      ticket_type TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      attachment_url TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   // Add soft-delete columns (idempotent — ignore if already exist)
@@ -167,6 +183,7 @@ export function initializeDatabase() {
     "ALTER TABLE conversations ADD COLUMN owner_deleted_at TEXT",
     "ALTER TABLE admin_conversations ADD COLUMN admin_deleted_at TEXT",
     "ALTER TABLE admin_conversations ADD COLUMN user_deleted_at TEXT",
+    "ALTER TABLE admin_conversations ADD COLUMN conversation_type TEXT NOT NULL DEFAULT 'warning'",
     "ALTER TABLE users ADD COLUMN birthday TEXT",
     "ALTER TABLE users ADD COLUMN university_or_workplace TEXT",
     "ALTER TABLE users ADD COLUMN emergency_contact_name TEXT",
