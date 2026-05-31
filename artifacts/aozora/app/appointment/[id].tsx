@@ -15,6 +15,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { ReviewsSection } from "@/components/ReviewsSection";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   getGetAppointmentByIdQueryKey,
   useGetAppointmentById,
@@ -32,7 +34,7 @@ export default function AppointmentDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const qc = useQueryClient();
 
   const { data, isLoading } = useGetAppointmentById(id!, {
@@ -67,6 +69,7 @@ export default function AppointmentDetailScreen() {
   }
 
   const statusColor = STATUS_COLORS[appt.status] || colors.mutedForeground;
+  const isApproved = appt.status === "approved";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -96,6 +99,37 @@ export default function AppointmentDetailScreen() {
             </View>
           )}
         </View>
+
+        {/* Student info — visible to owners */}
+        {user?.role === "owner" && appt.student && (
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+            <Text style={[styles.cardTitle, { color: colors.mutedForeground }]}>STUDENT</Text>
+            <TouchableOpacity
+              style={styles.studentRow}
+              onPress={() => router.push(`/user/${appt.student.id}`)}
+              activeOpacity={0.8}
+            >
+              <UserAvatar
+                name={appt.student.fullName}
+                avatarUrl={appt.student.avatarUrl}
+                size={36}
+                color={colors.primary}
+                backgroundColor={colors.primary + "22"}
+                userId={appt.student.id}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardValue, { color: colors.foreground }]}>{appt.student.fullName}</Text>
+                {appt.student.verificationStatus === "verified" && (
+                  <View style={styles.iconRow}>
+                    <Feather name="check-circle" size={12} color="#10b981" />
+                    <Text style={[styles.sub, { color: "#10b981" }]}>ID Verified</Text>
+                  </View>
+                )}
+              </View>
+              <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           <Text style={[styles.cardTitle, { color: colors.mutedForeground }]}>DATE & TIME</Text>
@@ -160,6 +194,31 @@ export default function AppointmentDetailScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Review sections for approved visits */}
+        {isApproved && user?.role === "student" && appt.dorm?.id && (
+          <>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <ReviewsSection
+              type="dorm"
+              targetId={appt.dorm.id}
+              token={token}
+              colors={colors}
+            />
+          </>
+        )}
+
+        {isApproved && user?.role === "owner" && appt.student?.id && (
+          <>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <ReviewsSection
+              type="user"
+              targetId={appt.student.id}
+              token={token}
+              colors={colors}
+            />
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -179,7 +238,9 @@ const styles = StyleSheet.create({
   cardValue: { fontSize: 17, fontWeight: "600" },
   iconRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sub: { fontSize: 14 },
+  studentRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   actions: { flexDirection: "row", gap: 12, marginTop: 8 },
   actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
   actionBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  divider: { height: 1, marginVertical: 8 },
 });
