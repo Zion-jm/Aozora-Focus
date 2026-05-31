@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 
+import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReportModal } from "@/components/ReportModal";
 
@@ -71,6 +72,7 @@ interface ReviewsSectionProps {
 }
 
 export function ReviewsSection({ type, targetId, token, colors }: ReviewsSectionProps) {
+  const { user: currentUser } = useAuth();
   const qc = useQueryClient();
   const reviewsKey = [type === "dorm" ? "dormReviews" : "userReviews", targetId];
   const canReviewKey = ["canReview", type, targetId];
@@ -228,7 +230,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
                   userId={review.reviewer.id}
                 />
                 <View style={styles.cardMeta}>
-                  <TouchableOpacity onPress={() => router.push(`/user/${review.reviewer.id}`)}>
+                  <TouchableOpacity onPress={() => review.reviewer.id === currentUser?.id ? router.push("/(tabs)/profile") : router.push(`/user/${review.reviewer.id}`)}>
                     <Text style={[styles.reviewerName, { color: colors.foreground }]} numberOfLines={1}>
                       {review.reviewer.fullName}
                     </Text>

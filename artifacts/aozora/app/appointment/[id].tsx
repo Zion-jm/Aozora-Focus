@@ -164,7 +164,7 @@ export default function AppointmentDetailScreen() {
             <Text style={[styles.cardTitle, { color: colors.mutedForeground }]}>STUDENT</Text>
             <TouchableOpacity
               style={styles.studentRow}
-              onPress={() => router.push(`/user/${appt.student.id}`)}
+              onPress={() => appt.student.id === user?.id ? router.push("/(tabs)/profile") : router.push(`/user/${appt.student.id}`)}
               activeOpacity={0.8}
             >
               <UserAvatar

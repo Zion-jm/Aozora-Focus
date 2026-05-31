@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 
 interface UserAvatarProps {
   name?: string | null;
@@ -21,6 +22,7 @@ export function UserAvatar({
   style,
   userId,
 }: UserAvatarProps) {
+  const { user: currentUser } = useAuth();
   const letter = (name || "?")[0]?.toUpperCase() ?? "?";
   const borderRadius = size / 2;
   const fontSize = size * 0.42;
@@ -46,9 +48,10 @@ export function UserAvatar({
   );
 
   if (userId) {
+    const isSelf = userId === currentUser?.id;
     return (
       <TouchableOpacity
-        onPress={() => router.push(`/user/${userId}`)}
+        onPress={() => isSelf ? router.push("/(tabs)/profile") : router.push(`/user/${userId}`)}
         activeOpacity={0.75}
         style={style}
       >
