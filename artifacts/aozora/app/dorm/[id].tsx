@@ -20,6 +20,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewsSection } from "@/components/ReviewsSection";
+import { ReportModal } from "@/components/ReportModal";
 import {
   getGetDormByIdQueryKey,
   useGetDormById,
@@ -177,6 +178,7 @@ export default function DormDetailScreen() {
 
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [initialMsg, setInitialMsg] = useState("");
+  const [showReport, setShowReport] = useState(false);
 
   const { data: dorm, isLoading } = useGetDormById(id!, {
     query: { enabled: !!id, queryKey: getGetDormByIdQueryKey(id!) },
@@ -268,6 +270,15 @@ export default function DormDetailScreen() {
           >
             <Feather name="arrow-left" size={20} color={colors.foreground} />
           </TouchableOpacity>
+          {user && user.id !== (d as any)?.owner?.id && (
+            <TouchableOpacity
+              style={[styles.reportBtn, { backgroundColor: colors.card }]}
+              onPress={() => setShowReport(true)}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            >
+              <Feather name="flag" size={17} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
           {user && (
             <TouchableOpacity
               style={[styles.favBtn, { backgroundColor: colors.card }]}
@@ -284,6 +295,16 @@ export default function DormDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        <ReportModal
+          visible={showReport}
+          onClose={() => setShowReport(false)}
+          targetType="dorm"
+          targetId={dormIdNum}
+          targetLabel={(d as any)?.name}
+          token={token}
+          colors={colors}
+        />
 
         <View style={styles.content}>
           <View style={styles.titleRow}>
@@ -561,6 +582,7 @@ const styles = StyleSheet.create({
   coverImage: { width: "100%", height: 280, backgroundColor: "#e2e8f0" },
   backBtn: { position: "absolute", top: 48, left: 16, width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
   favBtn: { position: "absolute", top: 48, right: 16, width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 3 },
+  reportBtn: { position: "absolute", top: 96, right: 16, width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2 },
   content: { padding: 20 },
   titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
   title: { fontSize: 24, fontWeight: "bold", flex: 1, marginRight: 12 },

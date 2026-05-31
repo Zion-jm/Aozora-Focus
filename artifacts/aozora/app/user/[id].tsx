@@ -20,6 +20,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewsSection } from "@/components/ReviewsSection";
+import { ReportModal } from "@/components/ReportModal";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -67,6 +68,7 @@ export default function PublicProfileScreen() {
 
   const [showDormPicker, setShowDormPicker] = useState(false);
   const [isMessaging, setIsMessaging] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ["publicUser", userId],
@@ -177,8 +179,28 @@ export default function PublicProfileScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>
           {profile?.fullName?.split(" ")[0] ?? "Profile"}
         </Text>
-        <View style={{ width: 36 }} />
+        {!isOwnProfile && !!me && !!profile ? (
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => setShowReport(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="flag" size={18} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
+
+      <ReportModal
+        visible={showReport}
+        onClose={() => setShowReport(false)}
+        targetType="user"
+        targetId={userId}
+        targetLabel={profile?.fullName}
+        token={token}
+        colors={colors}
+      />
 
       {isLoading ? (
         <View style={styles.center}>

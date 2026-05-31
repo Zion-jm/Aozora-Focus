@@ -129,6 +129,19 @@ export function initializeDatabase() {
       UNIQUE(reviewed_user_id, reviewer_id)
     );
 
+    CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reporter_id INTEGER NOT NULL REFERENCES users(id),
+      target_type TEXT NOT NULL,
+      target_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      details TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      admin_note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS admin_conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       admin_id INTEGER NOT NULL REFERENCES users(id),

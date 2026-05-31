@@ -112,6 +112,14 @@ export default function AdminDashboard() {
                 onPress={() => router.push("/admin/users")}
                 colors={colors}
               />
+              <NavCard
+                icon="flag"
+                label="User Reports"
+                desc="Review safety and moderation reports"
+                badge={stats?.pendingReports > 0 ? stats.pendingReports : null}
+                onPress={() => router.push("/admin/reports")}
+                colors={colors}
+              />
             </View>
           </>
         )}

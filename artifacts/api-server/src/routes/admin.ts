@@ -12,6 +12,9 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
   const allAppts = await db.select().from(appointments).all();
   const allVerifs = await db.select().from(verificationRecords).all();
 
+  const { sqlite } = await import("../db/index");
+  const pendingReports = (sqlite.prepare("SELECT COUNT(*) as cnt FROM reports WHERE status = 'pending'").get() as any)?.cnt ?? 0;
+
   res.json({
     totalUsers: allUsers.length,
     totalStudents: allUsers.filter((u) => u.role === "student").length,
@@ -22,6 +25,7 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
     approvedDorms: allDorms.filter((d) => d.status === "approved").length,
     totalAppointments: allAppts.length,
     pendingAppointments: allAppts.filter((a) => a.status === "pending").length,
+    pendingReports,
   });
 });
 

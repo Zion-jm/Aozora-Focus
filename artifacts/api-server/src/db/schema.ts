@@ -125,3 +125,16 @@ export const userReviews = sqliteTable("user_reviews", {
   comment: text("comment"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
+
+export const reports = sqliteTable("reports", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  reporterId: integer("reporter_id").notNull().references(() => users.id),
+  targetType: text("target_type", { enum: ["user", "dorm", "review"] }).notNull(),
+  targetId: integer("target_id").notNull(),
+  reason: text("reason").notNull(),
+  details: text("details"),
+  status: text("status", { enum: ["pending", "reviewed", "dismissed"] }).notNull().default("pending"),
+  adminNote: text("admin_note"),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
+});
