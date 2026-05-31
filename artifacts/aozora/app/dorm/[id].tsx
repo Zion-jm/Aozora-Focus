@@ -167,7 +167,7 @@ export default function DormDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const qc = useQueryClient();
 
   const [showBookModal, setShowBookModal] = useState(false);
