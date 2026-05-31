@@ -134,17 +134,6 @@ export default function ProfileScreen() {
           userId={user?.id}
         />
         <Text style={[styles.name, { color: colors.foreground }]}>{user?.fullName || "User"}</Text>
-        {user?.universityOrWorkplace ? (
-          <Text style={[styles.subInfo, { color: colors.mutedForeground }]}>
-            {user.universityOrWorkplace}
-          </Text>
-        ) : null}
-        {user?.email ? (
-          <Text style={[styles.email, { color: colors.mutedForeground }]}>{user.email}</Text>
-        ) : null}
-        {user?.phone ? (
-          <Text style={[styles.email, { color: colors.mutedForeground }]}>{user.phone}</Text>
-        ) : null}
         {user?.bio ? (
           <Text style={[styles.bio, { color: colors.mutedForeground }]}>{user.bio}</Text>
         ) : null}
@@ -164,6 +153,43 @@ export default function ProfileScreen() {
             <Text style={[styles.verifyBadgeText, { color: verificationColor }]}>{verificationLabel}</Text>
           </View>
         </View>
+        {/* All personal details */}
+        <View style={styles.infoGroup}>
+          {user?.email ? (
+            <View style={styles.infoRow}>
+              <Feather name="mail" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.infoText, { color: colors.foreground }]}>{user.email}</Text>
+            </View>
+          ) : null}
+          {user?.phone ? (
+            <View style={styles.infoRow}>
+              <Feather name="phone" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.infoText, { color: colors.foreground }]}>{user.phone}</Text>
+            </View>
+          ) : null}
+          {user?.universityOrWorkplace ? (
+            <View style={styles.infoRow}>
+              <Feather name="briefcase" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.infoText, { color: colors.foreground }]}>{user.universityOrWorkplace}</Text>
+            </View>
+          ) : null}
+          {(user as any)?.birthday ? (
+            <View style={styles.infoRow}>
+              <Feather name="gift" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.infoText, { color: colors.foreground }]}>{(user as any).birthday}</Text>
+            </View>
+          ) : null}
+          {(user as any)?.emergencyContactName ? (
+            <View style={styles.infoRow}>
+              <Feather name="user-check" size={14} color={colors.mutedForeground} />
+              <Text style={[styles.infoText, { color: colors.foreground }]}>
+                Emergency: {(user as any).emergencyContactName}
+                {(user as any).emergencyContactPhone ? ` · ${(user as any).emergencyContactPhone}` : ""}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
         <TouchableOpacity
           style={[styles.editProfileBtn, { borderColor: colors.border, backgroundColor: colors.background }]}
           onPress={() => router.push("/profile/edit")}
@@ -241,6 +267,9 @@ const styles = StyleSheet.create({
   subInfo: { fontSize: 13 },
   email: { fontSize: 15 },
   bio: { fontSize: 14, lineHeight: 20, textAlign: "center", marginTop: 2 },
+  infoGroup: { width: "100%", gap: 10, marginTop: 4 },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  infoText: { fontSize: 14, flex: 1 },
   editProfileBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   editProfileBtnText: { fontSize: 13, fontWeight: "600" },
   badges: { flexDirection: "row", gap: 8, marginTop: 4 },

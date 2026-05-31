@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   Alert,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -83,6 +84,15 @@ export default function PublicProfileScreen() {
 
   const isOwnProfile = me?.id === userId;
   const canMessage = !!me && !isOwnProfile && profile?.role === "owner" && ownerDorms.length > 0;
+  const canCall = !!profile?.phone;
+
+  const handleCall = () => {
+    if (!profile?.phone) return;
+    const tel = `tel:${profile.phone.replace(/\s/g, "")}`;
+    Linking.openURL(tel).catch(() =>
+      Alert.alert("Cannot call", "Your device doesn't support phone calls.")
+    );
+  };
 
   const totalAvailableBeds = ownerDorms.reduce((s: number, d: any) => s + (d.availableBeds ?? 0), 0);
   const avgRating =
@@ -244,7 +254,7 @@ export default function PublicProfileScreen() {
               <Text style={[styles.bio, { color: colors.foreground }]}>{profile.bio}</Text>
             ) : null}
 
-            {/* Public meta — no contact details */}
+            {/* Public meta */}
             <View style={styles.metaGroup}>
               {profile.universityOrWorkplace ? (
                 <View style={styles.metaRow}>
@@ -262,26 +272,52 @@ export default function PublicProfileScreen() {
                   </Text>
                 </View>
               ) : null}
+              {canCall ? (
+                <View style={styles.metaRow}>
+                  <Feather name="phone" size={14} color={colors.mutedForeground} />
+                  <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{profile.phone}</Text>
+                  <TouchableOpacity
+                    onPress={handleCall}
+                    style={[styles.callChip, { backgroundColor: "#10b98118" }]}
+                    activeOpacity={0.75}
+                  >
+                    <Feather name="phone-call" size={13} color="#10b981" />
+                    <Text style={[styles.callChipText, { color: "#10b981" }]}>Call</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
 
-            {/* Action buttons — message only, no phone/call */}
-            {canMessage && !isOwnProfile && (
+            {/* Action buttons */}
+            {(canMessage || canCall) && !isOwnProfile && (
               <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: colors.primary, flex: 1 }]}
-                  onPress={handleMessage}
-                  disabled={isMessaging}
-                  activeOpacity={0.85}
-                >
-                  {isMessaging ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Feather name="message-circle" size={17} color="#fff" />
-                      <Text style={styles.actionBtnText}>Message</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                {canMessage && (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: colors.primary, flex: canCall ? 1 : undefined, minWidth: 140 }]}
+                    onPress={handleMessage}
+                    disabled={isMessaging}
+                    activeOpacity={0.85}
+                  >
+                    {isMessaging ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Feather name="message-circle" size={17} color="#fff" />
+                        <Text style={styles.actionBtnText}>Message</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {canCall && (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: "#10b981", flex: canMessage ? 1 : undefined, minWidth: 140 }]}
+                    onPress={handleCall}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="phone-call" size={17} color="#fff" />
+                    <Text style={styles.actionBtnText}>Call</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -446,6 +482,8 @@ const styles = StyleSheet.create({
   metaGroup: { width: "100%", gap: 10, marginTop: 4 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   metaText: { fontSize: 14, flex: 1 },
+  callChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  callChipText: { fontSize: 13, fontWeight: "600" },
   actionRow: { flexDirection: "row", gap: 10, width: "100%", marginTop: 4 },
   actionBtn: {
     flexDirection: "row",
