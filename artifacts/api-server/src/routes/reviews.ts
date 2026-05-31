@@ -226,4 +226,123 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
   res.status(201).json({ success: true });
 });
 
+// ─── MY REVIEWS (current user) ────────────────────────────────────────────────
+
+router.get("/reviews/my-sent", requireAuth, (req, res) => {
+  const userId = req.user!.id;
+  const role = req.user!.role;
+
+  if (role === "student") {
+    const rows = (sqlite.prepare(`
+      SELECT dr.id, dr.rating, dr.comment, dr.created_at,
+             d.id as dorm_id, d.name as dorm_name, d.cover_photo_url
+      FROM dorm_reviews dr
+      JOIN dorms d ON dr.dorm_id = d.id
+      WHERE dr.reviewer_id = ?
+      ORDER BY dr.created_at DESC
+    `).all(userId) as any[]);
+    res.json({
+      reviews: rows.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment ?? null,
+        createdAt: r.created_at,
+        dorm: { id: r.dorm_id, name: r.dorm_name, coverPhotoUrl: r.cover_photo_url ?? null },
+      })),
+    });
+  } else if (role === "owner") {
+    const rows = (sqlite.prepare(`
+      SELECT ur.id, ur.rating, ur.comment, ur.created_at,
+             u.id as student_id, u.full_name as student_name, u.avatar_url as student_avatar,
+             u.verification_status
+      FROM user_reviews ur
+      JOIN users u ON ur.reviewed_user_id = u.id
+      WHERE ur.reviewer_id = ?
+      ORDER BY ur.created_at DESC
+    `).all(userId) as any[]);
+    res.json({
+      reviews: rows.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment ?? null,
+        createdAt: r.created_at,
+        student: {
+          id: r.student_id,
+          fullName: r.student_name,
+          avatarUrl: r.student_avatar ?? null,
+          verificationStatus: r.verification_status,
+        },
+      })),
+    });
+  } else {
+    res.json({ reviews: [] });
+  }
+});
+
+router.get("/reviews/my-received", requireAuth, (req, res) => {
+  const userId = req.user!.id;
+  const role = req.user!.role;
+
+  if (role === "student") {
+    const rows = (sqlite.prepare(`
+      SELECT ur.id, ur.rating, ur.comment, ur.created_at,
+             u.id as reviewer_id, u.full_name as reviewer_name, u.avatar_url as reviewer_avatar
+      FROM user_reviews ur
+      JOIN users u ON ur.reviewer_id = u.id
+      WHERE ur.reviewed_user_id = ?
+      ORDER BY ur.created_at DESC
+    `).all(userId) as any[]);
+    res.json({
+      reviews: rows.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment ?? null,
+        createdAt: r.created_at,
+        reviewer: { id: r.reviewer_id, fullName: r.reviewer_name, avatarUrl: r.reviewer_avatar ?? null },
+      })),
+    });
+  } else if (role === "owner") {
+    // Group dorm reviews by listing
+    const rows = (sqlite.prepare(`
+      SELECT dr.id, dr.rating, dr.comment, dr.created_at,
+             d.id as dorm_id, d.name as dorm_name, d.cover_photo_url, d.address,
+             u.id as reviewer_id, u.full_name as reviewer_name, u.avatar_url as reviewer_avatar
+      FROM dorm_reviews dr
+      JOIN dorms d ON dr.dorm_id = d.id
+      JOIN users u ON dr.reviewer_id = u.id
+      WHERE d.owner_id = ?
+      ORDER BY d.id ASC, dr.created_at DESC
+    `).all(userId) as any[]);
+
+    const dormMap = new Map<number, any>();
+    for (const r of rows) {
+      if (!dormMap.has(r.dorm_id)) {
+        dormMap.set(r.dorm_id, {
+          dorm: { id: r.dorm_id, name: r.dorm_name, coverPhotoUrl: r.cover_photo_url ?? null, address: r.address },
+          reviews: [],
+          average: 0,
+        });
+      }
+      dormMap.get(r.dorm_id).reviews.push({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment ?? null,
+        createdAt: r.created_at,
+        reviewer: { id: r.reviewer_id, fullName: r.reviewer_name, avatarUrl: r.reviewer_avatar ?? null },
+      });
+    }
+
+    const listings = Array.from(dormMap.values()).map((entry) => {
+      const avg = entry.reviews.length > 0
+        ? Math.round((entry.reviews.reduce((s: number, r: any) => s + r.rating, 0) / entry.reviews.length) * 10) / 10
+        : null;
+      return { ...entry, average: avg };
+    });
+
+    res.json({ listings });
+  } else {
+    res.json({ reviews: [] });
+  }
+});
+
 export default router;
