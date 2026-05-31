@@ -73,6 +73,7 @@ export default function HelpCenterScreen() {
   }, [token, isAdmin, isGuest]);
 
   const handleSubmit = async () => {
+    if (activeTicket) return;
     if (!ticketType) { Alert.alert("Required", "Please select a ticket type."); return; }
     if (!subject.trim()) { Alert.alert("Required", "Please enter a subject."); return; }
     if (!message.trim()) { Alert.alert("Required", "Please enter a message."); return; }
@@ -96,11 +97,27 @@ export default function HelpCenterScreen() {
         });
       }
 
+      if (res.status === 409) {
+        const existingTickets = await fetch(`${BASE_URL}/api/support-tickets/my`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => r.json()).catch(() => ({ tickets: [] }));
+        const pending = (existingTickets.tickets ?? []).find((t: any) => t.status === "pending");
+        setActiveTicket(pending
+          ? { id: pending.id, subject: pending.subject, conversationId: pending.conversationId }
+          : { id: 0, subject: subject.trim(), conversationId: null }
+        );
+        return;
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as any).message || "Failed to submit ticket");
       }
 
+      const data = await res.json().catch(() => ({}));
+      if (!isGuest && data.conversationId) {
+        setActiveTicket({ id: data.ticketId, subject: subject.trim(), conversationId: data.conversationId });
+      }
       setSubmitted(true);
     } catch (e: any) {
       Alert.alert("Error", e?.message ?? "Could not submit your request. Please try again.");
