@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -31,6 +32,7 @@ export default function SuspendedUsersScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetUsers({
     query: { queryKey: getAdminGetUsersQueryKey() },
@@ -38,6 +40,17 @@ export default function SuspendedUsersScreen() {
 
   const allUsers = (data as any)?.users || [];
   const suspended = allUsers.filter((u: any) => u.isSuspended);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return suspended;
+    const q = search.toLowerCase();
+    return suspended.filter(
+      (u: any) =>
+        u.fullName?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.toLowerCase().includes(q)
+    );
+  }, [suspended, search]);
 
   const update = useAdminUpdateUserStatus({
     mutation: {
@@ -54,8 +67,7 @@ export default function SuspendedUsersScreen() {
         { text: "Cancel", style: "cancel" },
         {
           text: "Unsuspend",
-          onPress: () =>
-            update.mutate({ userId: user.id, data: { isSuspended: false } }),
+          onPress: () => update.mutate({ userId: user.id, data: { isSuspended: false } }),
         },
       ]
     );
@@ -89,6 +101,27 @@ export default function SuspendedUsersScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      <View style={[styles.searchWrap, { borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by name, email, or phone…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -99,52 +132,28 @@ export default function SuspendedUsersScreen() {
         </View>
       ) : (
         <FlatList
-          data={suspended}
+          data={filtered}
           keyExtractor={(item: any) => item.id.toString()}
           refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor={colors.primary}
-            />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />
           }
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + 40 },
-          ]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 40 }]}
           renderItem={({ item }: { item: any }) => (
             <View
               style={[
                 styles.card,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  borderRadius: colors.radius,
-                },
+                { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
               ]}
             >
-              <View
-                style={[
-                  styles.avatar,
-                  { backgroundColor: (ROLE_COLOR[item.role] || colors.primary) + "22" },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.avatarText,
-                    { color: ROLE_COLOR[item.role] || colors.primary },
-                  ]}
-                >
+              <View style={[styles.avatar, { backgroundColor: (ROLE_COLOR[item.role] || colors.primary) + "22" }]}>
+                <Text style={[styles.avatarText, { color: ROLE_COLOR[item.role] || colors.primary }]}>
                   {(item.fullName || "U")[0].toUpperCase()}
                 </Text>
               </View>
 
               <View style={styles.info}>
                 <View style={styles.nameRow}>
-                  <Text
-                    style={[styles.name, { color: colors.foreground }]}
-                    numberOfLines={1}
-                  >
+                  <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
                     {item.fullName}
                   </Text>
                   {item.verificationStatus === "verified" && (
@@ -157,37 +166,20 @@ export default function SuspendedUsersScreen() {
                 </Text>
 
                 <View style={styles.badgeRow}>
-                  <View
-                    style={[
-                      styles.roleBadge,
-                      { backgroundColor: (ROLE_COLOR[item.role] || colors.primary) + "18" },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.roleText,
-                        { color: ROLE_COLOR[item.role] || colors.primary },
-                      ]}
-                    >
+                  <View style={[styles.roleBadge, { backgroundColor: (ROLE_COLOR[item.role] || colors.primary) + "18" }]}>
+                    <Text style={[styles.roleText, { color: ROLE_COLOR[item.role] || colors.primary }]}>
                       {item.role}
                     </Text>
                   </View>
                   <View style={[styles.suspendBadge, { backgroundColor: "#ef444420" }]}>
-                    <Text style={{ color: "#ef4444", fontSize: 11, fontWeight: "600" }}>
-                      Suspended
-                    </Text>
+                    <Text style={{ color: "#ef4444", fontSize: 11, fontWeight: "600" }}>Suspended</Text>
                   </View>
                 </View>
 
                 <TouchableOpacity
                   style={[
                     styles.unsuspendBtn,
-                    {
-                      backgroundColor: "#10b98115",
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: "#10b98130",
-                    },
+                    { backgroundColor: "#10b98115", borderRadius: 8, borderWidth: 1, borderColor: "#10b98130" },
                   ]}
                   onPress={() => handleUnsuspend(item)}
                   disabled={update.isPending}
@@ -200,13 +192,23 @@ export default function SuspendedUsersScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Feather name="users" size={48} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                No suspended users
-              </Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                All accounts are currently active.
-              </Text>
+              {search.trim() ? (
+                <>
+                  <Feather name="search" size={48} color={colors.mutedForeground} />
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No results</Text>
+                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                    No suspended users match "{search}"
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Feather name="users" size={48} color={colors.mutedForeground} />
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No suspended users</Text>
+                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                    All accounts are currently active.
+                  </Text>
+                </>
+              )}
             </View>
           }
         />
@@ -228,9 +230,12 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
   headerSub: { fontSize: 13, marginTop: 1 },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
   listContent: { padding: 16, gap: 12 },
-  card: { borderWidth: 1, padding: 14, gap: 0 },
+  card: { borderWidth: 1, padding: 14 },
   avatar: {
     width: 48,
     height: 48,
