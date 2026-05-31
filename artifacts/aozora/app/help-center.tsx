@@ -115,10 +115,6 @@ export default function HelpCenterScreen() {
         throw new Error((err as any).message || "Failed to submit ticket");
       }
 
-      const data = await res.json().catch(() => ({}));
-      if (!isGuest && data.conversationId) {
-        setActiveTicket({ id: data.ticketId, subject: subject.trim(), conversationId: data.conversationId });
-      }
       setSubmitted(true);
     } catch (e: any) {
       Alert.alert("Error", e?.message ?? "Could not submit your request. Please try again.");
@@ -226,7 +222,7 @@ export default function HelpCenterScreen() {
     );
   }
 
-  // ── Success — show confirmation + active ticket card ─────────────────────────
+  // ── Success — clean waiting-room confirmation ────────────────────────────────
   if (submitted) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -237,65 +233,40 @@ export default function HelpCenterScreen() {
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Help Center</Text>
           <View style={styles.backBtn} />
         </View>
-        <ScrollView contentContainerStyle={[styles.successScroll, { paddingBottom: insets.bottom + 40 }]}>
-          {/* Confirmation banner */}
-          <View style={[styles.confirmBanner, { backgroundColor: "#10b98112", borderColor: "#10b98130" }]}>
-            <View style={[styles.confirmIconWrap, { backgroundColor: "#10b98120" }]}>
-              <Feather name="check-circle" size={36} color="#10b981" />
-            </View>
-            <Text style={[styles.confirmTitle, { color: colors.foreground }]}>Ticket Submitted!</Text>
-            <Text style={[styles.confirmSub, { color: colors.mutedForeground }]}>
-              {isGuest
-                ? "Your request has been submitted. Our team will reach out to you via email."
-                : "Your support ticket has been received. A dedicated thread has been created in your Messages."}
+        <View style={styles.submittedWrap}>
+          <View style={[styles.submittedIconRing, { backgroundColor: "#10b98118" }]}>
+            <Feather name="check-circle" size={48} color="#10b981" />
+          </View>
+          <Text style={[styles.submittedTitle, { color: colors.foreground }]}>Ticket Submitted!</Text>
+          <Text style={[styles.submittedSub, { color: colors.mutedForeground }]}>
+            {isGuest
+              ? "Your request has been received. Our admin team will reach out to you via email shortly."
+              : "Your concern has been received. Please wait while an admin reviews your ticket — we'll get back to you as soon as possible."}
+          </Text>
+          <View style={[styles.submittedHint, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Feather name="info" size={15} color={colors.mutedForeground} />
+            <Text style={[styles.submittedHintText, { color: colors.mutedForeground }]}>
+              You can check the status of your ticket anytime from the Help Center or My Tickets.
             </Text>
           </View>
-
-          {/* Active ticket card */}
-          {activeTicket && (
-            <View style={[styles.pendingSection, { borderColor: colors.border }]}>
-              <Text style={[styles.pendingSectionLabel, { color: colors.mutedForeground }]}>YOUR ACTIVE TICKET</Text>
-              <View style={[styles.pendingCard, { backgroundColor: colors.card, borderColor: "#f9731640" }]}>
-                <View style={styles.pendingCardTop}>
-                  <View style={[styles.openBadge, { backgroundColor: "#f97316" }]}>
-                    <Text style={styles.openBadgeText}>OPEN</Text>
-                  </View>
-                  <View style={styles.pendingDot} />
-                  <Text style={[styles.pendingWaiting, { color: colors.mutedForeground }]}>Awaiting admin response</Text>
-                </View>
-                <Text style={[styles.pendingSubject, { color: colors.foreground }]} numberOfLines={2}>
-                  {activeTicket.subject}
-                </Text>
-                {activeTicket.conversationId && (
-                  <TouchableOpacity
-                    style={[styles.openThreadBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
-                    onPress={() => router.push(`/admin-conversation/${activeTicket.conversationId}`)}
-                    activeOpacity={0.85}
-                  >
-                    <Feather name="message-circle" size={16} color="#fff" />
-                    <Text style={styles.openThreadBtnText}>Open Ticket Thread</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              <TouchableOpacity
-                style={[styles.myTicketsLink, { borderColor: colors.border, borderRadius: colors.radius }]}
-                onPress={() => router.push("/my-tickets")}
-                activeOpacity={0.8}
-              >
-                <Feather name="inbox" size={15} color={colors.foreground} />
-                <Text style={[styles.myTicketsLinkText, { color: colors.foreground }]}>See All My Tickets</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Done */}
           <TouchableOpacity
-            style={[styles.doneBtn, { backgroundColor: isGuest || !activeTicket ? colors.primary : colors.secondary, borderRadius: colors.radius, marginHorizontal: 24 }]}
+            style={[styles.doneBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
             onPress={() => router.back()}
+            activeOpacity={0.85}
           >
-            <Text style={[styles.doneBtnText, { color: isGuest || !activeTicket ? "#fff" : colors.foreground }]}>Done</Text>
+            <Text style={[styles.doneBtnText, { color: "#fff" }]}>Got it</Text>
           </TouchableOpacity>
-        </ScrollView>
+          {!isGuest && (
+            <TouchableOpacity
+              style={[styles.myTicketsLink, { borderColor: colors.border, borderRadius: colors.radius }]}
+              onPress={() => router.push("/my-tickets")}
+              activeOpacity={0.8}
+            >
+              <Feather name="inbox" size={15} color={colors.foreground} />
+              <Text style={[styles.myTicketsLinkText, { color: colors.foreground }]}>See All My Tickets</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   }
@@ -492,4 +463,10 @@ const styles = StyleSheet.create({
   activeTicketBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, alignSelf: "flex-start" },
   activeTicketBadgeText: { fontSize: 11, fontWeight: "700", color: "#fff" },
   activeTicketSubject: { fontSize: 15, fontWeight: "600", lineHeight: 21 },
+  submittedWrap: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 },
+  submittedIconRing: { width: 96, height: 96, borderRadius: 48, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  submittedTitle: { fontSize: 24, fontWeight: "800", textAlign: "center" },
+  submittedSub: { fontSize: 15, textAlign: "center", lineHeight: 23 },
+  submittedHint: { flexDirection: "row", alignItems: "flex-start", gap: 10, padding: 14, borderRadius: 12, borderWidth: 1, width: "100%", marginTop: 4 },
+  submittedHintText: { flex: 1, fontSize: 13, lineHeight: 19 },
 });
