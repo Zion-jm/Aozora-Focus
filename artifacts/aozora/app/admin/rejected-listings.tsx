@@ -48,7 +48,7 @@ export default function RejectedListingsScreen() {
   const handleUndo = (dorm: any) => {
     Alert.alert(
       "Restore Listing?",
-      `Restore "${dorm.name}" back to active (approved) status?`,
+      `Restore "${dorm.name}" back to active status?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -76,11 +76,11 @@ export default function RejectedListingsScreen() {
         </TouchableOpacity>
         <View>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            Rejected Listings
+            Turned Down Listings
           </Text>
           {!isLoading && (
             <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-              {rejected.length} {rejected.length === 1 ? "listing" : "listings"} rejected
+              {rejected.length} {rejected.length === 1 ? "listing" : "listings"} turned down
             </Text>
           )}
         </View>
@@ -138,7 +138,7 @@ export default function RejectedListingsScreen() {
                     {item.name}
                   </Text>
                   <View style={[styles.rejectedBadge, { backgroundColor: "#ef444422" }]}>
-                    <Text style={[styles.rejectedText, { color: "#ef4444" }]}>rejected</Text>
+                    <Text style={[styles.rejectedText, { color: "#ef4444" }]}>turned down</Text>
                   </View>
                 </View>
 
@@ -168,7 +168,7 @@ export default function RejectedListingsScreen() {
                     ]}
                   >
                     <Text style={[styles.noteLabel, { color: colors.mutedForeground }]}>
-                      Rejection note:
+                      Admin note:
                     </Text>
                     <Text style={[styles.noteText, { color: colors.foreground }]}>
                       {item.adminNote}
@@ -201,7 +201,7 @@ export default function RejectedListingsScreen() {
             <View style={styles.empty}>
               <Feather name="check-circle" size={48} color={colors.mutedForeground} />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                No rejected listings
+                No turned down listings
               </Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 All listings are in good standing.

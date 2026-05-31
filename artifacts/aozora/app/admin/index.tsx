@@ -122,8 +122,8 @@ export default function AdminDashboard() {
               />
               <NavCard
                 icon="x-circle"
-                label="Rejected Listings"
-                desc="Restore turned-down dorm listings"
+                label="Turned Down Listings"
+                desc="Restore listings that were turned down"
                 onPress={() => router.push("/admin/rejected-listings")}
                 colors={colors}
               />
