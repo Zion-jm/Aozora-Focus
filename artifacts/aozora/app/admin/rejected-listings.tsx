@@ -37,18 +37,22 @@ export default function TurnedDownListingsScreen() {
 
   const update = useAdminUpdateDormStatus({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (_, vars) => {
         qc.invalidateQueries({ queryKey: getAdminGetDormsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
+        Alert.alert(
+          "Listing Restored",
+          "The listing is now approved and visible to all students on the Explore page."
+        );
       },
-      onError: () => Alert.alert("Error", "Could not restore listing."),
+      onError: () => Alert.alert("Error", "Could not restore listing. Please try again."),
     },
   });
 
   const handleUndo = (dorm: any) => {
     Alert.alert(
       "Restore Listing?",
-      `Restore "${dorm.name}" back to active status? It will be visible to students again.`,
+      `"${dorm.name}" will be marked as approved and shown to all students on the Explore page.`,
       [
         { text: "Cancel", style: "cancel" },
         {
