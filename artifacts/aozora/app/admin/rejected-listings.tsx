@@ -23,7 +23,7 @@ import {
   getGetDormsQueryKey,
 } from "@workspace/api-client-react";
 
-export default function RejectedListingsScreen() {
+export default function TurnedDownListingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
@@ -33,7 +33,7 @@ export default function RejectedListingsScreen() {
   });
 
   const allDorms = (data as any)?.dorms || [];
-  const rejected = allDorms.filter((d: any) => d.status === "rejected");
+  const takenDown = allDorms.filter((d: any) => d.status === "taken_down");
 
   const update = useAdminUpdateDormStatus({
     mutation: {
@@ -48,7 +48,7 @@ export default function RejectedListingsScreen() {
   const handleUndo = (dorm: any) => {
     Alert.alert(
       "Restore Listing?",
-      `Restore "${dorm.name}" back to active status?`,
+      `Restore "${dorm.name}" back to active status? It will be visible to students again.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -80,7 +80,7 @@ export default function RejectedListingsScreen() {
           </Text>
           {!isLoading && (
             <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-              {rejected.length} {rejected.length === 1 ? "listing" : "listings"} turned down
+              {takenDown.length} {takenDown.length === 1 ? "listing" : "listings"} turned down
             </Text>
           )}
         </View>
@@ -97,7 +97,7 @@ export default function RejectedListingsScreen() {
         </View>
       ) : (
         <FlatList
-          data={rejected}
+          data={takenDown}
           keyExtractor={(item: any) => item.id.toString()}
           refreshControl={
             <RefreshControl
@@ -137,9 +137,16 @@ export default function RejectedListingsScreen() {
                   >
                     {item.name}
                   </Text>
-                  <View style={[styles.rejectedBadge, { backgroundColor: "#ef444422" }]}>
-                    <Text style={[styles.rejectedText, { color: "#ef4444" }]}>turned down</Text>
+                  <View style={[styles.takenDownBadge, { backgroundColor: "#f9731622" }]}>
+                    <Text style={[styles.takenDownText, { color: "#f97316" }]}>turned down</Text>
                   </View>
+                </View>
+
+                <View style={[styles.reportBanner, { backgroundColor: "#f9731612", borderColor: "#f9731630" }]}>
+                  <Feather name="flag" size={13} color="#f97316" />
+                  <Text style={[styles.reportBannerText, { color: "#f97316" }]}>
+                    Taken down due to user report
+                  </Text>
                 </View>
 
                 <View style={styles.meta}>
@@ -204,7 +211,7 @@ export default function RejectedListingsScreen() {
                 No turned down listings
               </Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                All listings are in good standing.
+                No listings have been taken down via reports.
               </Text>
             </View>
           }
@@ -234,8 +241,18 @@ const styles = StyleSheet.create({
   cardContent: { padding: 14, gap: 8 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   dormName: { fontSize: 17, fontWeight: "600", flex: 1, marginRight: 10 },
-  rejectedBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  rejectedText: { fontSize: 12, fontWeight: "600" },
+  takenDownBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  takenDownText: { fontSize: 12, fontWeight: "600" },
+  reportBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  reportBannerText: { fontSize: 12, fontWeight: "600" },
   meta: { flexDirection: "row", alignItems: "center", gap: 6 },
   address: { fontSize: 13, flex: 1 },
   price: { fontSize: 15, fontWeight: "bold" },
