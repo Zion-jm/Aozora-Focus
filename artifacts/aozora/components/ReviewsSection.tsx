@@ -267,20 +267,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
         )}
       </View>
 
-      {/* Locked gate banner — shown when visit is not yet completed */}
-      {!canReview && requiresCompletedVisit && token && (
-        <View style={[styles.lockedBanner, { backgroundColor: "#f59e0b10", borderColor: "#f59e0b40" }]}>
-          <View style={styles.lockedIconWrap}>
-            <Feather name="lock" size={18} color="#f59e0b" />
-          </View>
-          <View style={styles.lockedTextWrap}>
-            <Text style={[styles.lockedTitle, { color: colors.foreground }]}>Review locked</Text>
-            <Text style={[styles.lockedReason, { color: colors.mutedForeground }]}>
-              {canReviewReason ?? "Your visit must be marked as completed before you can leave a review."}
-            </Text>
-          </View>
-        </View>
-      )}
+      {/* Locked gate banner hidden — logic preserved via canReview / requiresCompletedVisit */}
 
       {reviews.length === 0 ? (
         <View style={[styles.emptyBox, { backgroundColor: colors.secondary, borderRadius: 12 }]}>

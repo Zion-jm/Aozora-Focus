@@ -142,6 +142,17 @@ export function initializeDatabase() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS otp_verifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      contact TEXT NOT NULL,
+      code TEXT NOT NULL,
+      verification_token TEXT,
+      is_verified INTEGER NOT NULL DEFAULT 0,
+      expires_at TEXT NOT NULL,
+      verified_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS admin_conversations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       admin_id INTEGER NOT NULL REFERENCES users(id),
