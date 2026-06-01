@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { db } from "../db/index";
+import { db, sqlite } from "../db/index";
 import { dorms, dormPhotos, favorites, users } from "../db/schema";
 import { eq, and, gte, lte, like, desc, asc, sql, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { notifyAllAdmins } from "../lib/notifications";
 
 const router = Router();
 
@@ -117,6 +118,13 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
     coverPhotoUrl: coverPhotoUrl ?? null,
     nearbyLandmark: nearbyLandmark ?? null,
   }).returning();
+
+  notifyAllAdmins(sqlite, {
+    type: "dorm_submitted",
+    title: "New Listing Pending Review 🏠",
+    body: `${req.user!.fullName} submitted "${name}" for approval.`,
+    data: { path: "/admin/dorms" },
+  });
 
   res.status(201).json(parseDorm(result[0]!));
 });

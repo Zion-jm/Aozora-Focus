@@ -185,9 +185,20 @@ export function initializeDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      data TEXT NOT NULL DEFAULT '{}',
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
-  // Add soft-delete columns (idempotent — ignore if already exist)
+  // Add columns idempotently — ignore if already exist
   const migrations = [
     "ALTER TABLE conversations ADD COLUMN student_deleted_at TEXT",
     "ALTER TABLE conversations ADD COLUMN owner_deleted_at TEXT",
@@ -211,6 +222,7 @@ export function initializeDatabase() {
     "ALTER TABLE admin_conversations ADD COLUMN admin_archived_at TEXT",
     "ALTER TABLE admin_conversations ADD COLUMN user_archived_at TEXT",
     "ALTER TABLE admin_conversations ADD COLUMN started_at TEXT",
+    "ALTER TABLE users ADD COLUMN expo_push_token TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }
@@ -248,7 +260,7 @@ export function initializeDatabase() {
     sqlite.pragma("foreign_keys = ON");
   }
 
-  // Migrate legacy 'noted' status → 'cancelled' (noted is no longer a valid status)
+  // Migrate legacy 'noted' status → 'cancelled'
   try {
     sqlite.exec("UPDATE appointments SET status = 'cancelled' WHERE status = 'noted'");
   } catch { /* ignore */ }

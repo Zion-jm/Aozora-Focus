@@ -9,6 +9,7 @@ import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useNotifications } from "@/context/NotificationContext";
 
 function NativeTabLayout() {
   return (
@@ -29,6 +30,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "message", selected: "message.fill" }} />
         <Label>Messages</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="notifications">
+        <Icon sf={{ default: "bell", selected: "bell.fill" }} />
+        <Label>Notifications</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>Profile</Label>
@@ -40,6 +45,7 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const colors = useColors();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const isAdmin = user?.role === "admin";
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -123,6 +129,19 @@ function ClassicTabLayout() {
               <SymbolView name="message" tintColor={color} size={24} />
             ) : (
               <Feather name="message-square" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : undefined,
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="bell" tintColor={color} size={24} />
+            ) : (
+              <Feather name="bell" size={22} color={color} />
             ),
         }}
       />

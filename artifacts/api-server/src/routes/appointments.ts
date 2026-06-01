@@ -3,6 +3,7 @@ import { db, sqlite } from "../db/index";
 import { appointments, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -168,6 +169,15 @@ router.post("/appointments", requireAuth, async (req, res) => {
   const student = await db.select().from(users).where(eq(users.id, appt.studentId)).get();
   const dorm = await db.select().from(dorms).where(eq(dorms.id, appt.dormId)).get();
 
+  if (dorm) {
+    notifyUser(sqlite, dorm.ownerId, {
+      type: "appointment_new",
+      title: "New Visit Request 📅",
+      body: `${req.user!.fullName} wants to visit ${dorm.name} on ${appt.preferredDate}.`,
+      data: { path: `/appointment/${appt.id}` },
+    });
+  }
+
   res.status(201).json(serializeAppointment(appt, student, dorm));
 });
 
@@ -252,6 +262,45 @@ router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
 
   const updated = result[0]!;
   const student = await db.select().from(users).where(eq(users.id, updated.studentId)).get();
+
+  // ── Notifications based on status change ─────────────────────────────────
+  if (status === "approved") {
+    notifyUser(sqlite, updated.studentId, {
+      type: "appointment_approved",
+      title: "Visit Approved ✅",
+      body: `Your visit to ${dorm?.name ?? "the dorm"} on ${updated.preferredDate} at ${updated.preferredTime} has been approved.`,
+      data: { path: `/appointment/${updated.id}` },
+    });
+  } else if (status === "rejected") {
+    notifyUser(sqlite, updated.studentId, {
+      type: "appointment_rejected",
+      title: "Visit Request Declined",
+      body: `Your visit request for ${dorm?.name ?? "the dorm"} was not approved.${updated.ownerNote ? ` Note: ${updated.ownerNote}` : ""}`,
+      data: { path: `/appointment/${updated.id}` },
+    });
+  } else if (status === "completed") {
+    notifyUser(sqlite, updated.studentId, {
+      type: "appointment_completed",
+      title: "Visit Completed 🏠",
+      body: `Your visit to ${dorm?.name ?? "the dorm"} is marked complete. Share your experience with a review!`,
+      data: { path: `/appointment/${updated.id}` },
+    });
+  } else if (status === "no_show") {
+    notifyUser(sqlite, updated.studentId, {
+      type: "appointment_no_show",
+      title: "Missed Visit",
+      body: `Your visit to ${dorm?.name ?? "the dorm"} was marked as a no-show.`,
+      data: { path: `/appointment/${updated.id}` },
+    });
+  } else if (status === "cancelled" && dorm) {
+    notifyUser(sqlite, dorm.ownerId, {
+      type: "appointment_cancelled",
+      title: "Visit Cancelled",
+      body: `${student?.fullName ?? "A student"} cancelled their visit to ${dorm.name}.`,
+      data: { path: `/appointment/${updated.id}` },
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   res.json(serializeAppointment(updated, student, dorm));
 });

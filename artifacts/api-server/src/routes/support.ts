@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { notifyUser, notifyAllAdmins } from "../lib/notifications";
 
 const router = Router();
 
@@ -83,6 +84,13 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
   const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketResult.lastInsertRowid) as any;
   const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
 
+  notifyAllAdmins(sqlite, {
+    type: "support_ticket_new",
+    title: "New Support Ticket 🎫",
+    body: `${req.user!.fullName} submitted a support ticket: "${subject}"`,
+    data: { path: "/admin/support" },
+  });
+
   res.status(201).json({
     ticketId: ticket.id,
     conversationId: conv.id,
@@ -108,6 +116,13 @@ router.post("/support-tickets/public", async (req, res) => {
   ).run(guestName, guestEmail, ticketType, subject, message, now, now);
 
   const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketResult.lastInsertRowid) as any;
+
+  notifyAllAdmins(sqlite, {
+    type: "support_ticket_new",
+    title: "New Support Ticket (Guest) 🎫",
+    body: `${guestName} submitted a support ticket: "${subject}"`,
+    data: { path: "/admin/support" },
+  });
 
   res.status(201).json({
     ticketId: ticket.id,
@@ -179,6 +194,17 @@ router.patch("/admin/support-tickets/:id", requireAuth, requireRole("admin"), as
     } else {
       sqlite.prepare("UPDATE admin_conversations SET closed_at = NULL WHERE id = ?").run(ticket.conversation_id);
     }
+  }
+
+  if (status === "resolved" && ticket.user_id) {
+    notifyUser(sqlite, ticket.user_id, {
+      type: "support_ticket_resolved",
+      title: "Support Ticket Resolved ✅",
+      body: `Your support ticket "${ticket.subject}" has been resolved.`,
+      data: ticket.conversation_id
+        ? { path: `/admin-conversation/${ticket.conversation_id}` }
+        : { path: "/(tabs)/profile" },
+    });
   }
 
   const updated = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketId) as any;
