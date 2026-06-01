@@ -1015,6 +1015,9 @@ components:
         status:
           type: string
           enum: [pending, approved, rejected]
+        nearbyLandmark:
+          type: string
+          nullable: true
         coverPhotoUrl:
           type: string
           nullable: true
@@ -1068,6 +1071,8 @@ components:
           type: number
         address:
           type: string
+        nearbyLandmark:
+          type: string
         latitude:
           type: number
         longitude:
@@ -1096,6 +1101,8 @@ components:
         monthlyRent:
           type: number
         address:
+          type: string
+        nearbyLandmark:
           type: string
         latitude:
           type: number

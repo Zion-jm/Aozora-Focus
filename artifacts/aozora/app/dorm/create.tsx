@@ -66,6 +66,7 @@ export default function CreateDormScreen() {
   const [description, setDescription] = useState("");
   const [monthlyRent, setMonthlyRent] = useState("");
   const [address, setAddress] = useState("");
+  const [nearbyLandmark, setNearbyLandmark] = useState("");
   const [latitude, setLatitude] = useState("13.8856");
   const [longitude, setLongitude] = useState("122.2604");
   const [totalRooms, setTotalRooms] = useState("1");
@@ -87,6 +88,7 @@ export default function CreateDormScreen() {
     setDescription(d.description ?? "");
     setMonthlyRent(String(d.monthlyRent ?? ""));
     setAddress(d.address ?? "");
+    setNearbyLandmark(d.nearbyLandmark ?? "");
     setLatitude(String(d.latitude ?? "13.8856"));
     setLongitude(String(d.longitude ?? "122.2604"));
     setTotalRooms(String(d.totalRooms ?? "1"));
@@ -216,6 +218,7 @@ export default function CreateDormScreen() {
       description: description.trim(),
       monthlyRent: Number(monthlyRent),
       address: address.trim(),
+      nearbyLandmark: nearbyLandmark.trim() || undefined,
       latitude: Number(latitude),
       longitude: Number(longitude),
       totalRooms: Number(totalRooms),
@@ -320,6 +323,15 @@ export default function CreateDormScreen() {
           placeholderTextColor={colors.mutedForeground}
           value={address}
           onChangeText={setAddress}
+        />
+
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Nearby Landmark</Text>
+        <TextInput
+          style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
+          placeholder="e.g. Near Lopez Central School, beside BDO"
+          placeholderTextColor={colors.mutedForeground}
+          value={nearbyLandmark}
+          onChangeText={setNearbyLandmark}
         />
 
         <View style={styles.row}>
