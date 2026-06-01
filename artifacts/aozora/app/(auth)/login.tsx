@@ -7,7 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
+  ScrollView,
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,10 +55,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <View style={styles.root}>
       <LinearGradient
         colors={["#0f0e1a", "#1e1b4b", "#3730a3"]}
         style={StyleSheet.absoluteFillObject}
@@ -69,11 +66,17 @@ export default function LoginScreen() {
       <View style={styles.blob1} />
       <View style={styles.blob2} />
 
-      <View
-        style={[
-          styles.content,
-          { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 },
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top, 20) + 24,
+            paddingBottom: Math.max(insets.bottom, 16) + 24,
+          },
         ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.brand}>
           <View style={styles.logoShadow}>
@@ -99,12 +102,7 @@ export default function LoginScreen() {
           <View style={styles.fields}>
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email address</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  emailFocused && styles.inputRowFocused,
-                ]}
-              >
+              <View style={[styles.inputRow, emailFocused && styles.inputRowFocused]}>
                 <Feather
                   name="mail"
                   size={17}
@@ -129,18 +127,11 @@ export default function LoginScreen() {
             <View style={styles.fieldGroup}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>Password</Text>
-                <TouchableOpacity
-                  onPress={() => router.push("/(auth)/forgot-password")}
-                >
+                <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password")}>
                   <Text style={styles.forgotLink}>Forgot password?</Text>
                 </TouchableOpacity>
               </View>
-              <View
-                style={[
-                  styles.inputRow,
-                  passFocused && styles.inputRowFocused,
-                ]}
-              >
+              <View style={[styles.inputRow, passFocused && styles.inputRowFocused]}>
                 <Feather
                   name="lock"
                   size={17}
@@ -198,7 +189,7 @@ export default function LoginScreen() {
           <View style={styles.registerRow}>
             <Text style={styles.registerText}>Don't have an account? </Text>
             <Link href="/(auth)/register" asChild>
-              <TouchableOpacity>
+              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.registerLink}>Create one</Text>
               </TouchableOpacity>
             </Link>
@@ -215,13 +206,21 @@ export default function LoginScreen() {
             Need help or suspended? Contact Support
           </Text>
         </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
+  scroll: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    gap: 28,
+  },
 
   blob1: {
     position: "absolute",
@@ -240,13 +239,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(79,70,229,0.09)",
     bottom: 60,
     left: -70,
-  },
-
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: "center",
-    gap: 28,
   },
 
   brand: {
@@ -328,6 +320,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#e2e8f0",
     paddingHorizontal: 14,
+    minHeight: 52,
   },
   inputRowFocused: {
     borderColor: "#4f46e5",
@@ -343,8 +336,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: "#0f172a",
-    paddingVertical: 14,
-    padding: 0,
+    paddingVertical: Platform.OS === "web" ? 14 : 12,
+    // NOTE: do NOT add padding:0 here — it overrides paddingVertical on web
   },
   eyeBtn: { padding: 4, marginLeft: 4 },
 
