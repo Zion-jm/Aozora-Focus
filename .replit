@@ -25,10 +25,6 @@ args = "Start application"
 task = "workflow.run"
 args = "API Server"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Expo"
-
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -52,17 +48,6 @@ waitForPort = 8080
 
 [workflows.workflow.metadata]
 outputType = "console"
-
-[[workflows.workflow]]
-name = "Expo"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/aozora run dev"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
