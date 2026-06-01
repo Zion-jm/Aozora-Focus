@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { router } from "expo-router";
@@ -24,6 +24,7 @@ const STEP_LABELS = ["Email", "Verify", "Reset"];
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
+  const { toast } = useToast();
   const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<Step>(1);
@@ -54,11 +55,11 @@ export default function ForgotPasswordScreen() {
   const handleSendOtp = async () => {
     const trimmed = email.trim();
     if (!trimmed) {
-      Alert.alert("Required", "Please enter your email address.");
+      toast.warning("Required", "Please enter your email address.");
       return;
     }
     if (!isValidEmail(trimmed)) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      toast.warning("Invalid Email", "Please enter a valid email address.");
       return;
     }
     setIsLoading(true);
@@ -67,7 +68,7 @@ export default function ForgotPasswordScreen() {
       setOtp("");
       setStep(2);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      toast.error("Error", e.message);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +76,7 @@ export default function ForgotPasswordScreen() {
 
   const handleVerifyOtp = async () => {
     if (otp.trim().length !== 6) {
-      Alert.alert("Required", "Please enter the full 6-digit code.");
+      toast.warning("Required", "Please enter the full 6-digit code.");
       return;
     }
     setIsLoading(true);
@@ -87,7 +88,7 @@ export default function ForgotPasswordScreen() {
       setVerificationToken(data.verificationToken);
       setStep(3);
     } catch (e: any) {
-      Alert.alert("Invalid Code", e.message);
+      toast.error("Invalid Code", e.message);
     } finally {
       setIsLoading(false);
     }
@@ -95,11 +96,11 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     if (newPassword.length < 8) {
-      Alert.alert("Weak Password", "Password must be at least 8 characters.");
+      toast.warning("Weak Password", "Password must be at least 8 characters.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert("Mismatch", "Passwords don't match.");
+      toast.warning("Mismatch", "Passwords don't match.");
       return;
     }
     setIsLoading(true);
@@ -110,7 +111,7 @@ export default function ForgotPasswordScreen() {
       });
       setStep(4);
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      toast.error("Error", e.message);
     } finally {
       setIsLoading(false);
     }

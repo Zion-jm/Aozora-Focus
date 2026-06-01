@@ -7,9 +7,11 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   TextInput,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
+import { ActionSheet } from "@/components/ActionSheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -36,6 +38,8 @@ function timeAgo(dateStr: string) {
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 export default function MessagesScreen() {
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
@@ -112,6 +116,8 @@ export default function MessagesScreen() {
     }
   };
 
+  const [actionSheetItem, setActionSheetItem] = useState<any>(null);
+
   const handleDelete = async (item: any) => {
     const endpoint = item.type === "admin"
       ? `/api/admin-conversations/${item.id}`
@@ -125,48 +131,43 @@ export default function MessagesScreen() {
       });
       qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
     } catch {
-      Alert.alert("Error", "Could not delete conversation. Please try again.");
+      toast.error("Error", "Could not delete conversation. Please try again.");
     } finally {
       setActioningId(null);
     }
   };
 
   const handleLongPress = (item: any) => {
+    setActionSheetItem(item);
+  };
+
+  const getActionSheetItems = (item: any) => {
+    if (!item) return [];
     const isArchived = !!item.archived;
-    // Resolved support tickets can't be manually unarchived — admin controls that
     const isResolvedTicket = !!(item.closedAt);
     const canUnarchive = isArchived && !isResolvedTicket;
-
-    const buttons: any[] = [];
-
+    const items: any[] = [];
     if (!isArchived) {
-      buttons.push({
-        text: "Archive",
-        onPress: () => handleArchive(item),
-      });
+      items.push({ label: "Archive", icon: "archive" as const, onPress: () => handleArchive(item) });
     }
     if (canUnarchive) {
-      buttons.push({
-        text: "Move to Inbox",
-        onPress: () => handleUnarchive(item),
-      });
+      items.push({ label: "Move to Inbox", icon: "inbox" as const, onPress: () => handleUnarchive(item) });
     }
-    buttons.push({
-      text: "Delete",
-      style: "destructive",
+    items.push({
+      label: "Delete",
+      icon: "trash-2" as const,
+      destructive: true,
       onPress: () =>
-        Alert.alert(
-          "Delete Conversation",
-          "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Delete", style: "destructive", onPress: () => handleDelete(item) },
-          ]
-        ),
+        showConfirm({
+          title: "Delete Conversation",
+          message: "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
+          confirmLabel: "Delete",
+          destructive: true,
+          icon: "trash-2",
+          onConfirm: () => handleDelete(item),
+        }),
     });
-    buttons.push({ text: "Cancel", style: "cancel" });
-
-    Alert.alert("Conversation Options", "", buttons);
+    return items;
   };
 
   const isAdmin = user?.role === "admin";
@@ -381,6 +382,13 @@ export default function MessagesScreen() {
           }
         />
       )}
+
+      <ActionSheet
+        visible={!!actionSheetItem}
+        title="Conversation Options"
+        items={getActionSheetItems(actionSheetItem)}
+        onClose={() => setActionSheetItem(null)}
+      />
     </View>
   );
 }

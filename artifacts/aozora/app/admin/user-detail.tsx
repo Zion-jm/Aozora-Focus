@@ -6,12 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Image,
   Modal,
   Dimensions,
   TextInput,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -75,6 +76,8 @@ export default function AdminUserDetailScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { token } = useAuth();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const uid = parseInt(userId ?? "0");
 
@@ -106,45 +109,41 @@ export default function AdminUserDetailScreen() {
   };
 
   const reviewMutation = useAdminReviewVerification({
-    mutation: { onSuccess: invalidate, onError: () => Alert.alert("Error", "Could not update verification.") },
+    mutation: { onSuccess: invalidate, onError: () => toast.error("Error", "Could not update verification.") },
   });
 
   const statusMutation = useAdminUpdateUserStatus({
-    mutation: { onSuccess: invalidate, onError: () => Alert.alert("Error", "Could not update user status.") },
+    mutation: { onSuccess: invalidate, onError: () => toast.error("Error", "Could not update user status.") },
   });
 
   const handleReview = (verifId: number, status: "approved" | "rejected") => {
-    Alert.alert(
-      status === "approved" ? "Approve ID?" : "Reject ID?",
-      `Mark this verification as ${status}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: status === "approved" ? "Approve" : "Reject",
-          style: status === "rejected" ? "destructive" : "default",
-          onPress: () => {
-            reviewMutation.mutate({
-              verificationId: verifId,
-              data: { status, reviewNote: reviewNote || undefined },
-            });
-            setReviewNote("");
-            setReviewingId(null);
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: status === "approved" ? "Approve ID?" : "Reject ID?",
+      message: `Mark this verification as ${status}?`,
+      confirmLabel: status === "approved" ? "Approve" : "Reject",
+      destructive: status === "rejected",
+      icon: status === "approved" ? "check-circle" : "x-circle",
+      onConfirm: () => {
+        reviewMutation.mutate({
+          verificationId: verifId,
+          data: { status, reviewNote: reviewNote || undefined },
+        });
+        setReviewNote("");
+        setReviewingId(null);
+      },
+    });
   };
 
   const handleToggleSuspend = () => {
     const action = user?.isSuspended ? "Unsuspend" : "Suspend";
-    Alert.alert(`${action} User?`, `${action} ${user?.fullName}?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: action,
-        style: user?.isSuspended ? "default" : "destructive",
-        onPress: () => statusMutation.mutate({ userId: uid, data: { isSuspended: !user?.isSuspended } }),
-      },
-    ]);
+    showConfirm({
+      title: `${action} User?`,
+      message: `${action} ${user?.fullName}?`,
+      confirmLabel: action,
+      destructive: !user?.isSuspended,
+      icon: user?.isSuspended ? "user-check" : "user-x",
+      onConfirm: () => statusMutation.mutate({ userId: uid, data: { isSuspended: !user?.isSuspended } }),
+    });
   };
 
   if (isLoading) {

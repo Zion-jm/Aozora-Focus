@@ -9,8 +9,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -33,6 +34,8 @@ function apiFetch(path: string, token: string, options: RequestInit = {}) {
 }
 
 export default function AdminConversationScreen() {
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -100,25 +103,21 @@ export default function AdminConversationScreen() {
   }, [convId, token]);
 
   const handleDelete = () => {
-    Alert.alert(
-      "Delete Conversation",
-      "This will remove the conversation from your view.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await apiFetch(`/api/admin-conversations/${convId}`, token!, { method: "DELETE" });
-              router.back();
-            } catch {
-              Alert.alert("Error", "Could not delete conversation. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: "Delete Conversation",
+      message: "This will remove the conversation from your view.",
+      confirmLabel: "Delete",
+      destructive: true,
+      icon: "trash-2",
+      onConfirm: async () => {
+        try {
+          await apiFetch(`/api/admin-conversations/${convId}`, token!, { method: "DELETE" });
+          router.back();
+        } catch {
+          toast.error("Error", "Could not delete conversation. Please try again.");
+        }
+      },
+    });
   };
 
   const handleSend = async () => {
@@ -211,9 +210,9 @@ export default function AdminConversationScreen() {
     try {
       const res = await apiFetch(`/api/admin-conversations/${convId}/start`, token, { method: "POST" });
       if (res.ok) await fetchMessages();
-      else Alert.alert("Error", "Could not start conversation. Please try again.");
+      else toast.error("Error", "Could not start conversation. Please try again.");
     } catch {
-      Alert.alert("Error", "Could not start conversation. Please try again.");
+      toast.error("Error", "Could not start conversation. Please try again.");
     } finally {
       setIsStarting(false);
     }
@@ -222,28 +221,25 @@ export default function AdminConversationScreen() {
   const handleTicketAction = () => {
     if (!ticketInfo || !isAdmin) return;
     const isPending = ticketInfo.status === "pending";
-    Alert.alert(
-      ticketInfo.subject,
-      `Type: ${ticketInfo.ticketType}\nStatus: ${isPending ? "Open" : "Resolved"}`,
-      [
-        {
-          text: isPending ? "Mark as Resolved" : "Reopen Ticket",
-          onPress: async () => {
-            try {
-              const newStatus = isPending ? "resolved" : "pending";
-              const res = await apiFetch(`/api/admin/support-tickets/${ticketInfo.id}`, token!, {
-                method: "PATCH",
-                body: JSON.stringify({ status: newStatus }),
-              });
-              if (res.ok) await fetchMessages();
-            } catch {
-              Alert.alert("Error", "Could not update ticket status.");
-            }
-          },
-        },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+    showConfirm({
+      title: ticketInfo.subject,
+      message: `Type: ${ticketInfo.ticketType}\nStatus: ${isPending ? "Open" : "Resolved"}`,
+      confirmLabel: isPending ? "Mark as Resolved" : "Reopen Ticket",
+      cancelLabel: "Cancel",
+      icon: isPending ? "check-circle" : "refresh-cw",
+      onConfirm: async () => {
+        try {
+          const newStatus = isPending ? "resolved" : "pending";
+          const res = await apiFetch(`/api/admin/support-tickets/${ticketInfo.id}`, token!, {
+            method: "PATCH",
+            body: JSON.stringify({ status: newStatus }),
+          });
+          if (res.ok) await fetchMessages();
+        } catch {
+          toast.error("Error", "Could not update ticket status.");
+        }
+      },
+    });
   };
 
   return (

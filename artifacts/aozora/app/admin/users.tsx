@@ -6,10 +6,11 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   TextInput,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -36,6 +37,8 @@ export default function AdminUsersScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { token } = useAuth();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [messagingUserId, setMessagingUserId] = useState<number | null>(null);
@@ -66,25 +69,20 @@ export default function AdminUsersScreen() {
   const update = useAdminUpdateUserStatus({
     mutation: {
       onSuccess: () => qc.invalidateQueries({ queryKey: getAdminGetUsersQueryKey() }),
-      onError: () => Alert.alert("Error", "Could not update user."),
+      onError: () => toast.error("Error", "Could not update user."),
     },
   });
 
   const toggleSuspend = (user: any) => {
     const action = user.isSuspended ? "unsuspend" : "suspend";
-    Alert.alert(
-      `${action.charAt(0).toUpperCase() + action.slice(1)} User?`,
-      `Are you sure you want to ${action} ${user.fullName}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: action.charAt(0).toUpperCase() + action.slice(1),
-          style: user.isSuspended ? "default" : "destructive",
-          onPress: () =>
-            update.mutate({ userId: user.id, data: { isSuspended: !user.isSuspended } }),
-        },
-      ]
-    );
+    showConfirm({
+      title: `${action.charAt(0).toUpperCase() + action.slice(1)} User?`,
+      message: `Are you sure you want to ${action} ${user.fullName}?`,
+      confirmLabel: action.charAt(0).toUpperCase() + action.slice(1),
+      destructive: !user.isSuspended,
+      icon: user.isSuspended ? "user-check" : "user-x",
+      onConfirm: () => update.mutate({ userId: user.id, data: { isSuspended: !user.isSuspended } }),
+    });
   };
 
   const openMessageUser = async (user: any) => {
@@ -100,13 +98,13 @@ export default function AdminUsersScreen() {
         body: JSON.stringify({ userId: user.id }),
       });
       if (!res.ok) {
-        Alert.alert("Error", "Could not open conversation.");
+        toast.error("Error", "Could not open conversation.");
         return;
       }
       const conv = await res.json();
       router.push(`/admin-conversation/${conv.id}`);
     } catch {
-      Alert.alert("Error", "Network error. Please try again.");
+      toast.error("Error", "Network error. Please try again.");
     } finally {
       setMessagingUserId(null);
     }

@@ -7,10 +7,11 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Image,
   Switch,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { ActionSheet } from "@/components/ActionSheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -70,6 +71,7 @@ export default function EditProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, updateUser } = useAuth();
+  const { toast } = useToast();
 
   const [fullName, setFullName] = useState(user?.fullName ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
@@ -88,15 +90,16 @@ export default function EditProfileScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl ?? null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
 
+  const [showAvatarSheet, setShowAvatarSheet] = useState(false);
+
   const updateProfile = useUpdateProfile({
     mutation: {
       onSuccess: (data) => {
         updateUser(data);
-        Alert.alert("Saved!", "Your profile has been updated.", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
+        toast.success("Saved!", "Your profile has been updated.");
+        router.back();
       },
-      onError: () => Alert.alert("Error", "Could not save changes. Try again."),
+      onError: () => toast.error("Error", "Could not save changes. Try again."),
     },
   });
 
@@ -105,7 +108,7 @@ export default function EditProfileScreen() {
     if (source === "camera") {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Required", "Camera access is needed.");
+        toast.warning("Permission Required", "Camera access is needed.");
         return;
       }
       result = await ImagePicker.launchCameraAsync({
@@ -117,7 +120,7 @@ export default function EditProfileScreen() {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission Required", "Photo library access is needed.");
+        toast.warning("Permission Required", "Photo library access is needed.");
         return;
       }
       result = await ImagePicker.launchImageLibraryAsync({
@@ -134,17 +137,9 @@ export default function EditProfileScreen() {
     }
   };
 
-  const showAvatarPicker = () => {
-    Alert.alert("Change Profile Photo", "Choose a source:", [
-      { text: "Take Photo", onPress: () => pickAvatar("camera") },
-      { text: "Choose from Gallery", onPress: () => pickAvatar("gallery") },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
-
   const handleSave = () => {
     if (!fullName.trim()) {
-      Alert.alert("Name required", "Please enter your full name.");
+      toast.warning("Name required", "Please enter your full name.");
       return;
     }
     const avatarUrl = avatarBase64
@@ -201,7 +196,7 @@ export default function EditProfileScreen() {
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]}
       >
         <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={showAvatarPicker} style={styles.avatarWrap}>
+          <TouchableOpacity onPress={() => setShowAvatarSheet(true)} style={styles.avatarWrap}>
             {avatarUri ? (
               <Image
                 source={{ uri: avatarUri }}
@@ -348,6 +343,17 @@ export default function EditProfileScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <ActionSheet
+        visible={showAvatarSheet}
+        title="Change Profile Photo"
+        message="Choose a source:"
+        items={[
+          { label: "Take Photo", icon: "camera" as const, onPress: () => pickAvatar("camera") },
+          { label: "Choose from Gallery", icon: "image" as const, onPress: () => pickAvatar("gallery") },
+        ]}
+        onClose={() => setShowAvatarSheet(false)}
+      />
     </View>
   );
 }

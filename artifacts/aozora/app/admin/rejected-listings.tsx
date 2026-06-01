@@ -6,13 +6,14 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   Image,
   RefreshControl,
   TextInput,
   Modal,
   ScrollView,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -74,32 +75,28 @@ export default function TurnedDownListingsScreen() {
     );
   }, [takenDown, search]);
 
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
+
   const update = useAdminUpdateDormStatus({
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getAdminGetDormsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
-        Alert.alert(
-          "Listing Restored",
-          "The listing is now approved and visible to all students on the Explore page."
-        );
+        toast.success("Listing Restored", "The listing is now approved and visible to all students on the Explore page.");
       },
-      onError: () => Alert.alert("Error", "Could not restore listing. Please try again."),
+      onError: () => toast.error("Error", "Could not restore listing. Please try again."),
     },
   });
 
   const handleUndo = (dorm: any) => {
-    Alert.alert(
-      "Restore Listing?",
-      `"${dorm.name}" will be marked as approved and shown to all students on the Explore page.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Restore",
-          onPress: () => update.mutate({ dormId: dorm.id, data: { status: "approved" } }),
-        },
-      ]
-    );
+    showConfirm({
+      title: "Restore Listing?",
+      message: `"${dorm.name}" will be marked as approved and shown to all students on the Explore page.`,
+      confirmLabel: "Restore",
+      icon: "check-circle",
+      onConfirm: () => update.mutate({ dormId: dorm.id, data: { status: "approved" } }),
+    });
   };
 
   return (

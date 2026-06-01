@@ -8,9 +8,9 @@ import {
   ActivityIndicator,
   Image,
   Modal,
-  Alert,
   Linking,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -62,6 +62,7 @@ function StatBox({
 export default function PublicProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { toast } = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = id ? parseInt(id, 10) : 0;
   const { user: me, token } = useAuth();
@@ -104,7 +105,7 @@ export default function PublicProfileScreen() {
     if (!profile?.phone) return;
     const tel = `tel:${profile.phone.replace(/\s/g, "")}`;
     Linking.openURL(tel).catch(() =>
-      Alert.alert("Cannot call", "Your device doesn't support phone calls.")
+      toast.warning("Cannot call", "Your device doesn't support phone calls.")
     );
   };
 
@@ -162,7 +163,7 @@ export default function PublicProfileScreen() {
       const data = await res.json();
       router.push(`/conversation/${data.id}`);
     } catch {
-      Alert.alert("Error", "Could not start conversation. Please try again.");
+      toast.error("Error", "Could not start conversation. Please try again.");
     } finally {
       setIsMessaging(false);
     }
@@ -187,7 +188,7 @@ export default function PublicProfileScreen() {
       const data = await res.json();
       router.push(`/conversation/${data.id}`);
     } catch {
-      Alert.alert("Error", "Could not start conversation. Please try again.");
+      toast.error("Error", "Could not start conversation. Please try again.");
     } finally {
       setIsMessaging(false);
     }

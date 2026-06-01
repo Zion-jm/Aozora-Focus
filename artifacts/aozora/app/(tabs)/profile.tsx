@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from "react-native";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -51,19 +51,21 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
+  const { showConfirm } = useConfirm();
 
   const handleLogout = () => {
-    Alert.alert("Log out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Log out",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-          router.replace("/(auth)/login");
-        },
+    showConfirm({
+      title: "Log out",
+      message: "Are you sure you want to log out?",
+      confirmLabel: "Log out",
+      cancelLabel: "Cancel",
+      destructive: true,
+      icon: "log-out",
+      onConfirm: async () => {
+        await logout();
+        router.replace("/(auth)/login");
       },
-    ]);
+    });
   };
 
   const handleAppeal = () => {

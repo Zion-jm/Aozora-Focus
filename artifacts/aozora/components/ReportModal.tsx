@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -52,6 +52,7 @@ export function ReportModal({
   colors,
 }: ReportModalProps) {
   const insets = useSafeAreaInsets();
+  const { toast } = useToast();
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [details, setDetails] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,7 +98,7 @@ export function ReportModal({
 
       setSubmitted(true);
     } catch (e: any) {
-      Alert.alert("Could not submit", e.message ?? "Please try again.");
+      toast.error("Could not submit", e.message ?? "Please try again.");
     } finally {
       setIsSubmitting(false);
     }

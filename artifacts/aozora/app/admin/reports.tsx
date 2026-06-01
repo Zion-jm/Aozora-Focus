@@ -6,8 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -57,6 +58,8 @@ export default function AdminReportsScreen() {
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const qc = useQueryClient();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const [filter, setFilter] = useState<Filter>("pending");
   const [actionLoading, setActionLoading] = useState<Record<string, ActionType | null>>({});
 
@@ -94,111 +97,99 @@ export default function AdminReportsScreen() {
       if (!res.ok) throw new Error("Failed to update");
       qc.invalidateQueries({ queryKey: ["adminReports"] });
     } catch {
-      Alert.alert("Error", "Could not update report status.");
+      toast.error("Error", "Could not update report status.");
     } finally {
       setLoading(reportId, null);
     }
   };
 
-  const sendWarning = async (reportId: number, targetUserName: string | null) => {
+  const sendWarning = (reportId: number, targetUserName: string | null) => {
     const name = targetUserName ?? "this user";
-    Alert.alert(
-      "Send Warning",
-      `Send an official warning message to ${name}? The report details will be included automatically and the report will be marked as reviewed.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Send Warning",
-          onPress: async () => {
-            setLoading(reportId, "warn");
-            try {
-              const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/warn`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error ?? "Failed to send warning");
-              }
-              qc.invalidateQueries({ queryKey: ["adminReports"] });
-              Alert.alert("Warning Sent", `A warning message has been sent to ${name}.`);
-            } catch (e: any) {
-              Alert.alert("Error", e.message ?? "Could not send warning.");
-            } finally {
-              setLoading(reportId, null);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: "Send Warning",
+      message: `Send an official warning message to ${name}? The report details will be included automatically and the report will be marked as reviewed.`,
+      confirmLabel: "Send Warning",
+      icon: "alert-triangle",
+      onConfirm: async () => {
+        setLoading(reportId, "warn");
+        try {
+          const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/warn`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error ?? "Failed to send warning");
+          }
+          qc.invalidateQueries({ queryKey: ["adminReports"] });
+          toast.success("Warning Sent", `A warning message has been sent to ${name}.`);
+        } catch (e: any) {
+          toast.error("Error", e.message ?? "Could not send warning.");
+        } finally {
+          setLoading(reportId, null);
+        }
+      },
+    });
   };
 
-  const takeDownListing = async (reportId: number, dormName: string | null) => {
+  const takeDownListing = (reportId: number, dormName: string | null) => {
     const name = dormName ?? "this listing";
-    Alert.alert(
-      "Take Down Listing",
-      `Remove "${name}" from Aozora? The listing will be hidden from students immediately and the report will be marked as reviewed.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Take Down",
-          style: "destructive",
-          onPress: async () => {
-            setLoading(reportId, "takedown");
-            try {
-              const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/takedown`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error ?? "Failed to take down listing");
-              }
-              qc.invalidateQueries({ queryKey: ["adminReports"] });
-              Alert.alert("Listing Removed", `"${name}" has been taken down and is no longer visible to students.`);
-            } catch (e: any) {
-              Alert.alert("Error", e.message ?? "Could not take down listing.");
-            } finally {
-              setLoading(reportId, null);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: "Take Down Listing",
+      message: `Remove "${name}" from Aozora? The listing will be hidden from students immediately and the report will be marked as reviewed.`,
+      confirmLabel: "Take Down",
+      destructive: true,
+      icon: "home",
+      onConfirm: async () => {
+        setLoading(reportId, "takedown");
+        try {
+          const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/takedown`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error ?? "Failed to take down listing");
+          }
+          qc.invalidateQueries({ queryKey: ["adminReports"] });
+          toast.success("Listing Removed", `"${name}" has been taken down and is no longer visible to students.`);
+        } catch (e: any) {
+          toast.error("Error", e.message ?? "Could not take down listing.");
+        } finally {
+          setLoading(reportId, null);
+        }
+      },
+    });
   };
 
-  const suspendUser = async (reportId: number, targetUserName: string | null) => {
+  const suspendUser = (reportId: number, targetUserName: string | null) => {
     const name = targetUserName ?? "this user";
-    Alert.alert(
-      "Suspend User",
-      `Suspend ${name}'s account? They will immediately lose access to Aozora. The report will be marked as reviewed.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Suspend",
-          style: "destructive",
-          onPress: async () => {
-            setLoading(reportId, "suspend");
-            try {
-              const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/suspend`, {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error ?? "Failed to suspend user");
-              }
-              qc.invalidateQueries({ queryKey: ["adminReports"] });
-              Alert.alert("User Suspended", `${name}'s account has been suspended.`);
-            } catch (e: any) {
-              Alert.alert("Error", e.message ?? "Could not suspend user.");
-            } finally {
-              setLoading(reportId, null);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: "Suspend User",
+      message: `Suspend ${name}'s account? They will immediately lose access to Aozora. The report will be marked as reviewed.`,
+      confirmLabel: "Suspend",
+      destructive: true,
+      icon: "user-x",
+      onConfirm: async () => {
+        setLoading(reportId, "suspend");
+        try {
+          const res = await fetch(`${BASE_URL}/api/admin/reports/${reportId}/suspend`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error ?? "Failed to suspend user");
+          }
+          qc.invalidateQueries({ queryKey: ["adminReports"] });
+          toast.success("User Suspended", `${name}'s account has been suspended.`);
+        } catch (e: any) {
+          toast.error("Error", e.message ?? "Could not suspend user.");
+        } finally {
+          setLoading(reportId, null);
+        }
+      },
+    });
   };
 
   const renderReport = ({ item }: { item: any }) => {

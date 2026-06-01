@@ -6,10 +6,11 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   Image,
   RefreshControl,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -35,6 +36,8 @@ export default function AdminDormsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const [filter, setFilter] = useState("pending");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetDorms({
@@ -50,22 +53,19 @@ export default function AdminDormsScreen() {
         qc.invalidateQueries({ queryKey: getAdminGetDormsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
       },
-      onError: () => Alert.alert("Error", "Could not update dorm."),
+      onError: () => toast.error("Error", "Could not update dorm."),
     },
   });
 
   const handleStatus = (dorm: any, status: string) => {
-    Alert.alert(
-      `${status.charAt(0).toUpperCase() + status.slice(1)} Dorm?`,
-      `Set "${dorm.name}" to ${status}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: status.charAt(0).toUpperCase() + status.slice(1),
-          onPress: () => update.mutate({ dormId: dorm.id, data: { status } }),
-        },
-      ]
-    );
+    showConfirm({
+      title: `${status.charAt(0).toUpperCase() + status.slice(1)} Dorm?`,
+      message: `Set "${dorm.name}" to ${status}?`,
+      confirmLabel: status.charAt(0).toUpperCase() + status.slice(1),
+      destructive: status === "rejected",
+      icon: status === "approved" ? "check-circle" : "x-circle",
+      onConfirm: () => update.mutate({ dormId: dorm.id, data: { status } }),
+    });
   };
 
   return (

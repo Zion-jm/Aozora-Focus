@@ -6,11 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Image,
   TextInput,
   Platform,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { ActionSheet } from "@/components/ActionSheet";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -107,6 +108,7 @@ export default function VerifyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, updateUser } = useAuth();
+  const { toast } = useToast();
   const handleAppeal = () => {
     router.push("/help-center?type=appeal_rejection");
   };
@@ -144,14 +146,11 @@ export default function VerifyScreen() {
       onSuccess: () => {
         updateUser({ ...user!, verificationStatus: "pending" });
         setCanResubmit(false);
-        Alert.alert(
-          "Submitted!",
-          "Your identity verification is under review. We'll notify you once it's approved.",
-          [{ text: "OK", onPress: () => router.back() }]
-        );
+        toast.success("Submitted!", "Your identity verification is under review. We'll notify you once it's approved.");
+        router.back();
       },
       onError: () =>
-        Alert.alert("Error", "Could not submit verification. Try again."),
+        toast.error("Error", "Could not submit verification. Try again."),
     },
   });
 
@@ -164,12 +163,11 @@ export default function VerifyScreen() {
     info.emergencyContactName.trim() &&
     info.emergencyContactPhone.trim();
 
+  const [showPhotoSheet, setShowPhotoSheet] = useState(false);
+
   const handleNextStep = () => {
     if (!personalInfoComplete) {
-      Alert.alert(
-        "Missing info",
-        "Please fill in your name, contact (phone or email), and emergency contact before continuing."
-      );
+      toast.warning("Missing info", "Please fill in your name, contact (phone or email), and emergency contact before continuing.");
       return;
     }
     updateProfile.mutate(
@@ -190,7 +188,7 @@ export default function VerifyScreen() {
           setStep("id");
         },
         onError: () =>
-          Alert.alert("Error", "Could not save your information. Try again."),
+          toast.error("Error", "Could not save your information. Try again."),
       }
     );
   };
@@ -199,19 +197,13 @@ export default function VerifyScreen() {
     if (type === "camera") {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Camera access is needed to take a photo of your ID."
-        );
+        toast.warning("Permission Required", "Camera access is needed to take a photo of your ID.");
         return false;
       }
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Photo library access is needed to select your ID."
-        );
+        toast.warning("Permission Required", "Photo library access is needed to select your ID.");
         return false;
       }
     }
@@ -589,13 +581,7 @@ export default function VerifyScreen() {
                       borderRadius: colors.radius,
                     },
                   ]}
-                  onPress={() => {
-                    Alert.alert("Change Photo", "Choose how to update your ID photo.", [
-                      { text: "Take Photo", onPress: takePhoto },
-                      { text: "Choose from Gallery", onPress: pickFromGallery },
-                      { text: "Cancel", style: "cancel" },
-                    ]);
-                  }}
+                  onPress={() => setShowPhotoSheet(true)}
                 >
                   <Feather name="refresh-cw" size={15} color={colors.foreground} />
                   <Text style={[styles.retakeBtnText, { color: colors.foreground }]}>
@@ -691,6 +677,17 @@ export default function VerifyScreen() {
           </>
         )}
       </ScrollView>
+
+      <ActionSheet
+        visible={showPhotoSheet}
+        title="Change Photo"
+        message="Choose how to update your ID photo."
+        items={[
+          { label: "Take Photo", icon: "camera" as const, onPress: () => { setShowPhotoSheet(false); takePhoto(); } },
+          { label: "Choose from Gallery", icon: "image" as const, onPress: () => { setShowPhotoSheet(false); pickFromGallery(); } },
+        ]}
+        onClose={() => setShowPhotoSheet(false)}
+      />
     </View>
   );
 }

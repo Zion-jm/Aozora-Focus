@@ -9,8 +9,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -37,6 +38,8 @@ export default function ConversationScreen() {
   const convId = id ? parseInt(id, 10) : 0;
   const { user, token } = useAuth();
   const qc = useQueryClient();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const [text, setText] = useState("");
   const [showReport, setShowReport] = useState(false);
   const flatRef = useRef<FlatList>(null);
@@ -80,29 +83,25 @@ export default function ConversationScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      "Delete Conversation",
-      "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await fetch(`${BASE_URL}/api/conversations/${convId}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
-              router.back();
-            } catch {
-              Alert.alert("Error", "Could not delete conversation. Please try again.");
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: "Delete Conversation",
+      message: "This will remove the conversation from your view. The other party won't be affected until they delete it too.",
+      confirmLabel: "Delete",
+      destructive: true,
+      icon: "trash-2",
+      onConfirm: async () => {
+        try {
+          await fetch(`${BASE_URL}/api/conversations/${convId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+          router.back();
+        } catch {
+          toast.error("Error", "Could not delete conversation. Please try again.");
+        }
+      },
+    });
   };
 
   const otherUser = useMemo(() => {

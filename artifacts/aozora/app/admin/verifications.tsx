@@ -6,7 +6,6 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   Image,
   Modal,
@@ -15,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -46,6 +46,7 @@ export default function AdminVerificationsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { toast } = useToast();
   const [filter, setFilter] = useState("pending");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{
@@ -64,7 +65,7 @@ export default function AdminVerificationsScreen() {
   const review = useAdminReviewVerification({
     mutation: {
       onSuccess: () => qc.invalidateQueries({ queryKey: getAdminGetVerificationsQueryKey() }),
-      onError: () => Alert.alert("Error", "Could not update verification."),
+      onError: () => toast.error("Error", "Could not update verification."),
     },
   });
 
@@ -77,7 +78,7 @@ export default function AdminVerificationsScreen() {
     if (!reviewModal) return;
     const { item, status } = reviewModal;
     if (status === "rejected" && !reviewNote.trim()) {
-      Alert.alert("Note required", "Please provide a reason for rejection.");
+      toast.warning("Note required", "Please provide a reason for rejection.");
       return;
     }
     review.mutate(

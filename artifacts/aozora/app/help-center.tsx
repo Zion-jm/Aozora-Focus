@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -30,6 +30,7 @@ const TICKET_TYPES = [
 ];
 
 export default function HelpCenterScreen() {
+  const { toast } = useToast();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
@@ -75,11 +76,11 @@ export default function HelpCenterScreen() {
 
   const handleSubmit = async () => {
     if (activeTicket) return;
-    if (!ticketType) { Alert.alert("Required", "Please select a ticket type."); return; }
-    if (!subject.trim()) { Alert.alert("Required", "Please enter a subject."); return; }
-    if (!message.trim()) { Alert.alert("Required", "Please enter a message."); return; }
-    if (isGuest && !guestName.trim()) { Alert.alert("Required", "Please enter your name."); return; }
-    if (isGuest && !guestEmail.trim()) { Alert.alert("Required", "Please enter your email."); return; }
+    if (!ticketType) { toast.warning("Required", "Please select a ticket type."); return; }
+    if (!subject.trim()) { toast.warning("Required", "Please enter a subject."); return; }
+    if (!message.trim()) { toast.warning("Required", "Please enter a message."); return; }
+    if (isGuest && !guestName.trim()) { toast.warning("Required", "Please enter your name."); return; }
+    if (isGuest && !guestEmail.trim()) { toast.warning("Required", "Please enter your email."); return; }
 
     setIsSubmitting(true);
     try {
@@ -117,7 +118,7 @@ export default function HelpCenterScreen() {
 
       setSubmitted(true);
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Could not submit your request. Please try again.");
+      toast.error("Error", e?.message ?? "Could not submit your request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

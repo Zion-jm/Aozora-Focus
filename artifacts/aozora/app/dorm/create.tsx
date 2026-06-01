@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
 } from "react-native";
@@ -57,6 +56,7 @@ export default function CreateDormScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { token } = useAuth();
+  const { toast } = useToast();
 
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const editId = edit ? parseInt(edit) : null;
@@ -126,7 +126,7 @@ export default function CreateDormScreen() {
     if (Platform.OS !== "web") {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission needed", "Allow access to your photo library to add dorm photos.");
+        toast.warning("Permission needed", "Allow access to your photo library to add dorm photos.");
         return;
       }
     }
@@ -199,7 +199,7 @@ export default function CreateDormScreen() {
 
   const handleSubmit = async () => {
     if (!name.trim() || !address.trim() || !monthlyRent) {
-      Alert.alert("Missing Fields", "Please fill in name, address, and monthly rent.");
+      toast.warning("Missing Fields", "Please fill in name, address, and monthly rent.");
       return;
     }
 
@@ -237,21 +237,19 @@ export default function CreateDormScreen() {
         qc.invalidateQueries({ queryKey: getGetMyDormListingsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormByIdQueryKey(editId) });
-        Alert.alert("Listing Updated!", "Your changes have been saved.", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
+        toast.success("Listing Updated!", "Your changes have been saved.");
+        router.back();
       } else {
         const newDorm = await create.mutateAsync({ data: payload });
         const dormId = (newDorm as any).id;
         await uploadPhotos(dormId);
         qc.invalidateQueries({ queryKey: getGetMyDormListingsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
-        Alert.alert("Listing Created!", "Your dorm is pending admin approval.", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
+        toast.success("Listing Created!", "Your dorm is pending admin approval.");
+        router.back();
       }
     } catch {
-      Alert.alert("Error", isEditMode ? "Could not save changes. Try again." : "Could not create listing. Try again.");
+      toast.error("Error", isEditMode ? "Could not save changes. Try again." : "Could not create listing. Try again.");
     } finally {
       setIsSubmitting(false);
     }

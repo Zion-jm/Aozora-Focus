@@ -7,9 +7,10 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -72,6 +73,8 @@ interface ReviewsSectionProps {
 }
 
 export function ReviewsSection({ type, targetId, token, colors }: ReviewsSectionProps) {
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const { user: currentUser } = useAuth();
   const qc = useQueryClient();
   const reviewsKey = [type === "dorm" ? "dormReviews" : "userReviews", targetId];
@@ -128,7 +131,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
 
   const handleSubmit = async () => {
     if (selectedRating === 0) {
-      Alert.alert("Rating required", "Please select a star rating.");
+      toast.warning("Rating required", "Please select a star rating.");
       return;
     }
     if (!token) return;
@@ -152,9 +155,9 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
       setShowModal(false);
       setSelectedRating(0);
       setComment("");
-      Alert.alert("Review submitted!", "Thank you for your feedback.");
+      toast.success("Review submitted!", "Thank you for your feedback.");
     } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Could not submit review.");
+      toast.error("Error", e.message ?? "Could not submit review.");
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +172,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
   const handleEditSubmit = async () => {
     if (!editingReview || !token) return;
     if (editRating === 0) {
-      Alert.alert("Rating required", "Please select a star rating.");
+      toast.warning("Rating required", "Please select a star rating.");
       return;
     }
     setIsEditSubmitting(true);
@@ -189,46 +192,42 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
       }
       qc.invalidateQueries({ queryKey: reviewsKey });
       setEditingReview(null);
-      Alert.alert("Review updated!", "Your review has been saved.");
+      toast.success("Review updated!", "Your review has been saved.");
     } catch (e: any) {
-      Alert.alert("Error", e.message ?? "Could not update review.");
+      toast.error("Error", e.message ?? "Could not update review.");
     } finally {
       setIsEditSubmitting(false);
     }
   };
 
   const handleDelete = (review: any) => {
-    Alert.alert(
-      "Delete Review",
-      "Are you sure you want to delete your review? This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const url =
-                type === "dorm"
-                  ? `${BASE_URL}/api/dorms/${targetId}/reviews/${review.id}`
-                  : `${BASE_URL}/api/users/${targetId}/reviews/${review.id}`;
-              const res = await fetch(url, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-              });
-              if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || "Failed to delete review");
-              }
-              qc.invalidateQueries({ queryKey: reviewsKey });
-              qc.invalidateQueries({ queryKey: canReviewKey });
-            } catch (e: any) {
-              Alert.alert("Error", e.message ?? "Could not delete review.");
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: "Delete Review",
+      message: "Are you sure you want to delete your review? This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+      icon: "trash-2",
+      onConfirm: async () => {
+        try {
+          const url =
+            type === "dorm"
+              ? `${BASE_URL}/api/dorms/${targetId}/reviews/${review.id}`
+              : `${BASE_URL}/api/users/${targetId}/reviews/${review.id}`;
+          const res = await fetch(url, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to delete review");
+          }
+          qc.invalidateQueries({ queryKey: reviewsKey });
+          qc.invalidateQueries({ queryKey: canReviewKey });
+        } catch (e: any) {
+          toast.error("Error", e.message ?? "Could not delete review.");
+        }
+      },
+    });
   };
 
   if (isLoading) return null;

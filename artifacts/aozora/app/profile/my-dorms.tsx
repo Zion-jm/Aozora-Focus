@@ -8,9 +8,10 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  Alert,
   TextInput,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -37,6 +38,8 @@ export default function MyDormsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { token } = useAuth();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const [search, setSearch] = useState("");
   const [appealingId, setAppealingId] = useState<number | null>(null);
 
@@ -55,7 +58,7 @@ export default function MyDormsScreen() {
       const data = await res.json();
       router.push(`/admin-conversation/${data.id}`);
     } catch {
-      Alert.alert("Error", "Could not open admin chat. Please try again.");
+      toast.error("Error", "Could not open admin chat. Please try again.");
     } finally {
       setAppealingId(null);
     }
@@ -81,7 +84,7 @@ export default function MyDormsScreen() {
   const deleteDorm = useDeleteDorm({
     mutation: {
       onSuccess: () => qc.invalidateQueries({ queryKey: getGetMyDormListingsQueryKey() }),
-      onError: () => Alert.alert("Error", "Could not delete dorm."),
+      onError: () => toast.error("Error", "Could not delete dorm."),
     },
   });
 
@@ -177,14 +180,14 @@ export default function MyDormsScreen() {
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: "#ef444415", borderRadius: 8 }]}
                     onPress={() =>
-                      Alert.alert("Delete Listing?", "This cannot be undone.", [
-                        { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: () => deleteDorm.mutate({ dormId: item.id }),
-                        },
-                      ])
+                      showConfirm({
+                        title: "Delete Listing?",
+                        message: "This cannot be undone.",
+                        confirmLabel: "Delete",
+                        destructive: true,
+                        icon: "trash-2",
+                        onConfirm: () => deleteDorm.mutate({ dormId: item.id }),
+                      })
                     }
                   >
                     <Feather name="trash-2" size={15} color="#ef4444" />

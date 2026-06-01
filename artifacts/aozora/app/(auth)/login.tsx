@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useLogin } from "@workspace/api-client-react";
@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const { toast } = useToast();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,12 +34,12 @@ export default function LoginScreen() {
       },
       onError: (err: any) => {
         if (err?.status === 403) {
-          Alert.alert(
+          toast.error(
             "Account Suspended",
             "Your account has been suspended. Please contact support."
           );
         } else {
-          Alert.alert("Login Failed", "Invalid email or password. Please try again.");
+          toast.error("Login Failed", "Invalid email or password. Please try again.");
         }
       },
     },

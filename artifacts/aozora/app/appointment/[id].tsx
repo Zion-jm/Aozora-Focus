@@ -6,8 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -44,6 +45,8 @@ const STATUS_ICONS: Record<string, string> = {
 
 export default function AppointmentDetailScreen() {
   const colors = useColors();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, token } = useAuth();
@@ -59,7 +62,7 @@ export default function AppointmentDetailScreen() {
         qc.invalidateQueries({ queryKey: getGetAppointmentsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetAppointmentByIdQueryKey(id!) });
       },
-      onError: () => Alert.alert("Error", "Could not update status."),
+      onError: () => toast.error("Error", "Could not update status."),
     },
   });
 
@@ -232,13 +235,13 @@ export default function AppointmentDetailScreen() {
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#10b981", borderRadius: colors.radius }]}
               onPress={() =>
-                Alert.alert("Approve Visit?", "The student will be notified.", [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Approve",
-                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "approved" } }),
-                  },
-                ])
+                showConfirm({
+                  title: "Approve Visit?",
+                  message: "The student will be notified.",
+                  confirmLabel: "Approve",
+                  icon: "check-circle",
+                  onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "approved" } }),
+                })
               }
               disabled={update.isPending}
             >
@@ -248,14 +251,14 @@ export default function AppointmentDetailScreen() {
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#ef4444", borderRadius: colors.radius }]}
               onPress={() =>
-                Alert.alert("Reject Visit?", "The student will be notified.", [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Reject",
-                    style: "destructive",
-                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "rejected" } }),
-                  },
-                ])
+                showConfirm({
+                  title: "Reject Visit?",
+                  message: "The student will be notified.",
+                  confirmLabel: "Reject",
+                  destructive: true,
+                  icon: "x-circle",
+                  onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "rejected" } }),
+                })
               }
               disabled={update.isPending}
             >
@@ -279,17 +282,13 @@ export default function AppointmentDetailScreen() {
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#0ea5e9", borderRadius: colors.radius, flex: 1 }]}
                 onPress={() =>
-                  Alert.alert(
-                    "Mark as Completed?",
-                    "This confirms the student attended their visit. Both of you will be able to leave a review.",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Mark Completed",
-                        onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "completed" } }),
-                      },
-                    ]
-                  )
+                  showConfirm({
+                    title: "Mark as Completed?",
+                    message: "This confirms the student attended their visit. Both of you will be able to leave a review.",
+                    confirmLabel: "Mark Completed",
+                    icon: "award",
+                    onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "completed" } }),
+                  })
                 }
                 disabled={update.isPending}
               >
@@ -305,18 +304,14 @@ export default function AppointmentDetailScreen() {
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#f97316", borderRadius: colors.radius, flex: 1 }]}
                 onPress={() =>
-                  Alert.alert(
-                    "Mark as Not Shown?",
-                    "This records that the student did not attend the visit. The booking will be moved to history.",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      {
-                        text: "Mark Not Shown",
-                        style: "destructive",
-                        onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "no_show" } }),
-                      },
-                    ]
-                  )
+                  showConfirm({
+                    title: "Mark as Not Shown?",
+                    message: "This records that the student did not attend the visit. The booking will be moved to history.",
+                    confirmLabel: "Mark Not Shown",
+                    destructive: true,
+                    icon: "user-x",
+                    onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "no_show" } }),
+                  })
                 }
                 disabled={update.isPending}
               >
@@ -338,18 +333,15 @@ export default function AppointmentDetailScreen() {
           <TouchableOpacity
             style={[styles.cancelBtn, { borderColor: colors.destructive + "60", borderRadius: colors.radius }]}
             onPress={() =>
-              Alert.alert(
-                "Cancel Visit?",
-                "The owner will be notified of your cancellation.",
-                [
-                  { text: "Keep Visit", style: "cancel" },
-                  {
-                    text: "Cancel Visit",
-                    style: "destructive",
-                    onPress: () => update.mutate({ appointmentId: Number(id!), data: { status: "cancelled" } }),
-                  },
-                ]
-              )
+              showConfirm({
+                title: "Cancel Visit?",
+                message: "The owner will be notified of your cancellation.",
+                confirmLabel: "Cancel Visit",
+                cancelLabel: "Keep Visit",
+                destructive: true,
+                icon: "slash",
+                onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "cancelled" } }),
+              })
             }
             disabled={update.isPending}
             activeOpacity={0.8}

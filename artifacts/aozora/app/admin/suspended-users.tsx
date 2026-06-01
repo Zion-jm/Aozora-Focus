@@ -6,10 +6,11 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   TextInput,
 } from "react-native";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -52,25 +53,24 @@ export default function SuspendedUsersScreen() {
     );
   }, [suspended, search]);
 
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
+
   const update = useAdminUpdateUserStatus({
     mutation: {
       onSuccess: () => qc.invalidateQueries({ queryKey: getAdminGetUsersQueryKey() }),
-      onError: () => Alert.alert("Error", "Could not unsuspend user."),
+      onError: () => toast.error("Error", "Could not unsuspend user."),
     },
   });
 
   const handleUnsuspend = (user: any) => {
-    Alert.alert(
-      "Unsuspend User?",
-      `Restore access for ${user.fullName}? They will be able to log in again.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Unsuspend",
-          onPress: () => update.mutate({ userId: user.id, data: { isSuspended: false } }),
-        },
-      ]
-    );
+    showConfirm({
+      title: "Unsuspend User?",
+      message: `Restore access for ${user.fullName}? They will be able to log in again.`,
+      confirmLabel: "Unsuspend",
+      icon: "user-check",
+      onConfirm: () => update.mutate({ userId: user.id, data: { isSuspended: false } }),
+    });
   };
 
   return (
