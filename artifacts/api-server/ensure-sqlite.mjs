@@ -1,25 +1,27 @@
 import { execSync } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, readdirSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKSPACE_ROOT = resolve(__dirname, "../..");
-const SQLITE3_DIR = resolve(
-  WORKSPACE_ROOT,
-  "node_modules/.pnpm/better-sqlite3@12.10.0/node_modules/better-sqlite3"
-);
-const BINARY = resolve(SQLITE3_DIR, "build/Release/better_sqlite3.node");
 
-// Use the node-gyp installed via Node 20's npm (in npm global bin).
-// Do NOT use pnpm's internal node-gyp — it targets Node 24 headers which
-// are incompatible with the Node 20 runtime used by this server.
-const NODE_GYP = resolve(
-  process.env.HOME ?? "",
-  ".config/npm/node_global/bin/node-gyp"
-);
+const pnpmDir = resolve(WORKSPACE_ROOT, "node_modules/.pnpm");
+const sqliteDirs = existsSync(pnpmDir)
+  ? readdirSync(pnpmDir).filter(e => e.startsWith("better-sqlite3@"))
+  : [];
+
+const SQLITE3_DIR = sqliteDirs.length > 0
+  ? resolve(pnpmDir, sqliteDirs[0], "node_modules/better-sqlite3")
+  : null;
+
+const BINARY = SQLITE3_DIR ? resolve(SQLITE3_DIR, "build/Release/better_sqlite3.node") : null;
 
 function needsRebuild() {
+  if (!BINARY || !SQLITE3_DIR) {
+    console.log("[ensure-sqlite] Could not locate better-sqlite3 directory — skipping rebuild check.");
+    return false;
+  }
   if (!existsSync(BINARY)) return true;
   try {
     process.dlopen({ exports: {} }, BINARY);
@@ -32,18 +34,13 @@ function needsRebuild() {
 if (needsRebuild()) {
   console.log("[ensure-sqlite] Native binding missing or stale — rebuilding better-sqlite3...");
 
-  if (!existsSync(NODE_GYP)) {
-    console.log("[ensure-sqlite] Installing node-gyp for Node 20...");
-    execSync("npm install -g node-gyp", { stdio: "inherit" });
-  }
-
   try {
-    execSync(`"${NODE_GYP}" rebuild --release`, {
+    execSync("npm run build-release", {
       stdio: "inherit",
       cwd: SQLITE3_DIR,
     });
   } catch {
-    // node-gyp exits non-zero on the node_gyp_bins cleanup step even on success
+    // build-release may exit non-zero on cleanup step even on success
   }
 
   if (!existsSync(BINARY)) {
@@ -51,7 +48,6 @@ if (needsRebuild()) {
     process.exit(1);
   }
 
-  // Final check: ensure the binary actually loads under this Node version
   try {
     process.dlopen({ exports: {} }, BINARY);
   } catch (e) {
