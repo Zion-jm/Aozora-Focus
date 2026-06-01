@@ -162,9 +162,9 @@ export default function NotificationsScreen() {
         markOneRead({ id: n.id });
       }
       if (n.relatedType === "appointment" && n.relatedId) {
-        router.push(`/appointments/${n.relatedId}` as any);
+        router.push(`/appointment/${n.relatedId}` as any);
       } else if (n.relatedType === "dorm" && n.relatedId) {
-        router.push(`/dorms/${n.relatedId}` as any);
+        router.push(`/dorm/${n.relatedId}` as any);
       }
     },
     [markOneRead]
