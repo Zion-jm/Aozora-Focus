@@ -16,9 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
-
-const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -30,6 +27,39 @@ import {
   useMarkConversationRead,
   getGetConversationsQueryKey,
 } from "@workspace/api-client-react";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+
+// ─── Time helpers ─────────────────────────────────────────────────────────────
+// SQLite stores "YYYY-MM-DD HH:MM:SS" with no timezone marker (UTC).
+// Appending 'Z' makes JS parse it as UTC, then toLocaleTimeString()
+// automatically converts to the device's local timezone.
+function parseTs(ts: string): Date {
+  if (!ts) return new Date();
+  if (ts.includes("Z") || ts.includes("+") || (ts.includes("T") && ts.length > 19)) return new Date(ts);
+  return new Date(ts.replace(" ", "T") + "Z");
+}
+function fmtTime(ts: string): string {
+  return parseTs(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+function fmtDivider(ts: string): string {
+  const d = parseTs(ts);
+  const now = new Date();
+  const toDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((toDay(now) - toDay(d)) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return d.toLocaleDateString([], { weekday: "long" });
+  return d.toLocaleDateString([], { month: "long", day: "numeric", ...(diff > 365 ? { year: "numeric" } : {}) });
+}
+function sameDay(a: string, b: string): boolean {
+  const da = parseTs(a); const db = parseTs(b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+
+type ListItem =
+  | { kind: "message"; data: any }
+  | { kind: "divider"; label: string; id: string };
 
 export default function ConversationScreen() {
   const colors = useColors();
@@ -63,9 +93,7 @@ export default function ConversationScreen() {
   });
 
   useEffect(() => {
-    if (convId) {
-      markRead.mutate({ conversationId: convId });
-    }
+    if (convId) markRead.mutate({ conversationId: convId });
   }, [convId]);
 
   useEffect(() => {
@@ -109,29 +137,56 @@ export default function ConversationScreen() {
     return m?.sender ?? null;
   }, [messages, user?.id]);
 
-  const lastReadSentIndex = (() => {
+  // ID of the last message I sent that has been seen — used for the "Seen" receipt
+  const lastReadSentId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].senderId === user?.id && messages[i].isRead) return i;
+      if (messages[i].senderId === user?.id && messages[i].isRead) return messages[i].id;
     }
     return -1;
-  })();
+  }, [messages, user?.id]);
 
-  const renderMessage = ({ item, index }: { item: any; index: number }) => {
-    const isMe = item.senderId === user?.id;
-    const reversedIndex = messages.length - 1 - index;
-    const isLastReadSent = isMe && reversedIndex === lastReadSentIndex;
-    const senderName = isMe ? "You" : (item.sender?.fullName ?? "Unknown");
+  // Build list with date dividers (chronological), then reverse for the inverted FlatList
+  const listItems = useMemo((): ListItem[] => {
+    const items: ListItem[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const prev = messages[i - 1];
+      if (!prev || !sameDay(prev.createdAt, msg.createdAt)) {
+        items.push({ kind: "divider", label: fmtDivider(msg.createdAt), id: `div-${msg.createdAt}` });
+      }
+      items.push({ kind: "message", data: msg });
+    }
+    return [...items].reverse();
+  }, [messages]);
+
+  const renderItem = ({ item }: { item: ListItem }) => {
+    if (item.kind === "divider") {
+      return (
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerLabel, { color: colors.mutedForeground, backgroundColor: colors.background }]}>
+            {item.label}
+          </Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        </View>
+      );
+    }
+
+    const msg = item.data;
+    const isMe = msg.senderId === user?.id;
+    const isLastReadSent = isMe && msg.id === lastReadSentId;
+    const senderName = isMe ? "You" : (msg.sender?.fullName ?? "Unknown");
 
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
         {!isMe && (
           <UserAvatar
-            name={item.sender?.fullName}
-            avatarUrl={item.sender?.avatarUrl}
+            name={msg.sender?.fullName}
+            avatarUrl={msg.sender?.avatarUrl}
             size={32}
             color={colors.primary}
             backgroundColor={colors.primary + "22"}
-            userId={item.sender?.id}
+            userId={msg.sender?.id}
           />
         )}
         <View style={[styles.bubbleWrapper, isMe && styles.bubbleWrapperMe]}>
@@ -149,9 +204,9 @@ export default function ConversationScreen() {
               },
             ]}
           >
-            <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>{item.content}</Text>
+            <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>{msg.content}</Text>
             <Text style={[styles.timeText, { color: isMe ? "rgba(255,255,255,0.7)" : colors.mutedForeground }]}>
-              {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {fmtTime(msg.createdAt)}
             </Text>
           </View>
           {isLastReadSent && (
@@ -233,9 +288,9 @@ export default function ConversationScreen() {
       ) : (
         <FlatList
           ref={flatRef}
-          data={[...messages].reverse()}
-          keyExtractor={(item: any) => item.id.toString()}
-          renderItem={renderMessage}
+          data={listItems}
+          keyExtractor={(item) => item.kind === "divider" ? item.id : `msg-${item.data.id}`}
+          renderItem={renderItem}
           inverted
           contentContainerStyle={[styles.listContent, { paddingBottom: 16 }]}
           ListEmptyComponent={
@@ -304,10 +359,11 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: "700", flex: 1 },
   headerSub: { fontSize: 12 },
   listContent: { padding: 16, gap: 12 },
+  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerLabel: { fontSize: 12, fontWeight: "600", paddingHorizontal: 8 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginVertical: 2 },
   msgRowMe: { flexDirection: "row-reverse" },
-  avatar: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 14, fontWeight: "bold" },
   bubbleWrapper: { maxWidth: "75%", alignItems: "flex-start" },
   bubbleWrapperMe: { alignItems: "flex-end" },
   senderName: { fontSize: 11, fontWeight: "600", marginBottom: 3, marginLeft: 2 },

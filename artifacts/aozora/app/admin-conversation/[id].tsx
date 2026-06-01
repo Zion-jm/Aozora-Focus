@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -32,6 +31,37 @@ function apiFetch(path: string, token: string, options: RequestInit = {}) {
     },
   });
 }
+
+// ─── Time helpers ─────────────────────────────────────────────────────────────
+// SQLite stores "YYYY-MM-DD HH:MM:SS" with no timezone marker (UTC).
+// Appending 'Z' makes JS parse it as UTC, then toLocaleTimeString()
+// automatically converts to the device's local timezone.
+function parseTs(ts: string): Date {
+  if (!ts) return new Date();
+  if (ts.includes("Z") || ts.includes("+") || (ts.includes("T") && ts.length > 19)) return new Date(ts);
+  return new Date(ts.replace(" ", "T") + "Z");
+}
+function fmtTime(ts: string): string {
+  return parseTs(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+function fmtDivider(ts: string): string {
+  const d = parseTs(ts);
+  const now = new Date();
+  const toDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((toDay(now) - toDay(d)) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return d.toLocaleDateString([], { weekday: "long" });
+  return d.toLocaleDateString([], { month: "long", day: "numeric", ...(diff > 365 ? { year: "numeric" } : {}) });
+}
+function sameDay(a: string, b: string): boolean {
+  const da = parseTs(a); const db = parseTs(b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+
+type ListItem =
+  | { kind: "message"; data: any }
+  | { kind: "divider"; label: string; id: string };
 
 export default function AdminConversationScreen() {
   const { toast } = useToast();
@@ -64,7 +94,6 @@ export default function AdminConversationScreen() {
       if (msgsRes.ok) {
         const data = await msgsRes.json();
         setMessages(data.messages || []);
-        // Read closedAt, startedAt and ticket info directly from the messages endpoint (always accurate)
         setClosedAt(data.closedAt || null);
         setStartedAt(data.startedAt || null);
         if (data.conversationType) setConversationType(data.conversationType);
@@ -76,12 +105,7 @@ export default function AdminConversationScreen() {
         const conv = (data.conversations || []).find((c: any) => c.type === "admin" && c.id === convId);
         if (conv) {
           setOtherUser(conv.otherParticipant);
-          // Only use conversations list as fallback for fields not in messages endpoint
-          if (!conv.closedAt) {
-            // already set from msgsRes above; keep it
-          } else {
-            setClosedAt(conv.closedAt);
-          }
+          if (conv.closedAt) setClosedAt(conv.closedAt);
         }
       }
 
@@ -139,31 +163,63 @@ export default function AdminConversationScreen() {
     }
   };
 
-  const lastReadSentIndex = (() => {
+  const isAdmin = user?.role === "admin";
+  const isOneWay = conversationType === "warning" && !isAdmin;
+  const isClosed = !!closedAt;
+  const isNotStarted = conversationType === "support" && !startedAt;
+
+  // ID of the last message I sent that has been seen
+  const lastReadSentId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].senderId === user?.id && messages[i].isRead) return i;
+      if (messages[i].senderId === user?.id && messages[i].isRead) return messages[i].id;
     }
     return -1;
-  })();
+  }, [messages, user?.id]);
 
-  const renderMessage = ({ item, index }: { item: any; index: number }) => {
-    const isMe = item.senderId === user?.id;
-    const reversedIndex = messages.length - 1 - index;
-    const isLastReadSent = isMe && reversedIndex === lastReadSentIndex;
+  // Build list with date dividers (chronological), then reverse for inverted FlatList
+  const listItems = useMemo((): ListItem[] => {
+    const items: ListItem[] = [];
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const prev = messages[i - 1];
+      if (!prev || !sameDay(prev.createdAt, msg.createdAt)) {
+        items.push({ kind: "divider", label: fmtDivider(msg.createdAt), id: `div-${msg.createdAt}` });
+      }
+      items.push({ kind: "message", data: msg });
+    }
+    return [...items].reverse();
+  }, [messages]);
+
+  const renderItem = ({ item }: { item: ListItem }) => {
+    if (item.kind === "divider") {
+      return (
+        <View style={styles.dividerRow}>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerLabel, { color: colors.mutedForeground, backgroundColor: colors.background }]}>
+            {item.label}
+          </Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+        </View>
+      );
+    }
+
+    const msg = item.data;
+    const isMe = msg.senderId === user?.id;
+    const isLastReadSent = isMe && msg.id === lastReadSentId;
     const senderLabel = isMe
       ? "You"
-      : (item.sender?.fullName ?? otherUser?.fullName ?? (isAdmin ? "User" : "Aozora Support"));
+      : (msg.sender?.fullName ?? otherUser?.fullName ?? (isAdmin ? "User" : "Aozora Support"));
 
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
         {!isMe && (
           <UserAvatar
-            name={item.sender?.fullName ?? otherUser?.fullName}
-            avatarUrl={item.sender?.avatarUrl ?? otherUser?.avatarUrl}
+            name={msg.sender?.fullName ?? otherUser?.fullName}
+            avatarUrl={msg.sender?.avatarUrl ?? otherUser?.avatarUrl}
             size={32}
             color={conversationType === "support" ? colors.primary : "#ef4444"}
             backgroundColor={conversationType === "support" ? colors.primary + "22" : "#ef444422"}
-            userId={item.sender?.id ?? otherUser?.id}
+            userId={msg.sender?.id ?? otherUser?.id}
           />
         )}
         <View style={[styles.bubbleWrapper, isMe && styles.bubbleWrapperMe]}>
@@ -182,10 +238,10 @@ export default function AdminConversationScreen() {
             ]}
           >
             <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>
-              {item.content}
+              {msg.content}
             </Text>
             <Text style={[styles.timeText, { color: isMe ? "rgba(255,255,255,0.7)" : colors.mutedForeground }]}>
-              {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {fmtTime(msg.createdAt)}
             </Text>
           </View>
           {isLastReadSent && (
@@ -198,11 +254,6 @@ export default function AdminConversationScreen() {
       </View>
     );
   };
-
-  const isAdmin = user?.role === "admin";
-  const isOneWay = conversationType === "warning" && !isAdmin;
-  const isClosed = !!closedAt;
-  const isNotStarted = conversationType === "support" && !startedAt;
 
   const handleStartConversation = async () => {
     if (!token || isStarting) return;
@@ -337,9 +388,9 @@ export default function AdminConversationScreen() {
       ) : (
         <FlatList
           ref={flatRef}
-          data={[...messages].reverse()}
-          keyExtractor={(item: any) => item.id.toString()}
-          renderItem={renderMessage}
+          data={listItems}
+          keyExtractor={(item) => item.kind === "divider" ? item.id : `msg-${item.data.id}`}
+          renderItem={renderItem}
           inverted
           contentContainerStyle={[styles.listContent, { paddingBottom: 16 }]}
           ListEmptyComponent={
@@ -365,7 +416,6 @@ export default function AdminConversationScreen() {
 
       {/* Input area */}
       {isClosed ? (
-        /* Resolved ticket — conversation locked for everyone */
         <View
           style={[
             styles.oneWayBar,
@@ -380,7 +430,6 @@ export default function AdminConversationScreen() {
           </Text>
         </View>
       ) : isAdmin && isNotStarted ? (
-        /* Admin hasn't started yet — show "Start Conversation" CTA */
         <View
           style={[
             styles.startConvBar,
@@ -410,7 +459,6 @@ export default function AdminConversationScreen() {
           </TouchableOpacity>
         </View>
       ) : !isAdmin && isNotStarted ? (
-        /* User — waiting for admin to start */
         <View
           style={[
             styles.oneWayBar,
@@ -423,7 +471,6 @@ export default function AdminConversationScreen() {
           </Text>
         </View>
       ) : isOneWay ? (
-        /* One-way notice — user cannot reply to warnings */
         <View
           style={[
             styles.oneWayBar,
@@ -506,6 +553,9 @@ const styles = StyleSheet.create({
   ticketStatusChip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   ticketStatusText: { fontSize: 12, fontWeight: "700" },
   listContent: { padding: 16, gap: 12 },
+  dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerLabel: { fontSize: 12, fontWeight: "600", paddingHorizontal: 8 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginVertical: 2 },
   msgRowMe: { flexDirection: "row-reverse" },
   bubbleWrapper: { maxWidth: "75%", alignItems: "flex-start" },
