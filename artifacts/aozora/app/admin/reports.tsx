@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
@@ -61,6 +62,7 @@ export default function AdminReportsScreen() {
   const { toast } = useToast();
   const { showConfirm } = useConfirm();
   const [filter, setFilter] = useState<Filter>("pending");
+  const [search, setSearch] = useState("");
   const [actionLoading, setActionLoading] = useState<Record<string, ActionType | null>>({});
 
   const reportsKey = ["adminReports", filter];
@@ -77,7 +79,20 @@ export default function AdminReportsScreen() {
     enabled: !!token,
   });
 
-  const reports: any[] = data?.reports ?? [];
+  const allReports: any[] = data?.reports ?? [];
+  const reports = useMemo(() => {
+    if (!search.trim()) return allReports;
+    const q = search.toLowerCase();
+    return allReports.filter(
+      (r: any) =>
+        r.reporter_name?.toLowerCase().includes(q) ||
+        r.reporter_email?.toLowerCase().includes(q) ||
+        r.reason?.toLowerCase().includes(q) ||
+        r.details?.toLowerCase().includes(q) ||
+        r.target_dorm_name?.toLowerCase().includes(q) ||
+        r.target_user_name?.toLowerCase().includes(q)
+    );
+  }, [allReports, search]);
 
   const setLoading = (reportId: number, action: ActionType | null) => {
     setActionLoading((prev) => ({ ...prev, [reportId]: action }));
@@ -468,6 +483,26 @@ export default function AdminReportsScreen() {
         ))}
       </View>
 
+      <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: 12 }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search reporter, reason, or target…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -507,6 +542,9 @@ const styles = StyleSheet.create({
   filterBar: { flexDirection: "row", padding: 12, gap: 8, borderBottomWidth: 1 },
   filterBtn: { paddingHorizontal: 14, paddingVertical: 6 },
   filterBtnText: { fontSize: 13, fontWeight: "600" },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 9, gap: 8 },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   emptyText: { fontSize: 16 },
   list: { padding: 16, gap: 12 },

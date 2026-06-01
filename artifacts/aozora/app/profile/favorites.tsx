@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AntDesign, Feather } from "@expo/vector-icons";
@@ -25,12 +26,23 @@ export default function FavoritesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetFavorites({
     query: { queryKey: getGetFavoritesQueryKey() },
   });
 
-  const favorites = (data as any)?.dorms || [];
+  const allFavorites = (data as any)?.dorms || [];
+  const favorites = useMemo(() => {
+    if (!search.trim()) return allFavorites;
+    const q = search.toLowerCase();
+    return allFavorites.filter(
+      (d: any) =>
+        d.name?.toLowerCase().includes(q) ||
+        d.address?.toLowerCase().includes(q) ||
+        d.nearbyLandmark?.toLowerCase().includes(q)
+    );
+  }, [allFavorites, search]);
 
   const remove = useRemoveFavorite({
     mutation: {
@@ -46,6 +58,26 @@ export default function FavoritesScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Saved Dorms</Text>
         <View style={{ width: 40 }} />
+      </View>
+
+      <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search saved dorms…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -101,16 +133,22 @@ export default function FavoritesScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <AntDesign name="hearto" size={56} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No saved dorms</Text>
-              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                Tap the heart icon on any dorm to save it here
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                {search.trim() ? `No results for "${search}"` : "No saved dorms"}
               </Text>
-              <TouchableOpacity
-                style={[styles.browseBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
-                onPress={() => router.push("/(tabs)")}
-              >
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>Browse Dorms</Text>
-              </TouchableOpacity>
+              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                {search.trim()
+                  ? "Try a different name or address"
+                  : "Tap the heart icon on any dorm to save it here"}
+              </Text>
+              {!search.trim() && (
+                <TouchableOpacity
+                  style={[styles.browseBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+                  onPress={() => router.push("/(tabs)")}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>Browse Dorms</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -124,6 +162,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 14, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "700" },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  searchInput: { flex: 1, fontSize: 15, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   listContent: { padding: 16, gap: 16 },
   card: { borderWidth: 1, overflow: "hidden" },

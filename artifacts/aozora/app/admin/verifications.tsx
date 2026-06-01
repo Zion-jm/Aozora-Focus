@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -48,6 +48,7 @@ export default function AdminVerificationsScreen() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [filter, setFilter] = useState("pending");
+  const [search, setSearch] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [reviewModal, setReviewModal] = useState<{
     item: any;
@@ -60,7 +61,18 @@ export default function AdminVerificationsScreen() {
   });
 
   const all = (data as any)?.verifications || [];
-  const items = all.filter((v: any) => filter === "all" || v.status === filter);
+  const items = useMemo(() => {
+    const byStatus = all.filter((v: any) => filter === "all" || v.status === filter);
+    if (!search.trim()) return byStatus;
+    const q = search.toLowerCase();
+    return byStatus.filter(
+      (v: any) =>
+        v.user?.fullName?.toLowerCase().includes(q) ||
+        v.user?.email?.toLowerCase().includes(q) ||
+        v.user?.phone?.toLowerCase().includes(q) ||
+        v.idType?.toLowerCase().includes(q)
+    );
+  }, [all, filter, search]);
 
   const review = useAdminReviewVerification({
     mutation: {
@@ -114,6 +126,26 @@ export default function AdminVerificationsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
+      </View>
+
+      <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by name, email, or ID type…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -375,6 +407,9 @@ const styles = StyleSheet.create({
   filterBar: { flexDirection: "row", padding: 12, gap: 8, borderBottomWidth: 1 },
   filterBtn: { paddingHorizontal: 14, paddingVertical: 6 },
   filterText: { fontSize: 13, fontWeight: "600" },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 9, gap: 8 },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
   listContent: { padding: 16, gap: 14 },
   card: { borderWidth: 1, padding: 16, gap: 12 },

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
@@ -39,13 +40,24 @@ export default function AdminDormsScreen() {
   const { toast } = useToast();
   const { showConfirm } = useConfirm();
   const [filter, setFilter] = useState("pending");
+  const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetDorms({
     query: { queryKey: getAdminGetDormsQueryKey() },
   });
 
   const allDorms = (data as any)?.dorms || [];
-  const dorms = allDorms.filter((d: any) => filter === "all" || d.status === filter);
+  const dorms = useMemo(() => {
+    const byStatus = allDorms.filter((d: any) => filter === "all" || d.status === filter);
+    if (!search.trim()) return byStatus;
+    const q = search.toLowerCase();
+    return byStatus.filter(
+      (d: any) =>
+        d.name?.toLowerCase().includes(q) ||
+        d.address?.toLowerCase().includes(q) ||
+        d.owner?.fullName?.toLowerCase().includes(q)
+    );
+  }, [allDorms, filter, search]);
 
   const update = useAdminUpdateDormStatus({
     mutation: {
@@ -93,6 +105,26 @@ export default function AdminDormsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
+      </View>
+
+      <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+          <Feather name="search" size={16} color={colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search by name, address, or owner…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {isLoading ? (
@@ -187,6 +219,9 @@ const styles = StyleSheet.create({
   filterBar: { flexDirection: "row", padding: 12, gap: 8, borderBottomWidth: 1 },
   filterBtn: { paddingHorizontal: 14, paddingVertical: 6 },
   filterText: { fontSize: 13, fontWeight: "600" },
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1 },
+  searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 9, gap: 8 },
+  searchInput: { flex: 1, fontSize: 14, padding: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
   listContent: { padding: 16, gap: 16 },
   card: { borderWidth: 1, overflow: "hidden" },
