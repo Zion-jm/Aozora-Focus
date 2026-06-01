@@ -5,10 +5,11 @@ import { db, sqlite } from "../db/index";
 import { users } from "../db/schema";
 import { eq, or } from "drizzle-orm";
 import { generateToken, requireAuth } from "../middlewares/auth";
+import { sendOtpEmail } from "../lib/mailer";
 
 const router = Router();
 
-// POST /auth/send-otp — generate and return a 6-digit OTP for the given contact (email or phone)
+// POST /auth/send-otp — generate and email a 6-digit OTP to the given email address
 router.post("/auth/send-otp", async (req, res) => {
   const { contact } = req.body;
   if (!contact || !contact.trim()) {
@@ -17,19 +18,29 @@ router.post("/auth/send-otp", async (req, res) => {
   }
 
   const normalized = contact.trim().toLowerCase();
+
+  if (!normalized.includes("@")) {
+    res.status(400).json({ error: "Validation error", message: "Please enter a valid email address." });
+    return;
+  }
+
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  // Remove any previous unverified OTPs for this contact
   sqlite.prepare("DELETE FROM otp_verifications WHERE contact = ? AND is_verified = 0").run(normalized);
-
   sqlite.prepare(
     "INSERT INTO otp_verifications (contact, code, expires_at) VALUES (?, ?, ?)"
   ).run(normalized, code, expiresAt);
 
-  // In production: send code via email/SMS service
-  // Development mode: return code in response so the app can display it
-  res.json({ message: "Verification code sent", devCode: code });
+  try {
+    await sendOtpEmail(normalized, code);
+  } catch (err) {
+    console.error("[send-otp] Failed to send email:", err);
+    res.status(500).json({ error: "Mail error", message: "Could not send verification email. Please try again." });
+    return;
+  }
+
+  res.json({ message: "Verification code sent" });
 });
 
 // POST /auth/verify-otp — validate the code and return a short-lived verificationToken
@@ -94,17 +105,16 @@ router.post("/auth/register", async (req, res) => {
   }
 
   const contact: string = otpRecord.contact;
-  const isEmail = contact.includes("@");
-  const email = isEmail ? contact : null;
-  const phone = isEmail ? null : contact;
+  const email = contact.includes("@") ? contact : null;
 
-  const conditions = [];
-  if (email) conditions.push(eq(users.email, email));
-  if (phone) conditions.push(eq(users.phone, phone));
+  if (!email) {
+    res.status(400).json({ error: "Validation error", message: "Only email contacts are supported." });
+    return;
+  }
 
-  const existing = await db.select().from(users).where(or(...conditions)).get();
+  const existing = await db.select().from(users).where(eq(users.email, email)).get();
   if (existing) {
-    res.status(400).json({ error: "Validation error", message: "Email or phone already in use" });
+    res.status(400).json({ error: "Validation error", message: "Email already in use" });
     return;
   }
 
@@ -112,14 +122,13 @@ router.post("/auth/register", async (req, res) => {
   const result = await db.insert(users).values({
     fullName,
     email,
-    phone,
+    phone: null,
     passwordHash,
     role,
     verificationStatus: "unverified",
     isSuspended: false,
   }).returning();
 
-  // Clean up used OTP record
   sqlite.prepare("DELETE FROM otp_verifications WHERE verification_token = ?").run(verificationToken);
 
   const user = result[0]!;

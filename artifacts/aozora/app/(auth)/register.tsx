@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
   ScrollView,
 } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { Link, router } from "expo-router";
@@ -23,7 +23,7 @@ export default function RegisterScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [contact, setContact] = useState("");
-  const [devCode, setDevCode] = useState<string | null>(null);
+
   const [otp, setOtp] = useState("");
 
   const [verificationToken, setVerificationToken] = useState("");
@@ -53,8 +53,7 @@ export default function RegisterScreen() {
     }
     setIsLoading(true);
     try {
-      const data = await apiPost("/auth/send-otp", { contact: trimmed });
-      setDevCode(data.devCode ?? null);
+      await apiPost("/auth/send-otp", { contact: trimmed });
       setOtp("");
       setStep(2);
     } catch (e: any) {
@@ -169,14 +168,14 @@ export default function RegisterScreen() {
             <View style={styles.header}>
               <Text style={[styles.title, { color: colors.primary }]}>Join Aozora</Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                Enter your email or phone number
+                Enter your email address to get started
               </Text>
             </View>
 
             <View style={styles.form}>
               <TextInput
                 style={inputStyle}
-                placeholder="Email or Phone Number"
+                placeholder="Email address"
                 placeholderTextColor={colors.mutedForeground}
                 value={contact}
                 onChangeText={setContact}
@@ -217,24 +216,14 @@ export default function RegisterScreen() {
         {step === 2 && (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.primary }]}>Verify Code</Text>
+              <Text style={[styles.title, { color: colors.primary }]}>Check Your Email</Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                Enter the 6-digit code sent to
+                We sent a 6-digit code to
               </Text>
               <Text style={[styles.contactLabel, { color: colors.foreground }]}>
                 {contact.trim()}
               </Text>
             </View>
-
-            {devCode && (
-              <View style={[styles.devBanner, { backgroundColor: "#f59e0b18", borderColor: "#f59e0b50", borderRadius: colors.radius }]}>
-                <Feather name="info" size={14} color="#b45309" />
-                <Text style={styles.devBannerText}>
-                  Development mode — your code is:{" "}
-                  <Text style={styles.devCode}>{devCode}</Text>
-                </Text>
-              </View>
-            )}
 
             <View style={styles.form}>
               <TextInput
@@ -264,11 +253,11 @@ export default function RegisterScreen() {
 
               <TouchableOpacity
                 style={styles.resendRow}
-                onPress={() => { setStep(1); setDevCode(null); setOtp(""); }}
+                onPress={() => { setStep(1); setOtp(""); }}
               >
-                <Feather name="arrow-left" size={14} color={colors.mutedForeground} />
+                <Ionicons name="arrow-back" size={14} color={colors.mutedForeground} />
                 <Text style={[styles.resendText, { color: colors.mutedForeground }]}>
-                  Change contact or resend
+                  Change email or resend
                 </Text>
               </TouchableOpacity>
             </View>
@@ -514,14 +503,5 @@ const styles = StyleSheet.create({
   },
   resendText: { fontSize: 14 },
 
-  devBanner: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    padding: 12,
-    borderWidth: 1,
-    marginBottom: 4,
-  },
-  devBannerText: { fontSize: 13, color: "#92400e", flex: 1, lineHeight: 18 },
-  devCode: { fontWeight: "800", fontSize: 15, letterSpacing: 2 },
+
 });
