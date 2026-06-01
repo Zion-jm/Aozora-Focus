@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -66,6 +67,11 @@ export default function LoginScreen() {
       <View style={styles.blob1} />
       <View style={styles.blob2} />
 
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -207,6 +213,7 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -214,6 +221,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
+  keyboardView: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
