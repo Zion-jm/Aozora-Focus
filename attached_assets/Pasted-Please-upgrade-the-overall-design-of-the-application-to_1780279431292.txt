@@ -1,0 +1,31 @@
+Please upgrade the overall design of the application to make it look premium, modern, and visually appealing. The main goal is to establish complete visual uniformity across the entire platform, with special attention given to the Admin Page, which currently looks disconnected from the rest of the app.
+
+CRITICAL NOTE: This is a frontend/styling-only task. Do NOT alter, modify, or break any existing processes, backend functions, form submissions, API calls, or state management logic.
+
+1. Admin Page Alignment (High Priority)
+Unified Theme: Redesign the Admin Page to use the exact same design system, color palette, and layout guidelines as the user-facing pages. It should feel like a part of the same application, not a separate tool.
+
+Consistent Components: Replace any standalone or default HTML styling on the admin page with the global custom components (buttons, input fields, cards, tables, and typography) used elsewhere.
+
+2. Visual Design & Aesthetics
+Modern Color Palette: Implement a cohesive, professional color scheme (consistent primary, secondary, accent, and neutral colors). Avoid harsh default browser colors.
+
+Typography Hierarchy: Clean up the fonts. Establish a strict hierarchy for titles, subtitles, body text, and labels using clean, highly readable font weights and sizes.
+
+Spacing & Layout: Implement consistent padding, margins, and alignment grids. Give elements room to "breathe" to avoid a cramped or cluttered look.
+
+3. Form & Component Polish
+Consistent Form Fields: Ensure all text inputs, dropdowns, and text areas look uniform across every single page. Use subtle borders, modern border-radius (rounded corners), and clear focus/active states.
+
+Polished Typography & Labels: Ensure field labels are positioned consistently (e.g., left-aligned or floating), look neat, and have adequate spacing relative to their input boxes.
+
+Button Styling: Design distinct, modern styles for Primary buttons (e.g., "Submit", "Save Changes") and Secondary buttons (e.g., "Cancel", "Back"). Use smooth hover or press transitions.
+
+Alternative: Casual Version
+If you are talking to a friendly AI assistant or teammate, you can use this casual version instead:
+
+Hey! Can we do a major design sweep across the app to make it look way more modern and polished?
+
+The main thing is that the Admin Page looks completely different from the other pages right now. We need to make sure the design is uniform everywhere—using the same colors, fonts, card styles, and buttons so the admin page actually feels like it belongs to the same app.
+
+Let's clean up the form fields, fix the spacing so things aren't cramped, and give everything a sleek, premium look page-by-page. Just please make sure to only touch the styling—don't change any of the underlying functions, forms, or backend logic. Thanks!
