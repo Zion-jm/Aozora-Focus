@@ -11,6 +11,7 @@ import reviewsRouter from "./reviews";
 import reportsRouter from "./reports";
 import supportRouter from "./support";
 import notificationsRouter from "./notifications";
+import pushTokensRouter from "./push-tokens";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(reviewsRouter);
 router.use(reportsRouter);
 router.use(supportRouter);
 router.use(notificationsRouter);
+router.use(pushTokensRouter);
 
 export default router;

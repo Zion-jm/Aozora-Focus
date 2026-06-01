@@ -134,7 +134,7 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
-  const { data, isLoading, refetch } = useGetNotifications();
+  const { data, isLoading, refetch } = useGetNotifications({ query: { refetchInterval: 30_000 } });
   const notifications: Notification[] = (data?.notifications ?? []) as Notification[];
   const unreadCount = data?.unreadCount ?? 0;
 

@@ -20,12 +20,18 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ConfirmProvider } from "@/context/ConfirmContext";
 import colors from "@/constants/colors";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 SplashScreen.preventAutoHideAsync();
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
 const queryClient = new QueryClient();
+
+function PushNotificationSetup() {
+  usePushNotifications();
+  return null;
+}
 
 function RootLayoutNav() {
   return (
@@ -35,6 +41,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)/register" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="admin" />
+      <Stack.Screen name="notifications" />
       <Stack.Screen name="dorm/[id]" />
       <Stack.Screen name="dorm/create" />
       <Stack.Screen name="appointment/[id]" />
@@ -73,6 +80,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
+            <PushNotificationSetup />
             <ToastProvider>
               <ConfirmProvider>
                 <GestureHandlerRootView>

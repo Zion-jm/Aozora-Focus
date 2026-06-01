@@ -199,6 +199,19 @@ export function initializeDatabase() {
     );
   `);
 
+  // Push tokens table
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS push_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token TEXT NOT NULL,
+      platform TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, token)
+    );
+  `);
+
   // Add soft-delete columns (idempotent — ignore if already exist)
   const migrations = [
     "ALTER TABLE conversations ADD COLUMN student_deleted_at TEXT",

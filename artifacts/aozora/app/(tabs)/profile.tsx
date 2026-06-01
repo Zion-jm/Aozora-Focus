@@ -53,7 +53,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { showConfirm } = useConfirm();
-  const { data: notifData } = useGetNotifications();
+  const { data: notifData } = useGetNotifications({ query: { refetchInterval: 30_000 } });
   const unreadCount = notifData?.unreadCount ?? 0;
 
   const handleLogout = () => {

@@ -39,4 +39,41 @@ export function createNotification({
   } catch {
     // Non-fatal — notifications must never break the primary action
   }
+
+  // Fire push in background (non-blocking)
+  sendPushNotificationToUser(userId, title, body).catch(() => {});
+}
+
+async function sendPushNotificationToUser(
+  userId: number,
+  title: string,
+  body: string
+): Promise<void> {
+  try {
+    const rows = sqlite
+      .prepare(`SELECT token FROM push_tokens WHERE user_id = ?`)
+      .all(userId) as { token: string }[];
+
+    if (rows.length === 0) return;
+
+    const messages = rows.map(({ token }) => ({
+      to: token,
+      sound: "default" as const,
+      title,
+      body,
+      priority: "high" as const,
+    }));
+
+    await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "Accept-Encoding": "gzip, deflate",
+      },
+      body: JSON.stringify(messages),
+    });
+  } catch {
+    // Non-fatal — push delivery must never break the caller
+  }
 }
