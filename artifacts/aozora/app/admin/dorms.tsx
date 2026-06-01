@@ -18,6 +18,7 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { PageHeader } from "@/components/PageHeader";
 import {
   getAdminGetDormsQueryKey,
   useAdminGetDorms,
@@ -82,16 +83,7 @@ export default function AdminDormsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Dorm Approvals</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Review and approve new listings</Text>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
+      <PageHeader title="Dorm Approvals" subtitle="Review and approve new listings" />
 
       <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>

@@ -16,6 +16,7 @@ import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
@@ -438,26 +439,15 @@ export default function AdminReportsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { paddingTop: insets.top || 48, backgroundColor: colors.background, borderBottomColor: colors.border },
-        ]}
-      >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Reports</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            {data?.total ?? 0} report{(data?.total ?? 0) !== 1 ? "s" : ""}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => refetch()} style={styles.backBtn}>
-          <Feather name="refresh-cw" size={18} color={colors.mutedForeground} />
-        </TouchableOpacity>
-      </View>
+      <PageHeader
+        title="User Reports"
+        subtitle={`${data?.total ?? 0} report${(data?.total ?? 0) !== 1 ? "s" : ""}`}
+        right={
+          <TouchableOpacity onPress={() => refetch()} style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
+            <Feather name="refresh-cw" size={18} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: 12 }]}>

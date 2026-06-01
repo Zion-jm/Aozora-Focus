@@ -10,25 +10,54 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import Svg, { Circle, G, Rect, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, G, Text as SvgText } from "react-native-svg";
+import { useQuery } from "@tanstack/react-query";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
+import { PageHeader } from "@/components/PageHeader";
 import { getAdminGetStatsQueryKey, useAdminGetStats } from "@workspace/api-client-react";
 
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+
+type ActivityItem = { type: string; label: string; at: string };
+
+const ACTIVITY_ICON: Record<string, any> = {
+  user: "user-plus",
+  dorm: "home",
+  appointment: "calendar",
+  report: "flag",
+};
+const ACTIVITY_COLOR: Record<string, string> = {
+  user: "#0ea5e9",
+  dorm: "#10b981",
+  appointment: "#4f46e5",
+  report: "#ef4444",
+};
 const DORM_COLORS = ["#10b981", "#f59e0b", "#ef4444"];
 const DORM_LABELS = ["Approved", "Pending", "Taken Down"];
 const USER_COLORS = ["#4f46e5", "#0ea5e9", "#ef4444"];
 const USER_LABELS = ["Students", "Owners", "Suspended"];
 
+function formatRelative(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+}
+
 function DonutChart({ data, colors: themeColors }: { data: { value: number; color: string; label: string }[]; colors: any }) {
-  const size = 140;
-  const strokeWidth = 22;
+  const size = 130;
+  const strokeWidth = 20;
   const r = (size - strokeWidth) / 2;
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
-
   const total = data.reduce((s, d) => s + d.value, 0);
-  const totalDisplay = total;
 
   const segments = useMemo(() => {
     if (total === 0) return [];
@@ -36,115 +65,50 @@ function DonutChart({ data, colors: themeColors }: { data: { value: number; colo
     return data.map((d) => {
       const pct = d.value / total;
       const dash = pct * circumference;
-      const gap = circumference - dash;
-      const seg = { ...d, dash, gap, offset };
+      const seg = { ...d, dash, gap: circumference - dash, offset };
       offset += dash;
       return seg;
     });
   }, [data, total, circumference]);
 
   return (
-    <View style={{ alignItems: "center" }}>
-      <Svg width={size} height={size}>
-        <G rotation="-90" origin={`${cx},${cy}`}>
-          {total === 0 ? (
-            <Circle
-              cx={cx}
-              cy={cy}
-              r={r}
-              stroke={themeColors.border}
-              strokeWidth={strokeWidth}
-              fill="none"
-            />
-          ) : (
-            segments.map((seg, i) => (
-              <Circle
-                key={i}
-                cx={cx}
-                cy={cy}
-                r={r}
-                stroke={seg.color}
-                strokeWidth={strokeWidth}
-                fill="none"
-                strokeDasharray={`${seg.dash} ${seg.gap}`}
-                strokeDashoffset={-seg.offset}
-                strokeLinecap="butt"
-              />
-            ))
-          )}
-        </G>
-        <SvgText
-          x={cx}
-          y={cy - 8}
-          textAnchor="middle"
-          fontSize={22}
-          fontWeight="bold"
-          fill={themeColors.foreground}
-        >
-          {totalDisplay}
-        </SvgText>
-        <SvgText
-          x={cx}
-          y={cy + 12}
-          textAnchor="middle"
-          fontSize={11}
-          fill={themeColors.mutedForeground}
-        >
-          total
-        </SvgText>
-      </Svg>
-    </View>
+    <Svg width={size} height={size}>
+      <G rotation="-90" origin={`${cx},${cy}`}>
+        {total === 0 ? (
+          <Circle cx={cx} cy={cy} r={r} stroke={themeColors.border} strokeWidth={strokeWidth} fill="none" />
+        ) : segments.map((seg, i) => (
+          <Circle key={i} cx={cx} cy={cy} r={r} stroke={seg.color} strokeWidth={strokeWidth} fill="none"
+            strokeDasharray={`${seg.dash} ${seg.gap}`} strokeDashoffset={-seg.offset} strokeLinecap="butt" />
+        ))}
+      </G>
+      <SvgText x={cx} y={cy - 7} textAnchor="middle" fontSize={20} fontWeight="bold" fill={themeColors.foreground}>{total}</SvgText>
+      <SvgText x={cx} y={cy + 11} textAnchor="middle" fontSize={10} fill={themeColors.mutedForeground}>total</SvgText>
+    </Svg>
   );
 }
 
-function HorizontalBarChart({ data, colors: themeColors }: { data: { value: number; color: string; label: string }[]; colors: any }) {
+function HorizontalBar({ data, colors: themeColors }: { data: { value: number; color: string; label: string }[]; colors: any }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   return (
     <View style={{ gap: 8 }}>
       <View style={[styles.barTrack, { backgroundColor: themeColors.border }]}>
         <View style={{ flexDirection: "row", flex: 1, overflow: "hidden", borderRadius: 6 }}>
           {data.map((d, i) => (
-            <View
-              key={i}
-              style={{ flex: d.value / total, backgroundColor: d.color, minWidth: d.value > 0 ? 2 : 0 }}
-            />
+            <View key={i} style={{ flex: d.value / total, backgroundColor: d.color, minWidth: d.value > 0 ? 2 : 0 }} />
           ))}
         </View>
       </View>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {data.map((d, i) => (
           <View key={i} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: d.color }]} />
-            <Text style={[styles.legendLabel, { color: themeColors.mutedForeground }]}>
-              {d.label}{" "}
-              <Text style={{ color: themeColors.foreground, fontWeight: "700" }}>{d.value}</Text>
+            <Text style={[styles.legendText, { color: themeColors.mutedForeground }]}>
+              {d.label} <Text style={{ color: themeColors.foreground, fontWeight: "700" }}>{d.value}</Text>
             </Text>
           </View>
         ))}
       </View>
     </View>
-  );
-}
-
-function NavTile({ icon, label, badge, color, onPress, colors: themeColors }: any) {
-  return (
-    <TouchableOpacity
-      style={[styles.navTile, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderRadius: themeColors.radius }]}
-      onPress={onPress}
-      activeOpacity={0.75}
-    >
-      <View style={[styles.navTileIcon, { backgroundColor: color + "18" }]}>
-        <Feather name={icon} size={20} color={color} />
-      </View>
-      {badge > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
-        </View>
-      )}
-      <Text style={[styles.navTileLabel, { color: themeColors.foreground }]} numberOfLines={2}>
-        {label}
-      </Text>
-    </TouchableOpacity>
   );
 }
 
@@ -168,43 +132,62 @@ function AlertRow({ icon, label, count, color, onPress, colors: themeColors }: a
   );
 }
 
+function NavTile({ icon, label, badge, color, onPress, colors: themeColors }: any) {
+  return (
+    <TouchableOpacity
+      style={[styles.navTile, { backgroundColor: themeColors.card, borderColor: themeColors.border, borderRadius: themeColors.radius }]}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      <View style={[styles.navTileIcon, { backgroundColor: color + "18" }]}>
+        <Feather name={icon} size={20} color={color} />
+      </View>
+      {badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
+        </View>
+      )}
+      <Text style={[styles.navTileLabel, { color: themeColors.foreground }]} numberOfLines={2}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function AdminDashboard() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { token } = useAuth();
+
   const { data, isLoading } = useAdminGetStats({
     query: { queryKey: getAdminGetStatsQueryKey() },
   });
   const s = data as any;
+
+  const { data: activityData, isLoading: activityLoading } = useQuery({
+    queryKey: ["adminActivity"],
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/api/admin/activity`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+    enabled: !!token,
+  });
+  const activity: ActivityItem[] = activityData?.activity ?? [];
 
   const dormData = [
     { value: s?.approvedDorms ?? 0, color: DORM_COLORS[0], label: DORM_LABELS[0] },
     { value: s?.pendingDorms ?? 0, color: DORM_COLORS[1], label: DORM_LABELS[1] },
     { value: s?.takenDownDorms ?? 0, color: DORM_COLORS[2], label: DORM_LABELS[2] },
   ];
-
   const userData = [
     { value: s?.totalStudents ?? 0, color: USER_COLORS[0], label: USER_LABELS[0] },
     { value: s?.totalOwners ?? 0, color: USER_COLORS[1], label: USER_LABELS[1] },
     { value: s?.suspendedUsers ?? 0, color: USER_COLORS[2], label: USER_LABELS[2] },
   ];
 
-  const today = new Date().toLocaleDateString("en-PH", { weekday: "long", month: "long", day: "numeric" });
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.hero, { paddingTop: insets.top || 48 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.heroSub}>Admin Panel</Text>
-          <Text style={styles.heroTitle}>Dashboard</Text>
-          <Text style={styles.heroDate}>{today}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.heroBackBtn}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <PageHeader title="Dashboard" subtitle="Aozora Admin Panel" />
 
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]}
@@ -238,8 +221,8 @@ export default function AdminDashboard() {
                     <View key={i} style={styles.donutLegendItem}>
                       <View style={[styles.legendDot, { backgroundColor: d.color }]} />
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.donutLegendLabel, { color: colors.mutedForeground }]}>{d.label}</Text>
-                        <Text style={[styles.donutLegendValue, { color: colors.foreground }]}>{d.value}</Text>
+                        <Text style={[styles.legendText, { color: colors.mutedForeground }]}>{d.label}</Text>
+                        <Text style={[styles.donutValue, { color: colors.foreground }]}>{d.value}</Text>
                       </View>
                     </View>
                   ))}
@@ -248,12 +231,10 @@ export default function AdminDashboard() {
             </View>
 
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-              <Text style={[styles.cardTitle, { color: colors.foreground }]}>User Breakdown</Text>
-              <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>
-                {s?.totalUsers ?? 0} registered users
-              </Text>
+              <Text style={[styles.cardTitle, { color: colors.foreground }]}>Users</Text>
+              <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>{s?.totalUsers ?? 0} registered</Text>
               <View style={{ marginTop: 14 }}>
-                <HorizontalBarChart data={userData} colors={colors} />
+                <HorizontalBar data={userData} colors={colors} />
               </View>
             </View>
 
@@ -263,7 +244,7 @@ export default function AdminDashboard() {
                   <Feather name="calendar" size={18} color="#4f46e5" />
                 </View>
                 <Text style={[styles.statPillValue, { color: colors.foreground }]}>{s?.totalAppointments ?? 0}</Text>
-                <Text style={[styles.statPillLabel, { color: colors.mutedForeground }]}>Appointments</Text>
+                <Text style={[styles.statPillLabel, { color: colors.mutedForeground }]}>Total Visits</Text>
               </View>
               <View style={[styles.statPill, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
                 <View style={[styles.statPillIcon, { backgroundColor: "#f59e0b10" }]}>
@@ -271,6 +252,45 @@ export default function AdminDashboard() {
                 </View>
                 <Text style={[styles.statPillValue, { color: colors.foreground }]}>{s?.pendingAppointments ?? 0}</Text>
                 <Text style={[styles.statPillLabel, { color: colors.mutedForeground }]}>Pending Visits</Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>RECENT ACTIVITY</Text>
+              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius, padding: 0, overflow: "hidden" }]}>
+                {activityLoading ? (
+                  <View style={{ padding: 24, alignItems: "center" }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : activity.length === 0 ? (
+                  <View style={{ padding: 24, alignItems: "center", gap: 6 }}>
+                    <Feather name="activity" size={28} color={colors.mutedForeground} />
+                    <Text style={[styles.emptyActivity, { color: colors.mutedForeground }]}>No activity yet</Text>
+                  </View>
+                ) : (
+                  activity.map((item, i) => {
+                    const color = ACTIVITY_COLOR[item.type] ?? "#64748b";
+                    const icon = ACTIVITY_ICON[item.type] ?? "activity";
+                    const isLast = i === activity.length - 1;
+                    return (
+                      <View
+                        key={i}
+                        style={[
+                          styles.activityRow,
+                          !isLast && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                        ]}
+                      >
+                        <View style={[styles.activityIconWrap, { backgroundColor: color + "18" }]}>
+                          <Feather name={icon} size={14} color={color} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.activityLabel, { color: colors.foreground }]} numberOfLines={2}>{item.label}</Text>
+                          <Text style={[styles.activityTime, { color: colors.mutedForeground }]}>{formatRelative(item.at)}</Text>
+                        </View>
+                      </View>
+                    );
+                  })
+                )}
               </View>
             </View>
 
@@ -294,89 +314,40 @@ export default function AdminDashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hero: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: "#4f46e5",
-  },
-  heroBackBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  heroSub: { fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: "600", letterSpacing: 0.5 },
-  heroTitle: { fontSize: 26, fontWeight: "800", color: "#fff", marginTop: 2 },
-  heroDate: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   body: { padding: 16, gap: 14 },
   center: { paddingTop: 60, alignItems: "center" },
   section: { gap: 10 },
   sectionLabel: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
-  alertRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-  },
+  alertRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1 },
   alertIcon: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   alertText: { flex: 1, fontSize: 13, fontWeight: "500" },
   alertBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
   alertBadgeText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  card: {
-    borderWidth: 1,
-    padding: 16,
-    gap: 4,
-  },
+  card: { borderWidth: 1, padding: 16, gap: 4 },
   cardTitle: { fontSize: 16, fontWeight: "700" },
   cardSub: { fontSize: 13 },
   donutRow: { flexDirection: "row", alignItems: "center", gap: 16, marginTop: 14 },
   donutLegend: { flex: 1, gap: 10 },
   donutLegendItem: { flexDirection: "row", alignItems: "center", gap: 10 },
-  donutLegendLabel: { fontSize: 12 },
-  donutLegendValue: { fontSize: 18, fontWeight: "700", marginTop: 1 },
+  donutValue: { fontSize: 18, fontWeight: "700", marginTop: 1 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { fontSize: 13 },
+  legendText: { fontSize: 13 },
   barTrack: { height: 14, borderRadius: 7, overflow: "hidden" },
   twoStatRow: { flexDirection: "row", gap: 12 },
-  statPill: {
-    flex: 1,
-    borderWidth: 1,
-    padding: 16,
-    gap: 6,
-    alignItems: "flex-start",
-  },
+  statPill: { flex: 1, borderWidth: 1, padding: 16, gap: 6, alignItems: "flex-start" },
   statPillIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   statPillValue: { fontSize: 26, fontWeight: "800" },
   statPillLabel: { fontSize: 12 },
+  activityRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, padding: 14 },
+  activityIconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center", marginTop: 1 },
+  activityLabel: { fontSize: 13, fontWeight: "500", lineHeight: 18 },
+  activityTime: { fontSize: 12, marginTop: 2 },
+  emptyActivity: { fontSize: 14 },
   navGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  navTile: {
-    width: "30.5%",
-    borderWidth: 1,
-    padding: 14,
-    gap: 8,
-    minWidth: 100,
-  },
+  navTile: { width: "30.5%", borderWidth: 1, padding: 14, gap: 8, minWidth: 100 },
   navTileIcon: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   navTileLabel: { fontSize: 13, fontWeight: "600", lineHeight: 18 },
-  badge: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "#ef4444",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-  },
+  badge: { position: "absolute", top: 10, right: 10, backgroundColor: "#ef4444", borderRadius: 10, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 });

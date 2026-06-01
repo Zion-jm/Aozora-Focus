@@ -18,6 +18,7 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 import {
   getGetMyDormListingsQueryKey,
@@ -90,18 +91,17 @@ export default function MyDormsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.background }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>My Listings</Text>
-        <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: 8 }]}
-          onPress={() => router.push("/dorm/create")}
-        >
-          <Feather name="plus" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <PageHeader
+        title="My Listings"
+        right={
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: 8 }]}
+            onPress={() => router.push("/dorm/create")}
+          >
+            <Feather name="plus" size={18} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>

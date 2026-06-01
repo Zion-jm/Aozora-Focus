@@ -200,4 +200,61 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
   res.json({ ...dorm, amenities: JSON.parse(dorm.amenities || "[]") });
 });
 
+router.get("/admin/activity", requireAuth, requireRole("admin"), async (_req, res) => {
+  const { sqlite } = await import("../db/index");
+
+  const recentUsers = sqlite.prepare(
+    `SELECT full_name as actor, role, created_at as at FROM users ORDER BY created_at DESC LIMIT 6`
+  ).all() as any[];
+
+  const recentDorms = sqlite.prepare(
+    `SELECT d.name as actor, u.full_name as owner_name, d.created_at as at
+     FROM dorms d LEFT JOIN users u ON d.owner_id = u.id
+     ORDER BY d.created_at DESC LIMIT 6`
+  ).all() as any[];
+
+  const recentAppts = sqlite.prepare(
+    `SELECT u.full_name as student_name, dm.name as dorm_name, a.created_at as at
+     FROM appointments a
+     LEFT JOIN users u ON a.student_id = u.id
+     LEFT JOIN dorms dm ON a.dorm_id = dm.id
+     ORDER BY a.created_at DESC LIMIT 6`
+  ).all() as any[];
+
+  const recentReports = sqlite.prepare(
+    `SELECT u.full_name as reporter_name, r.reason, r.created_at as at
+     FROM reports r LEFT JOIN users u ON r.reporter_id = u.id
+     ORDER BY r.created_at DESC LIMIT 6`
+  ).all() as any[];
+
+  type ActivityItem = { type: string; label: string; at: string };
+
+  const all: ActivityItem[] = [
+    ...recentUsers.map((r) => ({
+      type: "user",
+      label: `${r.actor} joined as ${r.role}`,
+      at: r.at,
+    })),
+    ...recentDorms.map((r) => ({
+      type: "dorm",
+      label: `"${r.actor}" submitted by ${r.owner_name ?? "—"}`,
+      at: r.at,
+    })),
+    ...recentAppts.map((r) => ({
+      type: "appointment",
+      label: `${r.student_name ?? "A student"} booked a visit at ${r.dorm_name ?? "a dorm"}`,
+      at: r.at,
+    })),
+    ...recentReports.map((r) => ({
+      type: "report",
+      label: `Report by ${r.reporter_name ?? "Unknown"}: ${r.reason}`,
+      at: r.at,
+    })),
+  ]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 10);
+
+  res.json({ activity: all });
+});
+
 export default router;

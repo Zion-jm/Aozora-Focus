@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { useColors } from "@/hooks/useColors";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 
@@ -182,20 +183,10 @@ export default function AdminSupportTicketsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Support & Appeals</Text>
-          {pendingCount > 0 && (
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingBadgeText}>{pendingCount} pending</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.backBtn} />
-      </View>
+      <PageHeader
+        title="Support & Appeals"
+        subtitle={pendingCount > 0 ? `${pendingCount} pending` : "Manage support requests"}
+      />
 
       <View style={[styles.filterBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <View style={[styles.searchRow, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: colors.radius }]}>

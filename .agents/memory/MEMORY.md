@@ -3,3 +3,4 @@
 - [Expo babel-preset version](expo-babel.md) — babel-preset-expo must be ~54.0.10 for Expo 54; 56.x causes bundler failures
 - [better-sqlite3 rebuild on Replit](better-sqlite3-rebuild.md) — native binding must be rebuilt after pnpm install; expo bin also needs direct path invocation
 - [Admin routing architecture](admin-routing.md) — admin has own app/admin/_layout.tsx (Tabs, dark indigo theme); login redirects admin to /admin; root _layout lists "admin" as a single Stack.Screen group (not admin/index, admin/users etc.)
+- [PageHeader component](page-header.md) — shared header at components/PageHeader.tsx; handles insets internally; fontSize 18/fontWeight "700"; props: title, subtitle?, showBack?, onBack?, right?; used on all admin + profile sub-screens
