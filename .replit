@@ -10,6 +10,44 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Aozora App"
+
+[[workflows.workflow]]
+name = "API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run dev"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Aozora App"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/aozora run dev"
+waitForPort = 8099
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -28,12 +66,12 @@ localPort = 8080
 externalPort = 8080
 
 [[ports]]
-localPort = 8082
-externalPort = 3001
-
-[[ports]]
 localPort = 20823
 externalPort = 3000
+
+[[ports]]
+localPort = 8099
+externalPort = 8099
 
 [nix]
 channel = "stable-25_05"
