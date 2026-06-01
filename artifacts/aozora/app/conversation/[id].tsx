@@ -178,16 +178,27 @@ export default function ConversationScreen() {
           {
             paddingTop: insets.top || 48,
             backgroundColor: colors.card,
-            borderBottomColor: colors.border,
           },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-          Conversation
-        </Text>
+        {otherUser ? (
+          <UserAvatar
+            name={otherUser.fullName}
+            avatarUrl={otherUser.avatarUrl}
+            size={34}
+            color={colors.primary}
+            backgroundColor={colors.primary + "22"}
+            userId={otherUser.id}
+          />
+        ) : null}
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
+            {otherUser?.fullName || "Conversation"}
+          </Text>
+        </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
           {otherUser && (
             <TouchableOpacity
@@ -289,9 +300,10 @@ export default function ConversationScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "bold", flex: 1, textAlign: "center" },
+  header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 12, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 16, fontWeight: "700", flex: 1 },
+  headerSub: { fontSize: 12 },
   listContent: { padding: 16, gap: 12 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, marginVertical: 2 },
   msgRowMe: { flexDirection: "row-reverse" },

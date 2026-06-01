@@ -1,10 +1,17 @@
 import { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +19,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 type Step = 1 | 2 | 3 | 4;
+
+const STEP_LABELS = ["Email", "Verify", "Reset"];
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
@@ -130,71 +139,131 @@ export default function ForgotPasswordScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Back button */}
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => (step === 1 ? router.back() : setStep((s) => (s - 1) as Step))}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.foreground} />
-        </TouchableOpacity>
+        {step !== 4 && (
+          <TouchableOpacity
+            style={[
+              styles.backBtn,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+            onPress={() =>
+              step === 1 ? router.back() : setStep((s) => (s - 1) as Step)
+            }
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.foreground} />
+          </TouchableOpacity>
+        )}
 
-        {/* Step indicator */}
-        <View style={styles.stepRow}>
-          {([1, 2, 3] as Step[]).map((s) => (
-            <View key={s} style={styles.stepItem}>
-              <View
-                style={[
-                  styles.stepDot,
-                  { backgroundColor: step >= s ? colors.primary : colors.muted },
-                ]}
-              >
-                {step > s ? (
-                  <Ionicons name="checkmark" size={12} color="#fff" />
-                ) : (
-                  <Text style={styles.stepDotText}>{s}</Text>
+        {/* Step indicator (not shown on success screen) */}
+        {step !== 4 && (
+          <View style={styles.stepRow}>
+            {([1, 2, 3] as Step[]).map((s) => (
+              <View key={s} style={styles.stepItem}>
+                <View style={styles.stepColumn}>
+                  <View
+                    style={[
+                      styles.stepDot,
+                      {
+                        backgroundColor:
+                          step >= s ? colors.primary : colors.muted,
+                      },
+                    ]}
+                  >
+                    {step > s ? (
+                      <Ionicons name="checkmark" size={12} color="#fff" />
+                    ) : (
+                      <Text style={styles.stepDotText}>{s}</Text>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.stepLabel,
+                      {
+                        color:
+                          step >= s ? colors.primary : colors.mutedForeground,
+                      },
+                    ]}
+                  >
+                    {STEP_LABELS[s - 1]}
+                  </Text>
+                </View>
+                {s < 3 && (
+                  <View
+                    style={[
+                      styles.stepLine,
+                      {
+                        backgroundColor:
+                          step > s ? colors.primary : colors.border,
+                      },
+                    ]}
+                  />
                 )}
               </View>
-              {s < 3 && (
-                <View
-                  style={[
-                    styles.stepLine,
-                    { backgroundColor: step > s ? colors.primary : colors.border },
-                  ]}
-                />
-              )}
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
         {/* ── Step 1: Email ── */}
         {step === 1 && (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.primary }]}>Reset Password</Text>
-              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                Enter your registered email and we'll send you a verification code.
+              <View
+                style={[
+                  styles.stepIconWrap,
+                  { backgroundColor: colors.primary + "18" },
+                ]}
+              >
+                <Feather name="lock" size={28} color={colors.primary} />
+              </View>
+              <Text style={[styles.title, { color: colors.foreground }]}>
+                Reset Password
+              </Text>
+              <Text
+                style={[styles.subtitle, { color: colors.mutedForeground }]}
+              >
+                Enter your registered email and we'll send you a verification
+                code.
               </Text>
             </View>
             <View style={styles.form}>
-              <TextInput
-                style={inputStyle}
-                placeholder="Email address"
-                placeholderTextColor={colors.mutedForeground}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoFocus
-              />
+              <View style={styles.fieldWrap}>
+                <Text
+                  style={[styles.fieldLabel, { color: colors.foreground }]}
+                >
+                  Email Address
+                </Text>
+                <TextInput
+                  style={inputStyle}
+                  placeholder="yourname@email.com"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoFocus
+                />
+              </View>
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: colors.primary,
+                    borderRadius: colors.radius,
+                    shadowColor: colors.primary,
+                  },
+                ]}
                 onPress={handleSendOtp}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color={colors.primaryForeground} />
                 ) : (
-                  <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
                     Send Reset Code
                   </Text>
                 )}
@@ -207,44 +276,92 @@ export default function ForgotPasswordScreen() {
         {step === 2 && (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.primary }]}>Check Your Email</Text>
-              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              <View
+                style={[
+                  styles.stepIconWrap,
+                  { backgroundColor: colors.primary + "18" },
+                ]}
+              >
+                <Feather name="mail" size={28} color={colors.primary} />
+              </View>
+              <Text style={[styles.title, { color: colors.foreground }]}>
+                Check Your Email
+              </Text>
+              <Text
+                style={[styles.subtitle, { color: colors.mutedForeground }]}
+              >
                 We sent a 6-digit code to
               </Text>
-              <Text style={[styles.emailLabel, { color: colors.foreground }]}>
+              <Text style={[styles.emailLabel, { color: colors.primary }]}>
                 {email.trim()}
               </Text>
             </View>
             <View style={styles.form}>
-              <TextInput
-                style={[inputStyle, styles.otpInput]}
-                placeholder="000000"
-                placeholderTextColor={colors.mutedForeground}
-                value={otp}
-                onChangeText={(t) => setOtp(t.replace(/[^0-9]/g, "").slice(0, 6))}
-                keyboardType="number-pad"
-                maxLength={6}
-                autoFocus
-              />
+              <View style={styles.fieldWrap}>
+                <Text
+                  style={[styles.fieldLabel, { color: colors.foreground }]}
+                >
+                  Verification Code
+                </Text>
+                <TextInput
+                  style={[inputStyle, styles.otpInput]}
+                  placeholder="000000"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={otp}
+                  onChangeText={(t) =>
+                    setOtp(t.replace(/[^0-9]/g, "").slice(0, 6))
+                  }
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus
+                />
+              </View>
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: colors.primary,
+                    borderRadius: colors.radius,
+                    shadowColor: colors.primary,
+                  },
+                ]}
                 onPress={handleVerifyOtp}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color={colors.primaryForeground} />
                 ) : (
-                  <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
                     Verify Code
                   </Text>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.resendRow}
-                onPress={() => { setStep(1); setOtp(""); }}
+                style={[
+                  styles.secondaryBtn,
+                  { borderColor: colors.border, borderRadius: colors.radius },
+                ]}
+                onPress={() => {
+                  setStep(1);
+                  setOtp("");
+                }}
               >
-                <Ionicons name="arrow-back" size={14} color={colors.mutedForeground} />
-                <Text style={[styles.resendText, { color: colors.mutedForeground }]}>
+                <Ionicons
+                  name="arrow-back"
+                  size={14}
+                  color={colors.mutedForeground}
+                />
+                <Text
+                  style={[
+                    styles.secondaryBtnText,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
                   Change email or resend
                 </Text>
               </TouchableOpacity>
@@ -256,18 +373,34 @@ export default function ForgotPasswordScreen() {
         {step === 3 && (
           <>
             <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.primary }]}>New Password</Text>
-              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              <View
+                style={[
+                  styles.stepIconWrap,
+                  { backgroundColor: colors.primary + "18" },
+                ]}
+              >
+                <Feather name="key" size={28} color={colors.primary} />
+              </View>
+              <Text style={[styles.title, { color: colors.foreground }]}>
+                New Password
+              </Text>
+              <Text
+                style={[styles.subtitle, { color: colors.mutedForeground }]}
+              >
                 Choose a strong password for your account.
               </Text>
             </View>
             <View style={styles.form}>
-              {/* New password */}
-              <View>
+              <View style={styles.fieldWrap}>
+                <Text
+                  style={[styles.fieldLabel, { color: colors.foreground }]}
+                >
+                  New Password
+                </Text>
                 <View style={styles.passwordWrapper}>
                   <TextInput
                     style={[inputStyle, styles.passwordInput]}
-                    placeholder="New password"
+                    placeholder="At least 8 characters"
                     placeholderTextColor={colors.mutedForeground}
                     value={newPassword}
                     onChangeText={setNewPassword}
@@ -298,17 +431,23 @@ export default function ForgotPasswordScreen() {
                   ]}
                 >
                   {newPassword.length > 0 && newPassword.length < 8
-                    ? `${8 - newPassword.length} more character${8 - newPassword.length === 1 ? "" : "s"} needed`
+                    ? `${8 - newPassword.length} more character${
+                        8 - newPassword.length === 1 ? "" : "s"
+                      } needed`
                     : "Minimum 8 characters"}
                 </Text>
               </View>
 
-              {/* Confirm password */}
-              <View>
+              <View style={styles.fieldWrap}>
+                <Text
+                  style={[styles.fieldLabel, { color: colors.foreground }]}
+                >
+                  Confirm Password
+                </Text>
                 <View style={styles.passwordWrapper}>
                   <TextInput
                     style={[inputStyle, styles.passwordInput]}
-                    placeholder="Confirm new password"
+                    placeholder="Re-enter your new password"
                     placeholderTextColor={colors.mutedForeground}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -320,29 +459,44 @@ export default function ForgotPasswordScreen() {
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Ionicons
-                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+                      name={
+                        showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                      }
                       size={18}
                       color={colors.mutedForeground}
                     />
                   </TouchableOpacity>
                 </View>
-                {confirmPassword.length > 0 && confirmPassword !== newPassword && (
-                  <Text style={[styles.hint, { color: colors.destructive }]}>
-                    Passwords don't match
-                  </Text>
-                )}
+                {confirmPassword.length > 0 &&
+                  confirmPassword !== newPassword && (
+                    <Text style={[styles.hint, { color: colors.destructive }]}>
+                      Passwords don't match
+                    </Text>
+                  )}
               </View>
 
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+                style={[
+                  styles.button,
+                  {
+                    backgroundColor: colors.primary,
+                    borderRadius: colors.radius,
+                    shadowColor: colors.primary,
+                  },
+                ]}
                 onPress={handleResetPassword}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color={colors.primaryForeground} />
                 ) : (
-                  <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                    Save Password
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
+                    Save New Password
                   </Text>
                 )}
               </TouchableOpacity>
@@ -353,20 +507,41 @@ export default function ForgotPasswordScreen() {
         {/* ── Step 4: Success ── */}
         {step === 4 && (
           <View style={styles.successContainer}>
-            <View style={[styles.successIcon, { backgroundColor: colors.primary + "18" }]}>
-              <Ionicons name="checkmark-circle" size={64} color={colors.primary} />
+            <View
+              style={[
+                styles.successIcon,
+                { backgroundColor: "#10b981" + "18" },
+              ]}
+            >
+              <Ionicons name="checkmark-circle" size={72} color="#10b981" />
             </View>
             <Text style={[styles.successTitle, { color: colors.foreground }]}>
               Password Changed!
             </Text>
-            <Text style={[styles.successSubtitle, { color: colors.mutedForeground }]}>
-              Your password has been updated successfully. Please log in with your new password.
+            <Text
+              style={[
+                styles.successSubtitle,
+                { color: colors.mutedForeground },
+              ]}
+            >
+              Your password has been updated successfully. Please log in with
+              your new password.
             </Text>
             <TouchableOpacity
-              style={[styles.button, styles.successBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+              style={[
+                styles.button,
+                styles.successBtn,
+                {
+                  backgroundColor: colors.primary,
+                  borderRadius: colors.radius,
+                  shadowColor: colors.primary,
+                },
+              ]}
               onPress={() => router.replace("/(auth)/login")}
             >
-              <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+              <Text
+                style={[styles.buttonText, { color: colors.primaryForeground }]}
+              >
                 Go to Login
               </Text>
             </TouchableOpacity>
@@ -381,7 +556,16 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, flexGrow: 1 },
 
-  backBtn: { marginBottom: 16, alignSelf: "flex-start" },
+  backBtn: {
+    marginBottom: 16,
+    alignSelf: "flex-start",
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   stepRow: {
     flexDirection: "row",
@@ -391,6 +575,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   stepItem: { flexDirection: "row", alignItems: "center" },
+  stepColumn: { alignItems: "center", gap: 4 },
   stepDot: {
     width: 28,
     height: 28,
@@ -399,14 +584,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepDotText: { fontSize: 12, fontWeight: "700", color: "#fff" },
-  stepLine: { width: 40, height: 2, marginHorizontal: 6 },
+  stepLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.3 },
+  stepLine: { width: 36, height: 2, marginHorizontal: 6, marginBottom: 16 },
 
-  header: { alignItems: "center", marginBottom: 32 },
-  title: { fontSize: 30, fontWeight: "bold", marginBottom: 10 },
+  header: { alignItems: "center", marginBottom: 32, gap: 6 },
+  stepIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  title: { fontSize: 26, fontWeight: "800", letterSpacing: -0.3 },
   subtitle: { fontSize: 15, textAlign: "center", lineHeight: 22 },
-  emailLabel: { fontSize: 15, fontWeight: "700", marginTop: 4 },
+  emailLabel: { fontSize: 15, fontWeight: "700", marginTop: 2 },
 
   form: { gap: 16 },
+  fieldWrap: { gap: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: "600", marginLeft: 2 },
   input: {
     borderWidth: 1,
     paddingHorizontal: 16,
@@ -424,9 +620,23 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  buttonText: { fontSize: 17, fontWeight: "600" },
+  buttonText: { fontSize: 17, fontWeight: "700", letterSpacing: 0.2 },
+
+  secondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 13,
+    borderWidth: 1,
+  },
+  secondaryBtnText: { fontSize: 14, fontWeight: "500" },
 
   passwordWrapper: { position: "relative" },
   passwordInput: { paddingRight: 52 },
@@ -438,16 +648,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  hint: { fontSize: 12, marginTop: 6, marginLeft: 2 },
-
-  resendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 8,
-  },
-  resendText: { fontSize: 14 },
+  hint: { fontSize: 12, marginTop: 4, marginLeft: 2 },
 
   successContainer: {
     flex: 1,
@@ -457,14 +658,18 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   successIcon: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
-  successTitle: { fontSize: 26, fontWeight: "700", textAlign: "center" },
-  successSubtitle: { fontSize: 15, textAlign: "center", lineHeight: 22 },
+  successTitle: { fontSize: 28, fontWeight: "800", textAlign: "center", letterSpacing: -0.3 },
+  successSubtitle: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+  },
   successBtn: { alignSelf: "stretch", marginTop: 8 },
 });

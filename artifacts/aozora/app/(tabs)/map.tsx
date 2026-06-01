@@ -17,7 +17,6 @@ export default function MapScreen() {
           {
             paddingTop: insets.top || 40,
             backgroundColor: colors.background,
-            borderBottomColor: colors.border,
           },
         ]}
       >
@@ -35,8 +34,8 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 28, fontWeight: "bold" },
+  header: { paddingHorizontal: 20, paddingBottom: 14, shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  headerTitle: { fontSize: 28, fontWeight: "800" },
   headerSub: { fontSize: 15, marginTop: 4 },
   mapContainer: { flex: 1 },
 });

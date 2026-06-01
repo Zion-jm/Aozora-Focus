@@ -150,11 +150,13 @@ export default function AdminUserDetailScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top || 48, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.primary }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="arrow-left" size={22} color={colors.foreground} />
+            <Feather name="arrow-left" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Profile</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>User Profile</Text>
+          </View>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.center}>
@@ -167,11 +169,13 @@ export default function AdminUserDetailScreen() {
   if (isError || !user) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top || 48, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.primary }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="arrow-left" size={22} color={colors.foreground} />
+            <Feather name="arrow-left" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Profile</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>User Profile</Text>
+          </View>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.center}>
@@ -192,22 +196,37 @@ export default function AdminUserDetailScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top || 48, borderBottomColor: colors.border, backgroundColor: colors.background },
+          { paddingTop: insets.top || 48, backgroundColor: colors.primary },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
+          <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Profile</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>User Profile</Text>
+          <Text style={styles.headerSub}>{user.fullName}</Text>
+        </View>
         <TouchableOpacity
           style={[
             styles.suspendBtn,
-            { borderColor: user.isSuspended ? "#10b981" : "#ef4444" },
+            {
+              borderColor: user.isSuspended
+                ? "rgba(255,255,255,0.5)"
+                : "rgba(255,255,255,0.5)",
+              backgroundColor: user.isSuspended
+                ? "rgba(16,185,129,0.25)"
+                : "rgba(239,68,68,0.25)",
+            },
           ]}
           onPress={handleToggleSuspend}
           disabled={statusMutation.isPending}
         >
-          <Text style={[styles.suspendBtnText, { color: user.isSuspended ? "#10b981" : "#ef4444" }]}>
+          <Text
+            style={[
+              styles.suspendBtnText,
+              { color: "#fff" },
+            ]}
+          >
             {user.isSuspended ? "Unsuspend" : "Suspend"}
           </Text>
         </TouchableOpacity>
@@ -538,14 +557,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 12,
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingBottom: 18,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "bold" },
-  suspendBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#fff" },
+  headerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 1 },
+  suspendBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   suspendBtnText: { fontSize: 13, fontWeight: "700" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
   body: { padding: 16, gap: 12 },

@@ -80,20 +80,19 @@ export default function SuspendedUsersScreen() {
           styles.header,
           {
             paddingTop: insets.top || 48,
-            borderBottomColor: colors.border,
-            backgroundColor: colors.background,
+            backgroundColor: colors.primary,
           },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
+          <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>
             Suspended Users
           </Text>
           {!isLoading && (
-            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+            <Text style={styles.headerSub}>
               {suspended.length} {suspended.length === 1 ? "user" : "users"} suspended
             </Text>
           )}
@@ -225,11 +224,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "bold" },
-  headerSub: { fontSize: 13, marginTop: 1 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#fff" },
+  headerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 1 },
   searchWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
   searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   searchInput: { flex: 1, fontSize: 15, padding: 0 },

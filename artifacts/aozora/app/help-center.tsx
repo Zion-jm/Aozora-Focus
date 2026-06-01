@@ -127,7 +127,7 @@ export default function HelpCenterScreen() {
   if (isAdmin) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={22} color={colors.foreground} />
           </TouchableOpacity>
@@ -159,7 +159,7 @@ export default function HelpCenterScreen() {
   if (checkingExisting) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={22} color={colors.foreground} />
           </TouchableOpacity>
@@ -177,7 +177,7 @@ export default function HelpCenterScreen() {
   if (activeTicket) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={22} color={colors.foreground} />
           </TouchableOpacity>
@@ -226,7 +226,7 @@ export default function HelpCenterScreen() {
   if (submitted) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="arrow-left" size={22} color={colors.foreground} />
           </TouchableOpacity>
@@ -277,7 +277,7 @@ export default function HelpCenterScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
@@ -408,7 +408,7 @@ export default function HelpCenterScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   headerTitle: { fontSize: 18, fontWeight: "700" },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },

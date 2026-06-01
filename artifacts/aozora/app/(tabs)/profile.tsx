@@ -99,7 +99,7 @@ export default function ProfileScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top || 40, backgroundColor: colors.background, borderBottomColor: colors.border },
+          { paddingTop: insets.top || 40, backgroundColor: colors.background },
         ]}
       >
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
@@ -256,8 +256,8 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 28, fontWeight: "bold" },
+  header: { paddingHorizontal: 20, paddingBottom: 14 },
+  headerTitle: { fontSize: 28, fontWeight: "800" },
   profileCard: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 24, alignItems: "center", gap: 8 },
   name: { fontSize: 22, fontWeight: "bold" },
   subInfo: { fontSize: 13 },

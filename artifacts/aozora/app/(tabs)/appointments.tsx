@@ -191,7 +191,13 @@ export default function AppointmentsScreen() {
             <TouchableOpacity
               style={[
                 styles.card,
-                { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  borderRadius: colors.radius,
+                  borderLeftWidth: 4,
+                  borderLeftColor: STATUS_COLORS[item.status] || "#64748b",
+                },
               ]}
               onPress={() => router.push(`/appointment/${item.id}`)}
               activeOpacity={0.8}

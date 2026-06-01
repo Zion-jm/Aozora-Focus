@@ -436,20 +436,20 @@ export default function AdminReportsScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top || 48, borderBottomColor: colors.border, backgroundColor: colors.background },
+          { paddingTop: insets.top || 48, backgroundColor: colors.primary },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
+          <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Reports</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>User Reports</Text>
+          <Text style={styles.headerSub}>
             {data?.total ?? 0} report{(data?.total ?? 0) !== 1 ? "s" : ""}
           </Text>
         </View>
         <TouchableOpacity onPress={() => refetch()} style={styles.backBtn}>
-          <Feather name="refresh-cw" size={18} color={colors.primary} />
+          <Feather name="refresh-cw" size={18} color="rgba(255,255,255,0.85)" />
         </TouchableOpacity>
       </View>
 
@@ -508,11 +508,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 19, fontWeight: "700" },
-  headerSub: { fontSize: 13, marginTop: 1 },
+  headerTitle: { fontSize: 19, fontWeight: "700", color: "#fff" },
+  headerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 1 },
   filterRow: {
     flexDirection: "row",
     borderBottomWidth: 1,

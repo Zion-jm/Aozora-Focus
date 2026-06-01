@@ -491,10 +491,10 @@ export default function AdminConversationScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { fontSize: 17, fontWeight: "bold" },
+  headerTitle: { fontSize: 17, fontWeight: "700" },
   headerSub: { fontSize: 12, marginTop: 1 },
   warningBadge: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 },
   warningBadgeText: { color: "#ef4444", fontSize: 11, fontWeight: "600" },

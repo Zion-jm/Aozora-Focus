@@ -176,7 +176,7 @@ export default function MessagesScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top || 40, backgroundColor: colors.background, borderBottomColor: colors.border },
+          { paddingTop: insets.top || 40, backgroundColor: colors.background },
         ]}
       >
         <View style={styles.headerRow}>
@@ -387,9 +387,9 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1 },
+  header: { paddingHorizontal: 20, paddingBottom: 14 },
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerTitle: { fontSize: 28, fontWeight: "bold" },
+  headerTitle: { fontSize: 28, fontWeight: "800" },
   unreadBadge: { borderRadius: 12, minWidth: 24, height: 24, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
   unreadBadgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
   headerSubtitle: { fontSize: 15, marginTop: 4, marginBottom: 12 },

@@ -262,7 +262,6 @@ export default function VerifyScreen() {
           styles.header,
           {
             paddingTop: insets.top || 48,
-            borderBottomColor: colors.border,
             backgroundColor: colors.background,
           },
         ]}
@@ -703,11 +702,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingBottom: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "bold" },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
 
   steps: {
     flexDirection: "row",

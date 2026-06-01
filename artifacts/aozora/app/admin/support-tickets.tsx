@@ -182,12 +182,12 @@ export default function AdminSupportTicketsScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.primary }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color={colors.foreground} />
+          <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Support & Appeals</Text>
+          <Text style={styles.headerTitle}>Support & Appeals</Text>
           {pendingCount > 0 && (
             <View style={styles.pendingBadge}>
               <Text style={styles.pendingBadgeText}>{pendingCount} pending</Text>
@@ -262,10 +262,10 @@ export default function AdminSupportTicketsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14 },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerCenter: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#fff" },
   pendingBadge: { backgroundColor: "#f97316", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
   pendingBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   filterBar: { paddingHorizontal: 16, paddingVertical: 10, gap: 10, borderBottomWidth: 1 },
