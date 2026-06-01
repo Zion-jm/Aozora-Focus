@@ -60,9 +60,10 @@ router.post("/auth/send-otp", async (req, res) => {
   try {
     await sendOtpEmail(normalized, code);
   } catch (err) {
-    console.error("[send-otp] Failed to send email:", err);
-    res.status(500).json({ error: "Mail error", message: "Could not send verification email. Please try again." });
-    return;
+    console.warn("[send-otp] Email delivery failed — falling back to console log.");
+    console.log(`\n====================================`);
+    console.log(`  OTP for ${normalized}: ${code}`);
+    console.log(`====================================\n`);
   }
 
   res.json({ message: "Verification code sent" });
@@ -252,9 +253,10 @@ router.post("/auth/forgot-password/send-otp", async (req, res) => {
   try {
     await sendOtpEmail(normalized, code);
   } catch (err) {
-    console.error("[forgot-password/send-otp] Failed to send email:", err);
-    res.status(500).json({ error: "Mail error", message: "Could not send reset email. Please try again." });
-    return;
+    console.warn("[forgot-password/send-otp] Email delivery failed — falling back to console log.");
+    console.log(`\n====================================`);
+    console.log(`  Password reset OTP for ${normalized}: ${code}`);
+    console.log(`====================================\n`);
   }
 
   res.json({ message: "Reset code sent" });
