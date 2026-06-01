@@ -220,6 +220,97 @@ router.post("/auth/login", async (req, res) => {
   });
 });
 
+// POST /auth/forgot-password/send-otp — send reset OTP to a registered email
+router.post("/auth/forgot-password/send-otp", async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.trim()) {
+    res.status(400).json({ error: "Validation error", message: "Email is required." });
+    return;
+  }
+
+  const normalized = email.trim().toLowerCase();
+
+  if (!EMAIL_RE.test(normalized)) {
+    res.status(400).json({ error: "Validation error", message: "Please enter a valid email address." });
+    return;
+  }
+
+  const user = await db.select().from(users).where(eq(users.email, normalized)).get();
+  if (!user) {
+    res.status(400).json({ error: "Not found", message: "No account found with that email address." });
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  sqlite.prepare("DELETE FROM otp_verifications WHERE contact = ? AND is_verified = 0").run(normalized);
+  sqlite.prepare(
+    "INSERT INTO otp_verifications (contact, code, expires_at) VALUES (?, ?, ?)"
+  ).run(normalized, code, expiresAt);
+
+  try {
+    await sendOtpEmail(normalized, code);
+  } catch (err) {
+    console.error("[forgot-password/send-otp] Failed to send email:", err);
+    res.status(500).json({ error: "Mail error", message: "Could not send reset email. Please try again." });
+    return;
+  }
+
+  res.json({ message: "Reset code sent" });
+});
+
+// POST /auth/forgot-password/reset — verify OTP token and set new password
+router.post("/auth/forgot-password/reset", async (req, res) => {
+  const { verificationToken, newPassword } = req.body;
+
+  if (!verificationToken || !newPassword) {
+    res.status(400).json({ error: "Validation error", message: "verificationToken and newPassword are required." });
+    return;
+  }
+
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: "Validation error", message: "Password must be at least 8 characters." });
+    return;
+  }
+
+  const otpRecord = sqlite.prepare(
+    "SELECT * FROM otp_verifications WHERE verification_token = ? AND is_verified = 1"
+  ).get(verificationToken) as any;
+
+  if (!otpRecord) {
+    res.status(400).json({ error: "Validation error", message: "Invalid or expired reset token. Please start over." });
+    return;
+  }
+
+  const user = await db.select().from(users).where(eq(users.email, otpRecord.contact)).get();
+  if (!user) {
+    res.status(400).json({ error: "Not found", message: "Account not found." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await db.update(users).set({ passwordHash }).where(eq(users.id, user.id));
+
+  sqlite.prepare("DELETE FROM otp_verifications WHERE verification_token = ?").run(verificationToken);
+
+  const token = generateToken(user.id);
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      verificationStatus: user.verificationStatus,
+      isSuspended: user.isSuspended,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+    },
+  });
+});
+
 router.post("/auth/logout", (_req, res) => {
   res.json({ message: "Logged out successfully" });
 });

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
@@ -61,25 +61,35 @@ export default function LoginScreen() {
             keyboardType="email-address"
           />
 
-          <View style={styles.passwordWrapper}>
-            <TextInput
-              style={[styles.input, styles.passwordInput, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
-              placeholder="Password"
-              placeholderTextColor={colors.mutedForeground}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-            />
-            <TouchableOpacity
-              style={styles.eyeButton}
-              onPress={() => setShowPassword((v) => !v)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather
-                name={showPassword ? "eye-off" : "eye"}
-                size={20}
-                color={colors.mutedForeground}
+          <View>
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card }]}
+                placeholder="Password"
+                placeholderTextColor={colors.mutedForeground}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
               />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color={colors.mutedForeground}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Forgot password link — sits just below the password field */}
+            <TouchableOpacity
+              style={styles.forgotRow}
+              onPress={() => router.push("/(auth)/forgot-password")}
+            >
+              <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
             </TouchableOpacity>
           </View>
 
@@ -164,6 +174,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
+  },
+  forgotRow: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+  },
+  forgotText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
   button: {
     paddingVertical: 16,
