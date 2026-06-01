@@ -31,9 +31,6 @@ export default function Index() {
   }
 
   if (isAuthenticated) {
-    if (user?.role === "admin") {
-      return <Redirect href="/admin" />;
-    }
     return <Redirect href="/(tabs)" />;
   }
 

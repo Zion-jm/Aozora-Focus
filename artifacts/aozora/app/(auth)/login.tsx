@@ -29,11 +29,7 @@ export default function LoginScreen() {
     mutation: {
       onSuccess: (data) => {
         login(data.token, data.user);
-        if (data.user.role === "admin") {
-          router.replace("/admin");
-        } else {
-          router.replace("/(tabs)");
-        }
+        router.replace("/(tabs)");
       },
       onError: (err: any) => {
         if (err?.status === 403) {
