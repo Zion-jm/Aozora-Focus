@@ -294,21 +294,7 @@ router.post("/auth/forgot-password/reset", async (req, res) => {
 
   sqlite.prepare("DELETE FROM otp_verifications WHERE verification_token = ?").run(verificationToken);
 
-  const token = generateToken(user.id);
-  res.json({
-    token,
-    user: {
-      id: user.id,
-      fullName: user.fullName,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      verificationStatus: user.verificationStatus,
-      isSuspended: user.isSuspended,
-      avatarUrl: user.avatarUrl,
-      createdAt: user.createdAt,
-    },
-  });
+  res.json({ message: "Password updated successfully." });
 });
 
 router.post("/auth/logout", (_req, res) => {

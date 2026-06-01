@@ -6,17 +6,15 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
-import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
-  const { login } = useAuth();
   const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<Step>(1);
@@ -97,12 +95,11 @@ export default function ForgotPasswordScreen() {
     }
     setIsLoading(true);
     try {
-      const data = await apiPost("/auth/forgot-password/reset", {
+      await apiPost("/auth/forgot-password/reset", {
         verificationToken,
         newPassword,
       });
-      login(data.token, data.user);
-      router.replace("/(tabs)");
+      setStep(4);
     } catch (e: any) {
       Alert.alert("Error", e.message);
     } finally {
@@ -345,12 +342,35 @@ export default function ForgotPasswordScreen() {
                   <ActivityIndicator color={colors.primaryForeground} />
                 ) : (
                   <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                    Save & Log In
+                    Save Password
                   </Text>
                 )}
               </TouchableOpacity>
             </View>
           </>
+        )}
+
+        {/* ── Step 4: Success ── */}
+        {step === 4 && (
+          <View style={styles.successContainer}>
+            <View style={[styles.successIcon, { backgroundColor: colors.primary + "18" }]}>
+              <Ionicons name="checkmark-circle" size={64} color={colors.primary} />
+            </View>
+            <Text style={[styles.successTitle, { color: colors.foreground }]}>
+              Password Changed!
+            </Text>
+            <Text style={[styles.successSubtitle, { color: colors.mutedForeground }]}>
+              Your password has been updated successfully. Please log in with your new password.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, styles.successBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+              onPress={() => router.replace("/(auth)/login")}
+            >
+              <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                Go to Login
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -428,4 +448,23 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   resendText: { fontSize: 14 },
+
+  successContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    gap: 16,
+  },
+  successIcon: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  successTitle: { fontSize: 26, fontWeight: "700", textAlign: "center" },
+  successSubtitle: { fontSize: 15, textAlign: "center", lineHeight: 22 },
+  successBtn: { alignSelf: "stretch", marginTop: 8 },
 });
