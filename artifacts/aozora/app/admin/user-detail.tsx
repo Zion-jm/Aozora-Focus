@@ -150,12 +150,12 @@ export default function AdminUserDetailScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.primary }]}>
+        <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="arrow-left" size={22} color="#fff" />
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>User Profile</Text>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Profile</Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
@@ -169,12 +169,12 @@ export default function AdminUserDetailScreen() {
   if (isError || !user) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.primary }]}>
+        <View style={[styles.header, { paddingTop: insets.top || 48, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="arrow-left" size={22} color="#fff" />
+            <Feather name="arrow-left" size={22} color={colors.foreground} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>User Profile</Text>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Profile</Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
@@ -196,26 +196,24 @@ export default function AdminUserDetailScreen() {
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top || 48, backgroundColor: colors.primary },
+          { paddingTop: insets.top || 48, backgroundColor: colors.background, borderBottomColor: colors.border },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color="#fff" />
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>User Profile</Text>
-          <Text style={styles.headerSub}>{user.fullName}</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>User Profile</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{user.fullName}</Text>
         </View>
         <TouchableOpacity
           style={[
             styles.suspendBtn,
             {
-              borderColor: user.isSuspended
-                ? "rgba(255,255,255,0.5)"
-                : "rgba(255,255,255,0.5)",
+              borderColor: colors.border,
               backgroundColor: user.isSuspended
-                ? "rgba(16,185,129,0.25)"
-                : "rgba(239,68,68,0.25)",
+                ? "#10b98120"
+                : "#ef444420",
             },
           ]}
           onPress={handleToggleSuspend}
@@ -224,7 +222,7 @@ export default function AdminUserDetailScreen() {
           <Text
             style={[
               styles.suspendBtnText,
-              { color: "#fff" },
+              { color: user.isSuspended ? "#10b981" : "#ef4444" },
             ]}
           >
             {user.isSuspended ? "Unsuspend" : "Suspend"}
@@ -560,6 +558,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingBottom: 18,
+    borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#fff" },

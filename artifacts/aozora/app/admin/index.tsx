@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -63,29 +62,25 @@ function NavCard({ icon, label, desc, onPress, colors, badge, color }: any) {
 export default function AdminDashboard() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const isDark = useColorScheme() === "dark";
-
   const { data, isLoading } = useAdminGetStats({
     query: { queryKey: getAdminGetStatsQueryKey() },
   });
   const s = data as any;
-
-  const headerBg = isDark ? "#0f172a" : colors.primary;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
         style={[
           styles.header,
-          { paddingTop: insets.top || 48, backgroundColor: headerBg },
+          { paddingTop: insets.top || 48, backgroundColor: colors.background, borderBottomColor: colors.border },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color="#fff" />
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Admin Panel</Text>
-          <Text style={styles.headerSub}>Aozora Dashboard</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Admin Panel</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Aozora Dashboard</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
@@ -176,6 +171,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingBottom: 18,
+    borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 20, fontWeight: "bold", color: "#fff" },

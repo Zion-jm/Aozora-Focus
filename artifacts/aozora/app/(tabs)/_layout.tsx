@@ -138,19 +138,7 @@ function ClassicTabLayout() {
             ),
         }}
       />
-      <Tabs.Screen
-        name="admin"
-        options={{
-          title: "Admin",
-          href: isAdmin ? undefined : null,
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="shield" tintColor={color} size={24} />
-            ) : (
-              <Feather name="shield" size={22} color={color} />
-            ),
-        }}
-      />
+      <Tabs.Screen name="admin" options={{ href: null }} />
     </Tabs>
   );
 }

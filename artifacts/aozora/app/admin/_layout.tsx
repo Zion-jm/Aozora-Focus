@@ -2,17 +2,14 @@ import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Platform } from "react-native";
 import { useAdminGetStats, getAdminGetStatsQueryKey } from "@workspace/api-client-react";
-
-const ADMIN_ACTIVE = "#a5b4fc";
-const ADMIN_INACTIVE = "rgba(148,163,184,0.4)";
-const ADMIN_BAR_BG = "#1a1740";
-const ADMIN_BORDER = "rgba(255,255,255,0.07)";
+import { useColors } from "@/hooks/useColors";
 
 function badge(n: number | undefined): number | undefined {
   return n && n > 0 ? n : undefined;
 }
 
 export default function AdminLayout() {
+  const colors = useColors();
   const { data } = useAdminGetStats({
     query: { queryKey: getAdminGetStatsQueryKey() },
   });
@@ -21,11 +18,11 @@ export default function AdminLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: ADMIN_ACTIVE,
-        tabBarInactiveTintColor: ADMIN_INACTIVE,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
-          backgroundColor: ADMIN_BAR_BG,
-          borderTopColor: ADMIN_BORDER,
+          backgroundColor: colors.background,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           elevation: 0,
           ...(Platform.OS === "web" ? { height: 60 } : {}),

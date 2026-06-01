@@ -103,6 +103,15 @@ export default function ProfileScreen() {
         ]}
       >
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
+        {user?.role === "admin" && (
+          <TouchableOpacity
+            onPress={() => router.push("/admin")}
+            style={styles.adminBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="shield" size={22} color={colors.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -256,7 +265,8 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { paddingHorizontal: 20, paddingBottom: 14 },
+  header: { paddingHorizontal: 20, paddingBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  adminBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 28, fontWeight: "800" },
   profileCard: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 24, alignItems: "center", gap: 8 },
   name: { fontSize: 22, fontWeight: "bold" },

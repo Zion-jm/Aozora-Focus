@@ -109,19 +109,20 @@ export default function TurnedDownListingsScreen() {
           styles.header,
           {
             paddingTop: insets.top || 48,
-            backgroundColor: colors.primary,
+            backgroundColor: colors.background,
+            borderBottomColor: colors.border,
           },
         ]}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Feather name="arrow-left" size={22} color="#fff" />
+          <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             Turned Down Listings
           </Text>
           {!isLoading && (
-            <Text style={styles.headerSub}>
+            <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
               {takenDown.length} {takenDown.length === 1 ? "listing" : "listings"} turned down
             </Text>
           )}
@@ -322,6 +323,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 18, fontWeight: "bold", color: "#fff" },
