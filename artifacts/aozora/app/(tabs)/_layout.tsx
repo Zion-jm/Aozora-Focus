@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
-import { Redirect, Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
@@ -138,18 +138,24 @@ function ClassicTabLayout() {
             ),
         }}
       />
-      <Tabs.Screen name="admin" options={{ href: null }} />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: "Admin",
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="shield" tintColor={color} size={24} />
+            ) : (
+              <Feather name="shield" size={22} color={color} />
+            ),
+        }}
+      />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
-  const { user } = useAuth();
-
-  if (user?.role === "admin") {
-    return <Redirect href="/admin" />;
-  }
-
   if (isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }
