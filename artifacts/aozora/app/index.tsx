@@ -1,23 +1,39 @@
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { Redirect } from "expo-router";
-import { useColors } from "@/hooks/useColors";
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const colors = useColors();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.title, { color: colors.primary }]}>Aozora</Text>
-        <Text style={[styles.tagline, { color: colors.mutedForeground }]}>Home, but smarter.</Text>
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+      <View style={styles.root}>
+        <LinearGradient
+          colors={["#0f0e1a", "#1e1b4b", "#3730a3"]}
+          style={StyleSheet.absoluteFillObject}
+          start={{ x: 0.15, y: 0 }}
+          end={{ x: 0.85, y: 1 }}
+        />
+        <View style={styles.logoShadow}>
+          <LinearGradient
+            colors={["#818cf8", "#4f46e5"]}
+            style={styles.logo}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Feather name="home" size={36} color="#fff" />
+          </LinearGradient>
+        </View>
       </View>
     );
   }
 
   if (isAuthenticated) {
+    if (user?.role === "admin") {
+      return <Redirect href="/admin" />;
+    }
     return <Redirect href="/(tabs)" />;
   }
 
@@ -25,17 +41,23 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  title: {
-    fontSize: 48,
-    fontWeight: "bold",
+  logoShadow: {
+    shadowColor: "#4f46e5",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 24,
+    elevation: 14,
   },
-  tagline: {
-    fontSize: 16,
-    marginTop: 8,
+  logo: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -1,0 +1,21 @@
+Please completely overhaul the application’s UI/UX to make it look professional, highly modern, and visually appealing. The current design, branding, and logo feel outdated and disconnected. We need a cohesive, uniform design system throughout the entire app. 
+
+Please implement the following specific changes:
+
+1. Brand & Aesthetic Overhaul:
+   - Replace the current logo with a modern, minimalist, and visually striking alternative.
+   - Redesign the landing page / starting view to be engaging and professional (using modern typography, clean layouts, and better whitespace or animation if possible.)
+   - Establish a uniform design system: all buttons, forms, input fields, tabs, and navigation elements must share the same modern aesthetic across every single page despite of tyhe role.
+
+2. Authentication:
+   - Simplify the login form: remove the phone number requirement. The form must only ask for an Email and Password. But still follow the overall aesthetics of the app. make the log in form visually appealing as it is the first page that a user could see.
+
+ 3. Role-Based Routing & Views:
+   - When an Admin logs in, they must be redirected automatically to a dedicated Admin Dashboard. Their primary view should look entirely different from what a standard User, Student, or Owner sees.
+   - However, maintain design uniformity: while the layout and features are specific to the Admin, the UI components (fonts, colors, buttons, cards) must still look like they belong to the same application.
+
+4. Admin Panel Architecture & Dashboard:
+   - Do not cram the entire admin panel onto a single page. 
+   - Restructure the admin view into an efficient, multi-page layout utilizing a clean sidebar navigation. Add more navigation button on the mainn view if possible instead of cramming it but make sure that it still follow the same aesthetics
+   - Break it down into professional sections (e.g., Dashboard overview with analytics widgets, User Management, Reports, and Settings).
+   - Use polished UI elements like cards, data tables with pagination, and crisp micro-interactions to give it an enterprise-grade, professional feel.

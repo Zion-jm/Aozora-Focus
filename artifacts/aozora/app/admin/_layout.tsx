@@ -1,0 +1,102 @@
+import { Tabs } from "expo-router";
+import { Feather } from "@expo/vector-icons";
+import { Platform } from "react-native";
+import { useAdminGetStats, getAdminGetStatsQueryKey } from "@workspace/api-client-react";
+
+const ADMIN_ACTIVE = "#a5b4fc";
+const ADMIN_INACTIVE = "rgba(148,163,184,0.4)";
+const ADMIN_BAR_BG = "#1a1740";
+const ADMIN_BORDER = "rgba(255,255,255,0.07)";
+
+function badge(n: number | undefined): number | undefined {
+  return n && n > 0 ? n : undefined;
+}
+
+export default function AdminLayout() {
+  const { data } = useAdminGetStats({
+    query: { queryKey: getAdminGetStatsQueryKey() },
+  });
+  const s = data as any;
+
+  return (
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: ADMIN_ACTIVE,
+        tabBarInactiveTintColor: ADMIN_INACTIVE,
+        tabBarStyle: {
+          backgroundColor: ADMIN_BAR_BG,
+          borderTopColor: ADMIN_BORDER,
+          borderTopWidth: 1,
+          elevation: 0,
+          ...(Platform.OS === "web" ? { height: 60 } : {}),
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "600",
+          marginBottom: Platform.OS === "ios" ? 0 : 4,
+        },
+        tabBarBadgeStyle: {
+          backgroundColor: "#ef4444",
+          fontSize: 10,
+          minWidth: 16,
+          height: 16,
+          lineHeight: 16,
+        },
+        headerShown: false,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Dashboard",
+          tabBarIcon: ({ color }) => (
+            <Feather name="grid" size={21} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="dorms"
+        options={{
+          title: "Listings",
+          tabBarBadge: badge(s?.pendingDorms),
+          tabBarIcon: ({ color }) => (
+            <Feather name="home" size={21} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="verifications"
+        options={{
+          title: "Verify",
+          tabBarBadge: badge(s?.pendingVerifications),
+          tabBarIcon: ({ color }) => (
+            <Feather name="shield" size={21} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="users"
+        options={{
+          title: "Users",
+          tabBarIcon: ({ color }) => (
+            <Feather name="users" size={21} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="reports"
+        options={{
+          title: "Reports",
+          tabBarBadge: badge(s?.pendingReports),
+          tabBarIcon: ({ color }) => (
+            <Feather name="flag" size={21} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="rejected-listings" options={{ href: null }} />
+      <Tabs.Screen name="suspended-users" options={{ href: null }} />
+      <Tabs.Screen name="support-tickets" options={{ href: null }} />
+      <Tabs.Screen name="user-detail" options={{ href: null }} />
+    </Tabs>
+  );
+}

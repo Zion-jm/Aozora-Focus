@@ -19,7 +19,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 import colors from "@/constants/colors";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
@@ -33,6 +32,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(auth)/register" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="admin" />
       <Stack.Screen name="dorm/[id]" />
       <Stack.Screen name="dorm/create" />
       <Stack.Screen name="appointment/[id]" />
@@ -42,12 +42,6 @@ function RootLayoutNav() {
       <Stack.Screen name="profile/my-dorms" />
       <Stack.Screen name="profile/reviews" />
       <Stack.Screen name="admin-conversation/[id]" />
-      <Stack.Screen name="admin/index" />
-      <Stack.Screen name="admin/users" />
-      <Stack.Screen name="admin/dorms" />
-      <Stack.Screen name="admin/verifications" />
-      <Stack.Screen name="admin/rejected-listings" />
-      <Stack.Screen name="admin/suspended-users" />
     </Stack>
   );
 }
