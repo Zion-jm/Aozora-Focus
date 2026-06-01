@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { existsSync, readdirSync, copyFileSync, mkdirSync } from "fs";
+import { existsSync, readdirSync, copyFileSync, mkdirSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -17,7 +17,6 @@ const SQLITE3_DIR = sqliteDirs.length > 0
 
 const BINARY = SQLITE3_DIR ? resolve(SQLITE3_DIR, "build/Release/better_sqlite3.node") : null;
 
-// Also check a cached copy in the workspace (survives across restarts)
 const CACHE_DIR = resolve(WORKSPACE_ROOT, ".cache/better-sqlite3");
 const CACHED_BINARY = resolve(CACHE_DIR, "better_sqlite3.node");
 
@@ -36,7 +35,6 @@ function needsRebuild() {
     return false;
   }
 
-  // Check if binary exists and loads
   if (existsSync(BINARY) && tryLoad(BINARY)) {
     return false;
   }
@@ -58,42 +56,97 @@ function needsRebuild() {
   return true;
 }
 
+function buildNative() {
+  const BUILD_DIR = resolve(SQLITE3_DIR, "build");
+  const nodeVersion = process.versions.node;
+  const NODE_INC = resolve(WORKSPACE_ROOT, `.cache/node-gyp/${nodeVersion}/include/node`);
+
+  const SQLITE3_GEN_DIR = resolve(BUILD_DIR, "Release/obj/gen/sqlite3");
+  const SQLITE3_C = resolve(SQLITE3_GEN_DIR, "sqlite3.c");
+  const SQLITE3_O = resolve(BUILD_DIR, "Release/obj.target/sqlite3/gen/sqlite3/sqlite3.o");
+  const SQLITE3_A = resolve(BUILD_DIR, "Release/obj.target/deps/sqlite3.a");
+  const BS3_O = resolve(BUILD_DIR, "Release/obj.target/better_sqlite3/src/better_sqlite3.o");
+  const BS3_CPP = resolve(SQLITE3_DIR, "src/better_sqlite3.cpp");
+
+  mkdirSync(resolve(BUILD_DIR, "Release/obj.target/sqlite3/gen/sqlite3"), { recursive: true });
+  mkdirSync(resolve(BUILD_DIR, "Release/obj.target/deps"), { recursive: true });
+  mkdirSync(resolve(BUILD_DIR, "Release/obj.target/better_sqlite3/src"), { recursive: true });
+  mkdirSync(resolve(BUILD_DIR, "Release"), { recursive: true });
+
+  // Step 1: Copy sqlite3 source to gen dir (runs the locate_sqlite3 node action)
+  if (!existsSync(SQLITE3_C)) {
+    console.log("[ensure-sqlite] Copying sqlite3 source...");
+    execSync(`node copy.js "${SQLITE3_GEN_DIR}" ""`, {
+      cwd: resolve(SQLITE3_DIR, "deps"),
+      stdio: "inherit",
+    });
+  }
+
+  // Step 2: Compile sqlite3.c
+  console.log("[ensure-sqlite] Compiling sqlite3.c...");
+  execSync(`gcc -o "${SQLITE3_O}" "${SQLITE3_C}" \
+    -DNODE_GYP_MODULE_NAME=sqlite3 -DUSING_UV_SHARED=1 -DUSING_V8_SHARED=1 \
+    -DV8_DEPRECATION_WARNINGS=1 -D_GLIBCXX_USE_CXX11_ABI=1 \
+    -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D__STDC_FORMAT_MACROS \
+    -DHAVE_INT16_T=1 -DHAVE_INT32_T=1 -DHAVE_INT8_T=1 -DHAVE_STDINT_H=1 \
+    -DHAVE_UINT16_T=1 -DHAVE_UINT32_T=1 -DHAVE_UINT8_T=1 -DHAVE_USLEEP=1 \
+    -DSQLITE_DEFAULT_CACHE_SIZE=-16000 -DSQLITE_DEFAULT_FOREIGN_KEYS=1 \
+    -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=1 \
+    -DSQLITE_DQS=0 -DSQLITE_ENABLE_COLUMN_METADATA \
+    -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_ENABLE_DESERIALIZE \
+    -DSQLITE_ENABLE_FTS3 -DSQLITE_ENABLE_FTS3_PARENTHESIS \
+    -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS5 \
+    -DSQLITE_ENABLE_GEOPOLY -DSQLITE_ENABLE_JSON1 \
+    -DSQLITE_ENABLE_MATH_FUNCTIONS -DSQLITE_ENABLE_PERCENTILE \
+    -DSQLITE_ENABLE_RTREE -DSQLITE_ENABLE_STAT4 \
+    -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT \
+    -DSQLITE_LIKE_DOESNT_MATCH_BLOBS -DSQLITE_OMIT_DEPRECATED \
+    -DSQLITE_OMIT_PROGRESS_CALLBACK -DSQLITE_OMIT_SHARED_CACHE \
+    -DSQLITE_OMIT_TCL_VARIABLE -DSQLITE_SOUNDEX \
+    -DSQLITE_THREADSAFE=2 -DSQLITE_TRACE_SIZE_LIMIT=32 \
+    -DSQLITE_USE_URI=0 -DNDEBUG \
+    -I"${NODE_INC}" -I"${NODE_INC}/../src" \
+    -I"${NODE_INC}/../deps/uv/include" \
+    -I"${NODE_INC}/../deps/v8/include" \
+    -I"${SQLITE3_GEN_DIR}" \
+    -fPIC -pthread -std=c99 -w -m64 -O3 -c`, { stdio: "inherit" });
+
+  // Step 3: Archive
+  console.log("[ensure-sqlite] Archiving sqlite3.a...");
+  execSync(`ar crs "${SQLITE3_A}" "${SQLITE3_O}"`, { stdio: "inherit" });
+
+  // Step 4: Compile better_sqlite3.cpp
+  console.log("[ensure-sqlite] Compiling better_sqlite3.cpp...");
+  execSync(`g++ -o "${BS3_O}" "${BS3_CPP}" \
+    -DNODE_GYP_MODULE_NAME=better_sqlite3 \
+    -DUSING_UV_SHARED=1 -DUSING_V8_SHARED=1 -DV8_DEPRECATION_WARNINGS=1 \
+    -D_GLIBCXX_USE_CXX11_ABI=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE \
+    -D__STDC_FORMAT_MACROS -DNDEBUG \
+    -I"${NODE_INC}" -I"${NODE_INC}/../src" \
+    -I"${NODE_INC}/../deps/uv/include" \
+    -I"${NODE_INC}/../deps/v8/include" \
+    -I"${resolve(SQLITE3_DIR, "deps")}" \
+    -I"${resolve(SQLITE3_DIR, "node_modules")}" \
+    -fPIC -pthread -Wall -m64 -O3 -std=c++17 -c`, { stdio: "inherit" });
+
+  // Step 5: Link
+  console.log("[ensure-sqlite] Linking better_sqlite3.node...");
+  execSync(`g++ -shared -fPIC -nostartfiles -m64 \
+    -o "${BINARY}" "${BS3_O}" "${SQLITE3_A}" -pthread`, { stdio: "inherit" });
+
+  // Cache the binary
+  try {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    copyFileSync(BINARY, CACHED_BINARY);
+    console.log("[ensure-sqlite] Binary cached for future restarts.");
+  } catch {
+    // non-fatal
+  }
+}
+
 if (needsRebuild()) {
   console.log("[ensure-sqlite] Native binding missing or stale — rebuilding better-sqlite3...");
-
-  // Use node-gyp via npx for the rebuild
-  const nodeGypPaths = [
-    resolve(WORKSPACE_ROOT, "node_modules/.bin/node-gyp"),
-    resolve(WORKSPACE_ROOT, "node_modules/.pnpm/node-gyp@10.1.0/node_modules/node-gyp/bin/node-gyp.js"),
-  ];
-
-  let built = false;
-  for (const ngPath of nodeGypPaths) {
-    if (existsSync(ngPath)) {
-      try {
-        execSync(`node "${ngPath}" rebuild --release`, {
-          stdio: "inherit",
-          cwd: SQLITE3_DIR,
-        });
-        built = true;
-        break;
-      } catch {
-        // try next
-      }
-    }
-  }
-
-  if (!built) {
-    // Fallback to npm run build-release
-    try {
-      execSync("npm run build-release", {
-        stdio: "inherit",
-        cwd: SQLITE3_DIR,
-      });
-    } catch {
-      // build-release may exit non-zero on cleanup step even on success
-    }
-  }
+  buildNative();
 
   if (!existsSync(BINARY)) {
     console.error("[ensure-sqlite] ERROR: Rebuild failed — binary still missing at", BINARY);
@@ -103,15 +156,6 @@ if (needsRebuild()) {
   if (!tryLoad(BINARY)) {
     console.error("[ensure-sqlite] ERROR: Binary built but cannot be loaded.");
     process.exit(1);
-  }
-
-  // Cache the binary for future restarts
-  try {
-    mkdirSync(CACHE_DIR, { recursive: true });
-    copyFileSync(BINARY, CACHED_BINARY);
-    console.log("[ensure-sqlite] Binary cached for future restarts.");
-  } catch {
-    // non-fatal
   }
 
   console.log("[ensure-sqlite] Rebuild complete.");
