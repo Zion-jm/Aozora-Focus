@@ -1,5 +1,5 @@
 guessImports = false
-modules = ["nodejs-20", "web", "bash"]
+modules = ["nodejs-20", "web", "python-3.12"]
 
 [deployment]
 router = "application"
@@ -84,3 +84,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 PORT = "8080"
+EXPO_PUBLIC_DOMAIN = "ae99a48c-f8d0-4c85-8bd0-335e890392c9-00-1pujxvnji6tvy.pike.replit.dev"
