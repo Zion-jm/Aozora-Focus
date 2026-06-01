@@ -3,6 +3,7 @@ import { db, sqlite } from "../db/index";
 import { conversations, messages, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { createNotification } from "../lib/notifications";
 
 const router = Router();
 
@@ -303,6 +304,19 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
   // Auto-unarchive for both participants when a message is sent
   sqlite.prepare("UPDATE conversations SET student_archived_at = NULL, owner_archived_at = NULL WHERE id = ?").run(convId);
 
+  // Notify the other participant
+  const recipientId = conv.studentId === userId ? conv.ownerId : conv.studentId;
+  const sender = await db.select().from(users).where(eq(users.id, userId)).get();
+  const dorm = await db.select().from(dorms).where(eq(dorms.id, conv.dormId)).get();
+  createNotification({
+    userId: recipientId,
+    type: "new_message",
+    title: `New message from ${sender?.fullName ?? "Someone"}`,
+    body: dorm ? `${dorm.name}: ${content.length > 60 ? content.slice(0, 60) + "…" : content}` : content.length > 80 ? content.slice(0, 80) + "…" : content,
+    relatedId: convId,
+    relatedType: "conversation",
+  });
+
   res.status(201).json(result[0]);
 });
 
@@ -600,6 +614,33 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
   sqlite.prepare("UPDATE admin_conversations SET updated_at = ?, admin_archived_at = NULL, user_archived_at = NULL WHERE id = ?").run(nowTs, convId);
 
   const msg = sqlite.prepare("SELECT * FROM admin_messages WHERE id = ?").get(result.lastInsertRowid) as any;
+
+  // Notify the other participant
+  const recipientId = conv.admin_id === userId ? conv.user_id : conv.admin_id;
+  const senderUser = sqlite.prepare("SELECT full_name FROM users WHERE id = ?").get(userId) as any;
+  const convType = conv.conversation_type || "warning";
+  if (convType === "support") {
+    createNotification({
+      userId: recipientId,
+      type: "admin_message",
+      title: conv.admin_id === userId ? "Admin replied to your support ticket" : `New support message from ${senderUser?.full_name ?? "You"}`,
+      body: content.length > 80 ? content.slice(0, 80) + "…" : content,
+      relatedId: convId,
+      relatedType: "conversation",
+    });
+  } else if (convType === "warning") {
+    // Warning is one-way (admin → user only); user cannot reply, so only notify user
+    if (conv.admin_id === userId) {
+      createNotification({
+        userId: recipientId,
+        type: "admin_message",
+        title: "New message from Admin",
+        body: content.length > 80 ? content.slice(0, 80) + "…" : content,
+        relatedId: convId,
+        relatedType: "conversation",
+      });
+    }
+  }
 
   res.status(201).json({
     id: msg.id,

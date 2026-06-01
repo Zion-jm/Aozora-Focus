@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { createNotification } from "../lib/notifications";
 
 const router = Router();
 
@@ -268,6 +269,15 @@ router.post("/admin/reports/:id/warn", requireAuth, requireRole("admin"), (req, 
     .prepare("SELECT * FROM admin_messages WHERE id = ?")
     .get(msgResult.lastInsertRowid) as any;
 
+  createNotification({
+    userId: targetUserId,
+    type: "admin_warning",
+    title: "⚠️ Official Warning Issued",
+    body: `You received an official warning regarding: ${report.reason}. Tap to view the message.`,
+    relatedId: conv.id,
+    relatedType: "conversation",
+  });
+
   res.status(201).json({
     conversationId: conv.id,
     targetUserId,
@@ -309,6 +319,8 @@ router.post("/admin/reports/:id/takedown", requireAuth, requireRole("admin"), (r
     return;
   }
 
+  const ownerId = sqlite.prepare("SELECT owner_id FROM dorms WHERE id = ?").get(dorm.id) as any;
+
   sqlite
     .prepare("UPDATE dorms SET status = 'taken_down', updated_at = ? WHERE id = ?")
     .run(new Date().toISOString(), dorm.id);
@@ -318,6 +330,17 @@ router.post("/admin/reports/:id/takedown", requireAuth, requireRole("admin"), (r
       "UPDATE reports SET status = 'reviewed', taken_down_at = datetime('now'), updated_at = datetime('now') WHERE id = ?"
     )
     .run(reportId);
+
+  if (ownerId?.owner_id) {
+    createNotification({
+      userId: ownerId.owner_id,
+      type: "dorm_taken_down",
+      title: "Listing Taken Down",
+      body: `Your listing "${dorm.name}" has been taken down by an admin due to a reported violation.`,
+      relatedId: dorm.id,
+      relatedType: "dorm",
+    });
+  }
 
   res.json({
     dormId: dorm.id,
@@ -365,6 +388,13 @@ router.post("/admin/reports/:id/suspend", requireAuth, requireRole("admin"), (re
       "UPDATE reports SET status = 'reviewed', updated_at = datetime('now') WHERE id = ?"
     )
     .run(reportId);
+
+  createNotification({
+    userId: targetUserId,
+    type: "account_suspended",
+    title: "Account Suspended",
+    body: "Your account has been suspended due to a reported violation of our community guidelines. If you believe this is an error, please contact support.",
+  });
 
   res.json({
     targetUserId,

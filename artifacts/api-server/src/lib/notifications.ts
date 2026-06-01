@@ -9,10 +9,17 @@ export type NotificationType =
   | "appointment_no_show"
   | "dorm_approved"
   | "dorm_rejected"
+  | "dorm_taken_down"
   | "id_verified"
   | "id_rejected"
   | "account_suspended"
-  | "account_unsuspended";
+  | "account_unsuspended"
+  | "admin_warning"
+  | "new_message"
+  | "admin_message"
+  | "support_ticket_resolved"
+  | "dorm_review_received"
+  | "user_review_received";
 
 export function createNotification({
   userId,

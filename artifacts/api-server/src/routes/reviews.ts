@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { sqlite } from "../db/index";
+import { createNotification } from "../lib/notifications";
 
 const router = Router();
 
@@ -105,6 +106,21 @@ router.post("/dorms/:dormId/reviews", requireAuth, (req, res) => {
   sqlite.prepare(
     "UPDATE dorms SET average_rating = ?, total_reviews = ? WHERE id = ?"
   ).run(stats.avg, stats.count, dormId);
+
+  // Notify the dorm owner
+  const dormRow = sqlite.prepare("SELECT owner_id, name FROM dorms WHERE id = ?").get(dormId) as any;
+  if (dormRow?.owner_id) {
+    const reviewer = sqlite.prepare("SELECT full_name FROM users WHERE id = ?").get(userId) as any;
+    const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+    createNotification({
+      userId: dormRow.owner_id,
+      type: "dorm_review_received",
+      title: `New review on ${dormRow.name}`,
+      body: `${reviewer?.full_name ?? "A student"} left a ${stars} review on your listing.`,
+      relatedId: dormId,
+      relatedType: "dorm",
+    });
+  }
 
   res.status(201).json({ success: true });
 });
@@ -222,6 +238,16 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
       "UPDATE users SET average_rating = ?, total_reviews = ? WHERE id = ?"
     ).run(stats.avg, stats.count, targetId);
   } catch { /* column might not exist */ }
+
+  // Notify the reviewed student
+  const ownerRow = sqlite.prepare("SELECT full_name FROM users WHERE id = ?").get(reviewerId) as any;
+  const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+  createNotification({
+    userId: targetId,
+    type: "user_review_received",
+    title: "You received a new review",
+    body: `${ownerRow?.full_name ?? "An owner"} left you a ${stars} review.`,
+  });
 
   res.status(201).json({ success: true });
 });

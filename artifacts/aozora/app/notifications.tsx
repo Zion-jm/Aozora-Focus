@@ -41,6 +41,8 @@ function notificationIcon(type: Notification["type"]): { name: React.ComponentPr
       return { name: "home", color: "#10b981" };
     case "dorm_rejected":
       return { name: "home", color: "#ef4444" };
+    case "dorm_taken_down":
+      return { name: "alert-triangle", color: "#ef4444" };
     case "id_verified":
       return { name: "shield", color: "#10b981" };
     case "id_rejected":
@@ -49,6 +51,18 @@ function notificationIcon(type: Notification["type"]): { name: React.ComponentPr
       return { name: "lock", color: "#ef4444" };
     case "account_unsuspended":
       return { name: "unlock", color: "#10b981" };
+    case "admin_warning":
+      return { name: "alert-octagon", color: "#f59e0b" };
+    case "new_message":
+      return { name: "message-circle", color: "#4f46e5" };
+    case "admin_message":
+      return { name: "message-square", color: "#6366f1" };
+    case "support_ticket_resolved":
+      return { name: "check-square", color: "#10b981" };
+    case "dorm_review_received":
+      return { name: "star", color: "#f59e0b" };
+    case "user_review_received":
+      return { name: "star", color: "#f59e0b" };
     default:
       return { name: "bell", color: "#4f46e5" };
   }
@@ -165,6 +179,8 @@ export default function NotificationsScreen() {
         router.push(`/appointment/${n.relatedId}` as any);
       } else if (n.relatedType === "dorm" && n.relatedId) {
         router.push(`/dorm/${n.relatedId}` as any);
+      } else if (n.relatedType === "conversation" && n.relatedId) {
+        router.push(`/chat/${n.relatedId}` as any);
       }
     },
     [markOneRead]
