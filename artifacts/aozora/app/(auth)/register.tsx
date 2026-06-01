@@ -300,8 +300,8 @@ export default function RegisterScreen() {
                     onPress={() => setShowPassword((v) => !v)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Feather
-                      name={showPassword ? "eye-off" : "eye"}
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
                       size={18}
                       color={colors.mutedForeground}
                     />
@@ -339,8 +339,8 @@ export default function RegisterScreen() {
                     onPress={() => setShowConfirmPassword((v) => !v)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Feather
-                      name={showConfirmPassword ? "eye-off" : "eye"}
+                    <Ionicons
+                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                       size={18}
                       color={colors.mutedForeground}
                     />
