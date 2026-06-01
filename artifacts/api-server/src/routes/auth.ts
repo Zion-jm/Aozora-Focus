@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import dns from "dns/promises";
 import { db, sqlite } from "../db/index";
 import { users } from "../db/schema";
 import { eq, or } from "drizzle-orm";
@@ -9,7 +10,17 @@ import { sendOtpEmail } from "../lib/mailer";
 
 const router = Router();
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+async function isEmailDomainValid(email: string): Promise<boolean> {
+  try {
+    const domain = email.split("@")[1];
+    const records = await dns.resolveMx(domain);
+    return records.length > 0;
+  } catch {
+    return false;
+  }
+}
 
 // POST /auth/send-otp — generate and email a 6-digit OTP to the given email address
 router.post("/auth/send-otp", async (req, res) => {
@@ -22,7 +33,13 @@ router.post("/auth/send-otp", async (req, res) => {
   const normalized = contact.trim().toLowerCase();
 
   if (!EMAIL_RE.test(normalized)) {
-    res.status(400).json({ error: "Validation error", message: "Please enter a valid email address." });
+    res.status(400).json({ error: "Validation error", message: "Please enter a valid email address (e.g. yourname@gmail.com)." });
+    return;
+  }
+
+  const domainValid = await isEmailDomainValid(normalized);
+  if (!domainValid) {
+    res.status(400).json({ error: "Validation error", message: "This email address doesn't look real. Please check and try again." });
     return;
   }
 
