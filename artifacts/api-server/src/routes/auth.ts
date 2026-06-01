@@ -9,6 +9,8 @@ import { sendOtpEmail } from "../lib/mailer";
 
 const router = Router();
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // POST /auth/send-otp — generate and email a 6-digit OTP to the given email address
 router.post("/auth/send-otp", async (req, res) => {
   const { contact } = req.body;
@@ -19,8 +21,14 @@ router.post("/auth/send-otp", async (req, res) => {
 
   const normalized = contact.trim().toLowerCase();
 
-  if (!normalized.includes("@")) {
+  if (!EMAIL_RE.test(normalized)) {
     res.status(400).json({ error: "Validation error", message: "Please enter a valid email address." });
+    return;
+  }
+
+  const existing = await db.select().from(users).where(eq(users.email, normalized)).get();
+  if (existing) {
+    res.status(400).json({ error: "Validation error", message: "An account with this email already exists. Please log in instead." });
     return;
   }
 

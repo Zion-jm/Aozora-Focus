@@ -45,10 +45,17 @@ export default function RegisterScreen() {
     return data;
   };
 
+  const isValidEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
   const handleSendOtp = async () => {
     const trimmed = contact.trim();
     if (!trimmed) {
-      Alert.alert("Required", "Please enter your email or phone number.");
+      Alert.alert("Required", "Please enter your email address.");
+      return;
+    }
+    if (!isValidEmail(trimmed)) {
+      Alert.alert("Invalid Email", "Please enter a valid email address (e.g. yourname@gmail.com).");
       return;
     }
     setIsLoading(true);
