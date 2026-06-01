@@ -24,8 +24,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passFocused, setPassFocused] = useState(false);
 
   const { mutate: doLogin, isPending } = useLogin({
     mutation: {
@@ -69,150 +67,145 @@ export default function LoginScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        behavior="padding"
       >
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: Math.max(insets.top, 20) + 24,
-            paddingBottom: Math.max(insets.bottom, 16) + 24,
-          },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.brand}>
-          <View style={styles.logoShadow}>
-            <LinearGradient
-              colors={["#818cf8", "#4f46e5"]}
-              style={styles.logoGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Feather name="home" size={30} color="#fff" />
-            </LinearGradient>
-          </View>
-          <Text style={styles.brandName}>Aozora</Text>
-          <Text style={styles.brandTagline}>Home, but smarter.</Text>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Welcome back</Text>
-            <Text style={styles.cardSubtitle}>Sign in to your account</Text>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: Math.max(insets.top, 20) + 24,
+              paddingBottom: Math.max(insets.bottom, 16) + 24,
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.brand}>
+            <View style={styles.logoShadow}>
+              <LinearGradient
+                colors={["#818cf8", "#4f46e5"]}
+                style={styles.logoGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Feather name="home" size={30} color="#fff" />
+              </LinearGradient>
+            </View>
+            <Text style={styles.brandName}>Aozora</Text>
+            <Text style={styles.brandTagline}>Home, but smarter.</Text>
           </View>
 
-          <View style={styles.fields}>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email address</Text>
-              <View style={[styles.inputRow, emailFocused && styles.inputRowFocused]}>
-                <Feather
-                  name="mail"
-                  size={17}
-                  color={emailFocused ? "#4f46e5" : "#94a3b8"}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="you@example.com"
-                  placeholderTextColor="#94a3b8"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoCorrect={false}
-                  onFocus={() => setEmailFocused(true)}
-                  onBlur={() => setEmailFocused(false)}
-                />
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Welcome back</Text>
+              <Text style={styles.cardSubtitle}>Sign in to your account</Text>
+            </View>
+
+            <View style={styles.fields}>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>Email address</Text>
+                <View style={styles.inputRow}>
+                  <Feather
+                    name="mail"
+                    size={17}
+                    color="#94a3b8"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="you@example.com"
+                    placeholderTextColor="#94a3b8"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <View style={styles.labelRow}>
+                  <Text style={styles.label}>Password</Text>
+                  <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password")}>
+                    <Text style={styles.forgotLink}>Forgot password?</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.inputRow}>
+                  <Feather
+                    name="lock"
+                    size={17}
+                    color="#94a3b8"
+                    style={styles.inputIcon}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94a3b8"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((v) => !v)}
+                    style={styles.eyeBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={19}
+                      color="#94a3b8"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.label}>Password</Text>
-                <TouchableOpacity onPress={() => router.push("/(auth)/forgot-password")}>
-                  <Text style={styles.forgotLink}>Forgot password?</Text>
+            <TouchableOpacity
+              style={[styles.signInBtn, isPending && styles.signInBtnDisabled]}
+              onPress={handleLogin}
+              disabled={isPending}
+              activeOpacity={0.88}
+            >
+              <LinearGradient
+                colors={["#4f46e5", "#4338ca"]}
+                style={styles.signInGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {isPending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.signInText}>Sign In</Text>
+                    <Feather name="arrow-right" size={18} color="#fff" />
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.registerRow}>
+              <Text style={styles.registerText}>Don't have an account? </Text>
+              <Link href="/(auth)/register" asChild>
+                <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.registerLink}>Create one</Text>
                 </TouchableOpacity>
-              </View>
-              <View style={[styles.inputRow, passFocused && styles.inputRowFocused]}>
-                <Feather
-                  name="lock"
-                  size={17}
-                  color={passFocused ? "#4f46e5" : "#94a3b8"}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#94a3b8"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  onFocus={() => setPassFocused(true)}
-                  onBlur={() => setPassFocused(false)}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword((v) => !v)}
-                  style={styles.eyeBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={19}
-                    color="#94a3b8"
-                  />
-                </TouchableOpacity>
-              </View>
+              </Link>
             </View>
           </View>
 
           <TouchableOpacity
-            style={[styles.signInBtn, isPending && styles.signInBtnDisabled]}
-            onPress={handleLogin}
-            disabled={isPending}
-            activeOpacity={0.88}
+            style={styles.supportBtn}
+            onPress={() => router.push("/help-center")}
+            activeOpacity={0.7}
           >
-            <LinearGradient
-              colors={["#4f46e5", "#4338ca"]}
-              style={styles.signInGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              {isPending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Text style={styles.signInText}>Sign In</Text>
-                  <Feather name="arrow-right" size={18} color="#fff" />
-                </>
-              )}
-            </LinearGradient>
+            <Feather name="life-buoy" size={14} color="rgba(255,255,255,0.45)" />
+            <Text style={styles.supportText}>
+              Need help or suspended? Contact Support
+            </Text>
           </TouchableOpacity>
-
-          <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <Link href="/(auth)/register" asChild>
-              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={styles.registerLink}>Create one</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.supportBtn}
-          onPress={() => router.push("/help-center")}
-          activeOpacity={0.7}
-        >
-          <Feather name="life-buoy" size={14} color="rgba(255,255,255,0.45)" />
-          <Text style={styles.supportText}>
-            Need help or suspended? Contact Support
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
@@ -330,22 +323,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 52,
   },
-  inputRowFocused: {
-    borderColor: "#4f46e5",
-    backgroundColor: "#fdfcff",
-    shadowColor: "#4f46e5",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 2,
-  },
   inputIcon: { marginRight: 10 },
   input: {
     flex: 1,
     fontSize: 15,
     color: "#0f172a",
     paddingVertical: Platform.OS === "web" ? 14 : 12,
-    // NOTE: do NOT add padding:0 here — it overrides paddingVertical on web
   },
   eyeBtn: { padding: 4, marginLeft: 4 },
 
