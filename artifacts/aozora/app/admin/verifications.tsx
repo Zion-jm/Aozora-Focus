@@ -114,20 +114,6 @@ export default function AdminVerificationsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={[styles.filterBar, { borderBottomColor: colors.border }]}>
-        {FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterBtn, { borderRadius: 20 }, filter === f && { backgroundColor: colors.primary }]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterText, { color: filter === f ? "#fff" : colors.mutedForeground }]}>
-              {STATUS_LABEL[f]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       <View style={[styles.searchWrap, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
           <Feather name="search" size={16} color={colors.mutedForeground} />
@@ -146,6 +132,20 @@ export default function AdminVerificationsScreen() {
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      <View style={[styles.filterBar, { borderBottomColor: colors.border }]}>
+        {FILTERS.map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterBtn, { borderRadius: 20 }, filter === f && { backgroundColor: colors.primary }]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={[styles.filterText, { color: filter === f ? "#fff" : colors.mutedForeground }]}>
+              {STATUS_LABEL[f]}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {isLoading ? (
