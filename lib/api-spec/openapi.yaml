@@ -24,6 +24,8 @@ tags:
     description: Admin operations
   - name: users
     description: User profile operations
+  - name: notifications
+    description: In-app notification operations
 
 paths:
   /healthz:
@@ -803,6 +805,67 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminStats"
 
+  # --- NOTIFICATIONS ---
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get current user's notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsListResponse"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Success
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark one notification as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+
+  /notifications/{id}:
+    delete:
+      operationId: deleteNotification
+      tags: [notifications]
+      summary: Delete a notification
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Success
+
 components:
   schemas:
     HealthStatus:
@@ -1452,3 +1515,40 @@ components:
         pendingAppointments:
           type: integer
       required: [totalUsers, totalStudents, totalOwners, pendingVerifications, totalDorms, pendingDorms, approvedDorms, totalAppointments, pendingAppointments]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [appointment_request, appointment_approved, appointment_rejected, appointment_cancelled, appointment_completed, appointment_no_show, dorm_approved, dorm_rejected, id_verified, id_rejected, account_suspended, account_unsuspended]
+        title:
+          type: string
+        body:
+          type: string
+        isRead:
+          type: boolean
+        relatedId:
+          type: integer
+          nullable: true
+        relatedType:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, userId, type, title, body, isRead, createdAt]
+
+    NotificationsListResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        unreadCount:
+          type: integer
+      required: [notifications, unreadCount]

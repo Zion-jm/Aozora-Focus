@@ -127,6 +127,18 @@ export const userReviews = sqliteTable("user_reviews", {
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });
 
+export const notifications = sqliteTable("notifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
+  relatedId: integer("related_id"),
+  relatedType: text("related_type"),
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
 export const reports = sqliteTable("reports", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   reporterId: integer("reporter_id").notNull().references(() => users.id),

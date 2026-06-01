@@ -3,6 +3,7 @@ import { db } from "../db/index";
 import { users, verificationRecords, dorms, appointments } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
+import { createNotification } from "../lib/notifications";
 
 const router = Router();
 
@@ -111,6 +112,16 @@ router.put("/admin/users/:userId/status", requireAuth, requireRole("admin"), asy
     res.status(404).json({ error: "Not found", message: "User not found" });
     return;
   }
+
+  createNotification({
+    userId,
+    type: isSuspended ? "account_suspended" : "account_unsuspended",
+    title: isSuspended ? "Account Suspended" : "Account Reinstated",
+    body: isSuspended
+      ? "Your account has been suspended by an admin. Contact support if you believe this is a mistake."
+      : "Your account suspension has been lifted. You can now use Aozora normally.",
+  });
+
   res.json({
     id: user.id,
     fullName: user.fullName,
@@ -161,8 +172,20 @@ router.put("/admin/verifications/:verificationId", requireAuth, requireRole("adm
 
   if (status === "approved") {
     await db.update(users).set({ verificationStatus: "verified" }).where(eq(users.id, verif.userId));
+    createNotification({
+      userId: verif.userId,
+      type: "id_verified",
+      title: "Identity Verified ✓",
+      body: "Your ID has been verified. You now have full access to all Aozora features.",
+    });
   } else if (status === "rejected") {
     await db.update(users).set({ verificationStatus: "rejected" }).where(eq(users.id, verif.userId));
+    createNotification({
+      userId: verif.userId,
+      type: "id_rejected",
+      title: "ID Verification Rejected",
+      body: `Your ID verification was rejected.${reviewNote ? ` Reason: ${reviewNote}` : " Please re-submit with a clearer photo."}`,
+    });
   }
 
   const u = await db.select().from(users).where(eq(users.id, verif.userId)).get();
@@ -197,6 +220,27 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
   }).where(eq(dorms.id, dormId)).returning();
 
   const dorm = result[0]!;
+
+  if (status === "approved") {
+    createNotification({
+      userId: dorm.ownerId,
+      type: "dorm_approved",
+      title: "Listing Approved! 🎉",
+      body: `Your listing "${dorm.name}" has been approved and is now live on Aozora.`,
+      relatedId: dorm.id,
+      relatedType: "dorm",
+    });
+  } else if (status === "rejected") {
+    createNotification({
+      userId: dorm.ownerId,
+      type: "dorm_rejected",
+      title: "Listing Rejected",
+      body: `Your listing "${dorm.name}" was not approved.${note ? ` Reason: ${note}` : " Please update it and resubmit."}`,
+      relatedId: dorm.id,
+      relatedType: "dorm",
+    });
+  }
+
   res.json({ ...dorm, amenities: JSON.parse(dorm.amenities || "[]") });
 });
 

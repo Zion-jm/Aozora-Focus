@@ -472,3 +472,37 @@ export const AdminGetDormsStatus = {
   rejected: 'rejected',
 } as const;
 
+
+export type NotificationItemType = typeof NotificationItemType[keyof typeof NotificationItemType];
+
+export const NotificationItemType = {
+  appointment_request: 'appointment_request',
+  appointment_approved: 'appointment_approved',
+  appointment_rejected: 'appointment_rejected',
+  appointment_cancelled: 'appointment_cancelled',
+  appointment_completed: 'appointment_completed',
+  appointment_no_show: 'appointment_no_show',
+  dorm_approved: 'dorm_approved',
+  dorm_rejected: 'dorm_rejected',
+  id_verified: 'id_verified',
+  id_rejected: 'id_rejected',
+  account_suspended: 'account_suspended',
+  account_unsuspended: 'account_unsuspended',
+} as const;
+
+export type Notification = {
+  id: number;
+  userId: number;
+  type: NotificationItemType;
+  title: string;
+  body: string;
+  isRead: boolean;
+  relatedId?: number | null;
+  relatedType?: string | null;
+  createdAt: string;
+};
+
+export type NotificationsListResponse = {
+  notifications: Notification[];
+  unreadCount: number;
+};
