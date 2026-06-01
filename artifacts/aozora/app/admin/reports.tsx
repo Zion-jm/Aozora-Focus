@@ -454,21 +454,21 @@ export default function AdminReportsScreen() {
       </View>
 
       {/* Filter tabs */}
-      <View style={[styles.filterRow, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+      <View style={[styles.filterBar, { borderBottomColor: colors.border }]}>
         {FILTERS.map((f) => (
           <TouchableOpacity
             key={f}
             style={[
-              styles.filterTab,
-              filter === f && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
+              styles.filterBtn,
+              { borderRadius: 20 },
+              filter === f && { backgroundColor: colors.primary },
             ]}
             onPress={() => setFilter(f)}
           >
             <Text
               style={[
-                styles.filterTabText,
-                { color: filter === f ? colors.primary : colors.mutedForeground },
-                filter === f && { fontWeight: "700" },
+                styles.filterBtnText,
+                { color: filter === f ? "#fff" : colors.mutedForeground },
               ]}
             >
               {FILTER_LABELS[f]}
@@ -513,19 +513,9 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 19, fontWeight: "700", color: "#fff" },
   headerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 1 },
-  filterRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    paddingHorizontal: 8,
-  },
-  filterTab: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  filterTabText: { fontSize: 13, fontWeight: "500" },
+  filterBar: { flexDirection: "row", padding: 12, gap: 8, borderBottomWidth: 1 },
+  filterBtn: { paddingHorizontal: 14, paddingVertical: 6 },
+  filterBtnText: { fontSize: 13, fontWeight: "600" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   emptyText: { fontSize: 16 },
   list: { padding: 16, gap: 12 },
