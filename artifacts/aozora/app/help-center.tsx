@@ -22,8 +22,9 @@ const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const TICKET_TYPES = [
   { value: "Appeal Rejection", label: "Appeal Rejection", icon: "shield-off" as const, color: "#ef4444" },
+  { value: "Appeal Takedown", label: "Appeal Takedown", icon: "alert-triangle" as const, color: "#f97316" },
   { value: "Appeal Suspension", label: "Appeal Suspension", icon: "user-x" as const, color: "#dc2626" },
-  { value: "Report a Technical Bug", label: "Report a Technical Bug", icon: "tool" as const, color: "#f97316" },
+  { value: "Report a Technical Bug", label: "Report a Technical Bug", icon: "tool" as const, color: "#f59e0b" },
   { value: "General Question", label: "General Question", icon: "help-circle" as const, color: "#0ea5e9" },
   { value: "Payment/Listing Help", label: "Payment / Listing Help", icon: "home" as const, color: "#10b981" },
   { value: "Other", label: "Other", icon: "more-horizontal" as const, color: "#8b5cf6" },
@@ -34,14 +35,14 @@ export default function HelpCenterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
-  const params = useLocalSearchParams<{ type?: string }>();
+  const params = useLocalSearchParams<{ type?: string; subject?: string }>();
 
   const defaultType = params.type
     ? TICKET_TYPES.find((t) => t.value.toLowerCase().replace(/\s+/g, "_") === params.type?.toLowerCase())?.value ?? ""
     : "";
 
   const [ticketType, setTicketType] = useState(defaultType);
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(params.subject ?? "");
   const [message, setMessage] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");

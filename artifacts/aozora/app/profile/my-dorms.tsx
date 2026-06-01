@@ -19,51 +19,26 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
 import { PageHeader } from "@/components/PageHeader";
-import { useAuth } from "@/context/AuthContext";
 import {
   getGetMyDormListingsQueryKey,
   useGetMyDormListings,
   useDeleteDorm,
 } from "@workspace/api-client-react";
 
-const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-
 const STATUS_COLOR: Record<string, string> = {
   pending: "#f59e0b",
   approved: "#10b981",
   rejected: "#ef4444",
+  taken_down: "#f97316",
 };
 
 export default function MyDormsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
-  const { token } = useAuth();
   const { toast } = useToast();
   const { showConfirm } = useConfirm();
   const [search, setSearch] = useState("");
-  const [appealingId, setAppealingId] = useState<number | null>(null);
-
-  const handleAppeal = async (dormId: number) => {
-    if (!token) return;
-    setAppealingId(dormId);
-    try {
-      const res = await fetch(`${BASE_URL}/api/user/admin-conversation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      router.push(`/admin-conversation/${data.id}`);
-    } catch {
-      toast.error("Error", "Could not open admin chat. Please try again.");
-    } finally {
-      setAppealingId(null);
-    }
-  };
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetMyDormListings({
     query: { queryKey: getGetMyDormListingsQueryKey() },
@@ -198,19 +173,40 @@ export default function MyDormsScreen() {
                 {item.status === "rejected" && (
                   <TouchableOpacity
                     style={[styles.appealDormBtn, { borderColor: "#ef444440", backgroundColor: "#ef444410" }]}
-                    onPress={() => handleAppeal(item.id)}
-                    disabled={appealingId === item.id}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/help-center",
+                        params: {
+                          type: "appeal_rejection",
+                          subject: `Appeal rejection: ${item.name}`,
+                        },
+                      })
+                    }
                     activeOpacity={0.8}
                   >
-                    {appealingId === item.id ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : (
-                      <>
-                        <Feather name="message-circle" size={14} color="#ef4444" />
-                        <Text style={styles.appealDormBtnText}>Appeal this rejection to Admin</Text>
-                        <Feather name="arrow-right" size={13} color="#ef4444" />
-                      </>
-                    )}
+                    <Feather name="shield-off" size={14} color="#ef4444" />
+                    <Text style={styles.appealDormBtnText}>Appeal this rejection to Admin</Text>
+                    <Feather name="arrow-right" size={13} color="#ef4444" />
+                  </TouchableOpacity>
+                )}
+
+                {item.status === "taken_down" && (
+                  <TouchableOpacity
+                    style={[styles.appealDormBtn, { borderColor: "#f9731640", backgroundColor: "#f9731610" }]}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/help-center",
+                        params: {
+                          type: "appeal_takedown",
+                          subject: `Appeal takedown: ${item.name}`,
+                        },
+                      })
+                    }
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="alert-triangle" size={14} color="#f97316" />
+                    <Text style={[styles.appealDormBtnText, { color: "#f97316" }]}>Appeal this takedown to Admin</Text>
+                    <Feather name="arrow-right" size={13} color="#f97316" />
                   </TouchableOpacity>
                 )}
               </View>
