@@ -99,6 +99,10 @@ export function usePushNotifications() {
     return () => {
       notifListener.current?.remove();
       responseListener.current?.remove();
+
+      if (authToken) {
+        unregisterPushToken(authToken);
+      }
     };
   }, [isAuthenticated, authToken]);
 }
