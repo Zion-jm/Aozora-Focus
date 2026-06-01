@@ -4,6 +4,7 @@ import { conversations, messages, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { createNotification } from "../lib/notifications";
+import { notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -73,7 +74,6 @@ function serializeAdminConversation(conv: any, currentUserId: number) {
 
   const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE conversation_id = ?").get(conv.id) as any;
 
-  // archived = resolved support ticket OR manually archived by this participant
   const myArchivedAt = isAdmin ? conv.admin_archived_at : conv.user_archived_at;
   const archived = !!conv.closed_at || !!myArchivedAt;
 
@@ -123,7 +123,6 @@ router.get("/conversations", requireAuth, async (req, res) => {
   const enriched: any[] = [];
 
   if (role === "admin") {
-    // Admins see only their non-deleted admin conversations
     const adminConvs = sqlite.prepare(
       "SELECT * FROM admin_conversations WHERE admin_id = ? AND admin_deleted_at IS NULL ORDER BY updated_at DESC"
     ).all(userId) as any[];
@@ -131,7 +130,6 @@ router.get("/conversations", requireAuth, async (req, res) => {
       enriched.push(serializeAdminConversation(c, userId));
     }
   } else {
-    // Regular users: dorm conversations (non-deleted) + admin conversations directed at them (non-deleted)
     const allConvs = await db.select().from(conversations).all();
     const myConvs = allConvs.filter((c) => {
       if (c.studentId === userId) return !(c as any).studentDeletedAt;
@@ -203,6 +201,12 @@ router.post("/conversations", requireAuth, async (req, res) => {
         isRead: false,
       });
       await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conv.id));
+      notifyUser(sqlite, targetStudentId, {
+        type: "message_new",
+        title: "New Message 💬",
+        body: `${req.user!.fullName} sent you a message about ${dorm.name}.`,
+        data: { path: `/conversation/${conv.id}` },
+      });
     }
 
     return res.status(201).json(await serializeConversation(conv, userId));
@@ -235,6 +239,13 @@ router.post("/conversations", requireAuth, async (req, res) => {
   });
 
   await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conv.id));
+
+  notifyUser(sqlite, dorm.ownerId, {
+    type: "message_new",
+    title: "New Message 💬",
+    body: `${req.user!.fullName} sent you a message about ${dorm.name}.`,
+    data: { path: `/conversation/${conv.id}` },
+  });
 
   res.status(201).json(await serializeConversation(conv, userId));
 });
@@ -315,6 +326,12 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
     body: dorm ? `${dorm.name}: ${content.length > 60 ? content.slice(0, 60) + "…" : content}` : content.length > 80 ? content.slice(0, 80) + "…" : content,
     relatedId: convId,
     relatedType: "conversation",
+  const otherPartyId = conv.studentId === userId ? conv.ownerId : conv.studentId;
+  notifyUser(sqlite, otherPartyId, {
+    type: "message_new",
+    title: "New Message 💬",
+    body: `${req.user!.fullName} sent you a message.`,
+    data: { path: `/conversation/${convId}` },
   });
 
   res.status(201).json(result[0]);
@@ -417,7 +434,6 @@ router.post("/user/admin-conversation", requireAuth, async (req, res) => {
 });
 
 // POST /admin/conversations — admin opens (or re-opens) the ONE warning thread for a user
-// Warning threads are one-per-admin-user-pair; support ticket threads are separate (created by tickets).
 router.post("/admin/conversations", requireAuth, requireRole("admin"), async (req, res) => {
   const { userId } = req.body;
   const adminId = req.user!.id;
@@ -433,7 +449,6 @@ router.post("/admin/conversations", requireAuth, requireRole("admin"), async (re
     return;
   }
 
-  // One warning thread per admin-user pair (application-level enforcement)
   let conv = sqlite.prepare(
     "SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ? AND conversation_type = 'warning'"
   ).get(adminId, userId) as any;
@@ -641,6 +656,13 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
       });
     }
   }
+  const otherPartyId = conv.admin_id === userId ? conv.user_id : conv.admin_id;
+  notifyUser(sqlite, otherPartyId, {
+    type: "admin_message_new",
+    title: "New Message 💬",
+    body: `${req.user!.fullName} sent you a message.`,
+    data: { path: `/admin-conversation/${convId}` },
+  });
 
   res.status(201).json({
     id: msg.id,

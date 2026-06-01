@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { db } from "../db/index";
+import { db, sqlite } from "../db/index";
 import { users, verificationRecords, dorms, appointments } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { createNotification } from "../lib/notifications";
+import { notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -13,7 +14,6 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
   const allAppts = await db.select().from(appointments).all();
   const allVerifs = await db.select().from(verificationRecords).all();
 
-  const { sqlite } = await import("../db/index");
   const pendingReports = (sqlite.prepare("SELECT COUNT(*) as cnt FROM reports WHERE status = 'pending'").get() as any)?.cnt ?? 0;
   const pendingSupportTickets = (sqlite.prepare("SELECT COUNT(*) as cnt FROM support_tickets WHERE status = 'pending'").get() as any)?.cnt ?? 0;
 
@@ -120,6 +120,13 @@ router.put("/admin/users/:userId/status", requireAuth, requireRole("admin"), asy
     body: isSuspended
       ? "Your account has been suspended by an admin. Contact support if you believe this is a mistake."
       : "Your account suspension has been lifted. You can now use Aozora normally.",
+  notifyUser(sqlite, userId, {
+    type: isSuspended ? "user_suspended" : "user_unsuspended",
+    title: isSuspended ? "Account Suspended" : "Account Reinstated",
+    body: isSuspended
+      ? "Your Aozora account has been suspended. Contact support if you believe this is a mistake."
+      : "Your Aozora account has been reinstated. Welcome back!",
+    data: { path: "/(tabs)/profile" },
   });
 
   res.json({
@@ -185,6 +192,19 @@ router.put("/admin/verifications/:verificationId", requireAuth, requireRole("adm
       type: "id_rejected",
       title: "ID Verification Rejected",
       body: `Your ID verification was rejected.${reviewNote ? ` Reason: ${reviewNote}` : " Please re-submit with a clearer photo."}`,
+    notifyUser(sqlite, verif.userId, {
+      type: "verification_approved",
+      title: "ID Verified ✅",
+      body: "Your identity has been verified. You now have full access to all Aozora features.",
+      data: { path: "/(tabs)/profile" },
+    });
+  } else if (status === "rejected") {
+    await db.update(users).set({ verificationStatus: "rejected" }).where(eq(users.id, verif.userId));
+    notifyUser(sqlite, verif.userId, {
+      type: "verification_rejected",
+      title: "ID Verification Failed",
+      body: `Your ID verification was not approved.${reviewNote ? ` Reason: ${reviewNote}` : " Please resubmit with a clearer photo."}`,
+      data: { path: "/(tabs)/profile" },
     });
   }
 
@@ -240,13 +260,30 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
       relatedType: "dorm",
     });
   }
+  const notifType =
+    status === "approved" ? "dorm_approved" :
+    status === "rejected" ? "dorm_rejected" : "dorm_taken_down";
+  const notifTitle =
+    status === "approved" ? "Listing Approved ✅" :
+    status === "rejected" ? "Listing Rejected" : "Listing Taken Down";
+  const notifBody =
+    status === "approved"
+      ? `Your listing "${dorm.name}" has been approved and is now live!`
+      : status === "rejected"
+      ? `Your listing "${dorm.name}" was not approved.${note ? ` Reason: ${note}` : ""}`
+      : `Your listing "${dorm.name}" has been taken down.${note ? ` Reason: ${note}` : ""}`;
+
+  notifyUser(sqlite, dorm.ownerId, {
+    type: notifType,
+    title: notifTitle,
+    body: notifBody,
+    data: { path: `/dorm/${dorm.id}` },
+  });
 
   res.json({ ...dorm, amenities: JSON.parse(dorm.amenities || "[]") });
 });
 
 router.get("/admin/activity", requireAuth, requireRole("admin"), async (_req, res) => {
-  const { sqlite } = await import("../db/index");
-
   const recentUsers = sqlite.prepare(
     `SELECT full_name as actor, role, created_at as at FROM users ORDER BY created_at DESC LIMIT 6`
   ).all() as any[];

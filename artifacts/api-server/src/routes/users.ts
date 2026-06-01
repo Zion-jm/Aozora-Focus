@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { db } from "../db/index";
+import { db, sqlite } from "../db/index";
 import { users, verificationRecords } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { notifyAllAdmins } from "../lib/notifications";
 
 const router = Router();
 
@@ -68,6 +69,13 @@ router.post("/users/me/submit-verification", requireAuth, async (req, res) => {
 
   await db.update(users).set({ verificationStatus: "pending" }).where(eq(users.id, userId));
 
+  notifyAllAdmins(sqlite, {
+    type: "verification_submitted",
+    title: "New ID Verification 🪪",
+    body: `${req.user!.fullName} submitted their ID for verification.`,
+    data: { path: "/admin/verifications" },
+  });
+
   res.status(201).json(result[0]);
 });
 
@@ -100,10 +108,6 @@ router.get("/users/:userId", async (req, res) => {
     return;
   }
 
-  // Phone visibility rules:
-  // - Owners always show phone (they want to be reachable)
-  // - Students show phone only if phonePublic is enabled
-  // - Admins never show phone
   const showPhone =
     user.role === "owner" ||
     (user.role === "student" && !!user.phonePublic);
@@ -120,6 +124,20 @@ router.get("/users/:userId", async (req, res) => {
     phone: showPhone ? (user.phone ?? null) : null,
     phonePublic: user.phonePublic ?? false,
   });
+});
+
+router.put("/users/me/push-token", requireAuth, async (req, res) => {
+  const { expoPushToken } = req.body;
+  const userId = req.user!.id;
+
+  if (!expoPushToken || typeof expoPushToken !== "string") {
+    res.status(400).json({ error: "expoPushToken is required" });
+    return;
+  }
+
+  sqlite.prepare("UPDATE users SET expo_push_token = ? WHERE id = ?").run(expoPushToken, userId);
+
+  res.json({ message: "Push token registered" });
 });
 
 export default router;

@@ -19,6 +19,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ConfirmProvider } from "@/context/ConfirmContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 import colors from "@/constants/colors";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
@@ -90,6 +91,17 @@ export default function RootLayout() {
                 </GestureHandlerRootView>
               </ConfirmProvider>
             </ToastProvider>
+            <NotificationProvider>
+              <ToastProvider>
+                <ConfirmProvider>
+                  <GestureHandlerRootView>
+                    <KeyboardProvider>
+                      <RootLayoutNav />
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </ConfirmProvider>
+              </ToastProvider>
+            </NotificationProvider>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

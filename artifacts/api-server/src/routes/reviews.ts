@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../middlewares/auth";
 import { sqlite } from "../db/index";
 import { createNotification } from "../lib/notifications";
+import { notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -119,6 +120,13 @@ router.post("/dorms/:dormId/reviews", requireAuth, (req, res) => {
       body: `${reviewer?.full_name ?? "A student"} left a ${stars} review on your listing.`,
       relatedId: dormId,
       relatedType: "dorm",
+  const dormInfo = sqlite.prepare("SELECT name, owner_id FROM dorms WHERE id = ?").get(dormId) as any;
+  if (dormInfo?.owner_id) {
+    notifyUser(sqlite, dormInfo.owner_id, {
+      type: "review_new_dorm",
+      title: "New Dorm Review ⭐",
+      body: `${req.user!.fullName} left a ${rating}-star review on ${dormInfo.name}.`,
+      data: { path: `/dorm/${dormId}` },
     });
   }
 
@@ -247,6 +255,11 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
     type: "user_review_received",
     title: "You received a new review",
     body: `${ownerRow?.full_name ?? "An owner"} left you a ${stars} review.`,
+  notifyUser(sqlite, targetId, {
+    type: "review_new_user",
+    title: "You Received a Review ⭐",
+    body: `${req.user!.fullName} gave you a ${rating}-star rating as a tenant.`,
+    data: { path: "/(tabs)/profile" },
   });
 
   res.status(201).json({ success: true });
@@ -470,7 +483,6 @@ router.get("/reviews/my-received", requireAuth, (req, res) => {
       })),
     });
   } else if (role === "owner") {
-    // Group dorm reviews by listing
     const rows = (sqlite.prepare(`
       SELECT dr.id, dr.rating, dr.comment, dr.created_at,
              d.id as dorm_id, d.name as dorm_name, d.cover_photo_url, d.address,

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { createNotification } from "../lib/notifications";
+import { notifyUser, notifyAllAdmins } from "../lib/notifications";
 
 const router = Router();
 
@@ -101,6 +102,13 @@ router.post("/reports", requireAuth, (req, res) => {
       "INSERT INTO reports (reporter_id, target_type, target_id, reason, details) VALUES (?, ?, ?, ?, ?)"
     )
     .run(user.id, targetType, targetId, reason, details?.trim() || null);
+
+  notifyAllAdmins(sqlite, {
+    type: "report_new",
+    title: "New Report Filed 🚩",
+    body: `A new report was filed: ${reason}.`,
+    data: { path: "/admin/reports" },
+  });
 
   res.status(201).json({
     success: true,
@@ -265,6 +273,13 @@ router.post("/admin/reports/:id/warn", requireAuth, requireRole("admin"), (req, 
     )
     .run(reportId);
 
+  notifyUser(sqlite, targetUserId, {
+    type: "user_warned",
+    title: "⚠️ Official Warning",
+    body: `You've received an official warning: ${report.reason}. Check your messages for details.`,
+    data: { path: `/admin-conversation/${conv.id}` },
+  });
+
   const msg = sqlite
     .prepare("SELECT * FROM admin_messages WHERE id = ?")
     .get(msgResult.lastInsertRowid) as any;
@@ -312,7 +327,7 @@ router.post("/admin/reports/:id/takedown", requireAuth, requireRole("admin"), (r
   }
 
   const dorm = sqlite
-    .prepare("SELECT id, name, status FROM dorms WHERE id = ?")
+    .prepare("SELECT id, name, status, owner_id FROM dorms WHERE id = ?")
     .get(report.target_id) as any;
   if (!dorm) {
     res.status(404).json({ error: "Dorm not found" });
@@ -339,6 +354,12 @@ router.post("/admin/reports/:id/takedown", requireAuth, requireRole("admin"), (r
       body: `Your listing "${dorm.name}" has been taken down by an admin due to a reported violation.`,
       relatedId: dorm.id,
       relatedType: "dorm",
+  if (dorm.owner_id) {
+    notifyUser(sqlite, dorm.owner_id, {
+      type: "dorm_taken_down",
+      title: "Listing Taken Down",
+      body: `Your listing "${dorm.name}" has been taken down due to a reported violation.`,
+      data: { path: `/dorm/${dorm.id}` },
     });
   }
 
@@ -394,6 +415,11 @@ router.post("/admin/reports/:id/suspend", requireAuth, requireRole("admin"), (re
     type: "account_suspended",
     title: "Account Suspended",
     body: "Your account has been suspended due to a reported violation of our community guidelines. If you believe this is an error, please contact support.",
+  notifyUser(sqlite, targetUserId, {
+    type: "user_suspended",
+    title: "Account Suspended",
+    body: "Your Aozora account has been suspended due to a reported violation. Contact support to appeal.",
+    data: { path: "/(tabs)/profile" },
   });
 
   res.json({
