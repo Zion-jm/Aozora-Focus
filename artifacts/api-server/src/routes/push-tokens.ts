@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { sqlite } from "../db/index";
-import { authenticate } from "../middleware/auth";
+import { requireAuth } from "../middlewares/auth";
 
 const router = Router();
 
-router.post("/api/push-tokens", authenticate, (req, res) => {
-  const userId = (req as any).userId as number;
+router.post("/api/push-tokens", requireAuth, (req, res) => {
+  const userId = req.user!.id;
   const { token, platform } = req.body as { token: string; platform?: string };
 
   if (!token || typeof token !== "string") {
@@ -26,8 +26,8 @@ router.post("/api/push-tokens", authenticate, (req, res) => {
   res.json({ success: true });
 });
 
-router.delete("/api/push-tokens", authenticate, (req, res) => {
-  const userId = (req as any).userId as number;
+router.delete("/api/push-tokens", requireAuth, (req, res) => {
+  const userId = req.user!.id;
   const { token } = req.body as { token: string };
 
   if (!token) {
