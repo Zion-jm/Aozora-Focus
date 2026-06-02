@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -22,6 +23,7 @@ const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 const TICKET_TYPE_COLORS: Record<string, string> = {
   "Appeal Rejection": "#ef4444",
   "Appeal Suspension": "#dc2626",
+  "Appeal Takedown": "#f97316",
   "Report a Technical Bug": "#f97316",
   "General Question": "#0ea5e9",
   "Payment/Listing Help": "#10b981",
@@ -33,10 +35,54 @@ import { timeAgo } from "../../utils/time";
 const TICKET_TYPE_ICONS: Record<string, React.ComponentProps<typeof Feather>["name"]> = {
   "Appeal Rejection": "shield-off",
   "Appeal Suspension": "user-x",
+  "Appeal Takedown": "alert-triangle",
   "Report a Technical Bug": "tool",
   "General Question": "help-circle",
   "Payment/Listing Help": "home",
   "Other": "more-horizontal",
+};
+
+type ResponseOption = {
+  label: string;
+  responseType: string;
+  color: string;
+  icon: React.ComponentProps<typeof Feather>["name"];
+};
+
+function getResponseOptions(ticketType: string): [ResponseOption, ResponseOption] {
+  switch (ticketType) {
+    case "Appeal Suspension":
+      return [
+        { label: "Suspension Lifted", responseType: "suspension_lifted", color: "#10b981", icon: "unlock" },
+        { label: "Suspension Persists", responseType: "suspension_persists", color: "#ef4444", icon: "lock" },
+      ];
+    case "Appeal Rejection":
+      return [
+        { label: "Decision Overturned", responseType: "decision_overturned", color: "#10b981", icon: "check-circle" },
+        { label: "Rejection Stands", responseType: "rejection_stands", color: "#f97316", icon: "x-circle" },
+      ];
+    case "Appeal Takedown":
+      return [
+        { label: "Takedown Reversed", responseType: "takedown_reversed", color: "#10b981", icon: "refresh-cw" },
+        { label: "Takedown Upheld", responseType: "takedown_upheld", color: "#f97316", icon: "slash" },
+      ];
+    default:
+      return [
+        { label: "Request Resolved", responseType: "request_resolved", color: "#10b981", icon: "check-circle" },
+        { label: "Request Denied", responseType: "request_denied", color: "#f97316", icon: "x-circle" },
+      ];
+  }
+}
+
+const RESPONSE_LABELS: Record<string, string> = {
+  suspension_lifted: "Suspension Lifted",
+  suspension_persists: "Suspension Persists",
+  decision_overturned: "Decision Overturned",
+  rejection_stands: "Rejection Stands",
+  takedown_reversed: "Takedown Reversed",
+  takedown_upheld: "Takedown Upheld",
+  request_resolved: "Request Resolved",
+  request_denied: "Request Denied",
 };
 
 export default function AdminSupportTicketsScreen() {
@@ -48,6 +94,7 @@ export default function AdminSupportTicketsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<"pending" | "resolved">("pending");
   const [search, setSearch] = useState("");
+  const [sendingEmail, setSendingEmail] = useState<Record<number, boolean>>({});
 
   const fetchTickets = async () => {
     if (!token) return;
@@ -83,6 +130,46 @@ export default function AdminSupportTicketsScreen() {
     }
   };
 
+  const handleSendEmailResponse = async (item: any, responseType: string, label: string) => {
+    if (!token) return;
+
+    Alert.alert(
+      `Send Email: ${label}`,
+      `This will send an email to ${item.guestEmail ?? item.user?.email ?? "the user"} and mark the ticket as resolved.\n\nProceed?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Send & Resolve",
+          style: "default",
+          onPress: async () => {
+            setSendingEmail((prev) => ({ ...prev, [item.id]: true }));
+            try {
+              const res = await fetch(`${BASE_URL}/api/admin/support-tickets/${item.id}/respond`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ responseType }),
+              });
+              if (res.ok) {
+                setTickets((prev) =>
+                  prev.map((t) =>
+                    t.id === item.id ? { ...t, status: "resolved", adminResponse: responseType } : t
+                  )
+                );
+              } else {
+                const err = await res.json().catch(() => ({}));
+                Alert.alert("Failed", (err as any).message ?? "Could not send email. Please try again.");
+              }
+            } catch {
+              Alert.alert("Error", "Network error. Please try again.");
+            } finally {
+              setSendingEmail((prev) => ({ ...prev, [item.id]: false }));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const filtered = tickets.filter((t) => {
     const matchStatus = t.status === filter;
     const q = search.toLowerCase();
@@ -103,6 +190,10 @@ export default function AdminSupportTicketsScreen() {
     const isPending = item.status === "pending";
     const displayName = item.user?.fullName ?? item.guestName ?? "Anonymous";
     const isGuest = !item.user;
+    const isSuspendedUser = !!item.user?.isSuspended;
+    const needsEmailResponse = (isGuest || isSuspendedUser) && isPending;
+    const isSending = !!sendingEmail[item.id];
+    const [positiveOption, negativeOption] = getResponseOptions(item.ticketType);
 
     return (
       <TouchableOpacity
@@ -133,10 +224,22 @@ export default function AdminSupportTicketsScreen() {
               </View>
             )}
             <View style={styles.userInfo}>
-              <Text style={[styles.userName, { color: colors.foreground }]}>
-                {displayName}
-                {isGuest && <Text style={[styles.guestTag, { color: colors.mutedForeground }]}> (Guest)</Text>}
-              </Text>
+              <View style={styles.nameRow}>
+                <Text style={[styles.userName, { color: colors.foreground }]}>
+                  {displayName}
+                </Text>
+                {isGuest && (
+                  <View style={[styles.pill, { backgroundColor: "#6b7280" + "18" }]}>
+                    <Text style={[styles.pillText, { color: "#6b7280" }]}>Guest</Text>
+                  </View>
+                )}
+                {isSuspendedUser && (
+                  <View style={[styles.pill, { backgroundColor: "#ef4444" + "15" }]}>
+                    <Feather name="lock" size={9} color="#ef4444" />
+                    <Text style={[styles.pillText, { color: "#ef4444" }]}>Suspended</Text>
+                  </View>
+                )}
+              </View>
               {item.user?.email || item.guestEmail ? (
                 <Text style={[styles.userEmail, { color: colors.mutedForeground }]} numberOfLines={1}>
                   {item.user?.email ?? item.guestEmail}
@@ -148,6 +251,53 @@ export default function AdminSupportTicketsScreen() {
           <Text style={[styles.subject, { color: colors.foreground }]} numberOfLines={1}>{item.subject}</Text>
           <Text style={[styles.preview, { color: colors.mutedForeground }]} numberOfLines={2}>{item.message}</Text>
         </View>
+
+        {needsEmailResponse && (
+          <View style={[styles.emailSection, { borderColor: colors.border, backgroundColor: colors.background }]}>
+            <View style={styles.emailSectionHeader}>
+              <Feather name="mail" size={13} color={colors.mutedForeground} />
+              <Text style={[styles.emailSectionLabel, { color: colors.mutedForeground }]}>
+                Send email response
+              </Text>
+            </View>
+            <View style={styles.emailBtnRow}>
+              {isSending ? (
+                <View style={styles.sendingWrap}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={[styles.sendingText, { color: colors.mutedForeground }]}>Sending email…</Text>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[styles.emailBtn, { backgroundColor: positiveOption.color + "18", borderColor: positiveOption.color + "40" }]}
+                    onPress={() => handleSendEmailResponse(item, positiveOption.responseType, positiveOption.label)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name={positiveOption.icon} size={13} color={positiveOption.color} />
+                    <Text style={[styles.emailBtnText, { color: positiveOption.color }]}>{positiveOption.label}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.emailBtn, { backgroundColor: negativeOption.color + "18", borderColor: negativeOption.color + "40" }]}
+                    onPress={() => handleSendEmailResponse(item, negativeOption.responseType, negativeOption.label)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name={negativeOption.icon} size={13} color={negativeOption.color} />
+                    <Text style={[styles.emailBtnText, { color: negativeOption.color }]}>{negativeOption.label}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        )}
+
+        {!isPending && item.adminResponse && (
+          <View style={[styles.resolvedBadgeRow, { backgroundColor: "#10b981" + "10" }]}>
+            <Feather name="send" size={12} color="#10b981" />
+            <Text style={[styles.resolvedBadgeText, { color: "#10b981" }]}>
+              Email sent: {RESPONSE_LABELS[item.adminResponse] ?? item.adminResponse}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.ticketActions}>
           {item.conversationId && (
@@ -274,12 +424,24 @@ const styles = StyleSheet.create({
   userRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   guestAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   userInfo: { flex: 1 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 5, flexWrap: "wrap" },
   userName: { fontSize: 14, fontWeight: "600" },
-  guestTag: { fontSize: 12, fontWeight: "400" },
+  pill: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 20 },
+  pillText: { fontSize: 10, fontWeight: "700" },
   userEmail: { fontSize: 12 },
   timeText: { fontSize: 12 },
   subject: { fontSize: 15, fontWeight: "700" },
   preview: { fontSize: 13, lineHeight: 18 },
+  emailSection: { borderWidth: 1, borderRadius: 10, padding: 10, gap: 8 },
+  emailSectionHeader: { flexDirection: "row", alignItems: "center", gap: 5 },
+  emailSectionLabel: { fontSize: 12, fontWeight: "600" },
+  emailBtnRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  emailBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 8, borderWidth: 1, flex: 1, justifyContent: "center" },
+  emailBtnText: { fontSize: 12, fontWeight: "700" },
+  sendingWrap: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, justifyContent: "center", paddingVertical: 6 },
+  sendingText: { fontSize: 13 },
+  resolvedBadgeRow: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  resolvedBadgeText: { fontSize: 12, fontWeight: "600" },
   ticketActions: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7 },
   actionBtnText: { fontSize: 13, fontWeight: "600" },

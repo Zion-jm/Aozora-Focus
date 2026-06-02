@@ -81,7 +81,8 @@ export default function HelpCenterScreen() {
     if (!subject.trim()) { toast.warning("Required", "Please enter a subject."); return; }
     if (!message.trim()) { toast.warning("Required", "Please enter a message."); return; }
     if (isGuest && !guestName.trim()) { toast.warning("Required", "Please enter your name."); return; }
-    if (isGuest && !guestEmail.trim()) { toast.warning("Required", "Please enter your email."); return; }
+    if (isGuest && !guestEmail.trim()) { toast.warning("Required", "Please enter your email address."); return; }
+    if (isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) { toast.warning("Invalid Email", "Please enter a valid email address."); return; }
 
     setIsSubmitting(true);
     try {
@@ -305,7 +306,7 @@ export default function HelpCenterScreen() {
               value={guestName}
               onChangeText={setGuestName}
             />
-            <Text style={[styles.label, { color: colors.foreground }]}>Email Address</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>Email Address <Text style={{ color: "#ef4444" }}>*</Text></Text>
             <TextInput
               style={[styles.input, { borderColor: colors.border, backgroundColor: colors.card, color: colors.foreground, borderRadius: colors.radius }]}
               placeholder="your@email.com"

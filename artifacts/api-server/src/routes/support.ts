@@ -2,6 +2,7 @@ import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
+import { sendSupportResponseEmail } from "../lib/mailer";
 
 const router = Router();
 
@@ -155,18 +156,99 @@ router.get("/admin/support-tickets", requireAuth, requireRole("admin"), async (_
       updatedAt: t.updated_at,
       guestName: t.guest_name,
       guestEmail: t.guest_email,
+      adminResponse: t.admin_response ?? null,
+      emailSentAt: t.email_sent_at ?? null,
       user: user ? {
         id: user.id,
         fullName: user.full_name,
         email: user.email,
         avatarUrl: user.avatar_url,
         role: user.role,
+        isSuspended: !!user.is_suspended,
       } : null,
     };
   });
 
   const pendingCount = enriched.filter((t) => t.status === "pending").length;
   res.json({ tickets: enriched, pendingCount });
+});
+
+// ─── POST /admin/support-tickets/:id/respond — send email response to guest/suspended user ──
+router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admin"), async (req, res) => {
+  const ticketId = parseInt(req.params["id"]!);
+  const { responseType } = req.body;
+
+  const VALID_TYPES = [
+    "suspension_lifted", "suspension_persists",
+    "decision_overturned", "rejection_stands",
+    "takedown_reversed", "takedown_upheld",
+    "request_resolved", "request_denied",
+  ];
+
+  if (!responseType || !VALID_TYPES.includes(responseType)) {
+    res.status(400).json({ error: "Validation error", message: "Invalid responseType" });
+    return;
+  }
+
+  const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketId) as any;
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  // Determine recipient email
+  let recipientEmail: string | null = ticket.guest_email ?? null;
+  let recipientName: string = ticket.guest_name ?? "there";
+
+  if (!recipientEmail && ticket.user_id) {
+    const user = sqlite.prepare("SELECT email, full_name FROM users WHERE id = ?").get(ticket.user_id) as any;
+    recipientEmail = user?.email ?? null;
+    recipientName = user?.full_name ?? "there";
+  }
+
+  if (!recipientEmail) {
+    res.status(400).json({ error: "No email address available for this ticket" });
+    return;
+  }
+
+  try {
+    await sendSupportResponseEmail({
+      to: recipientEmail,
+      name: recipientName,
+      ticketType: ticket.ticket_type,
+      subject: ticket.subject,
+      responseType,
+    });
+  } catch (err: any) {
+    console.error("Failed to send support response email:", err?.message);
+    res.status(500).json({ error: "Failed to send email", message: err?.message });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  sqlite.prepare(
+    "UPDATE support_tickets SET admin_response = ?, email_sent_at = ?, status = 'resolved', updated_at = ? WHERE id = ?"
+  ).run(responseType, now, now, ticketId);
+
+  // Sync conversation closed_at if present
+  if (ticket.conversation_id) {
+    sqlite.prepare("UPDATE admin_conversations SET closed_at = ? WHERE id = ?").run(now, ticket.conversation_id);
+  }
+
+  // Notify in-app user if they have an account
+  if (ticket.user_id) {
+    notifyUser(sqlite, ticket.user_id, {
+      type: "support_ticket_resolved",
+      title: "Support Ticket Resolved ✅",
+      body: `Your support ticket "${ticket.subject}" has been resolved.`,
+      data: ticket.conversation_id
+        ? { path: `/admin-conversation/${ticket.conversation_id}` }
+        : { path: "/(tabs)/profile" },
+    });
+  }
+
+  const updated = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketId) as any;
+  res.json({ id: updated.id, status: updated.status, adminResponse: updated.admin_response, emailSentAt: updated.email_sent_at });
 });
 
 // ─── PATCH /admin/support-tickets/:id — update status ─────────────────────────

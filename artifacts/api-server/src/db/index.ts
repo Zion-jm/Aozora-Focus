@@ -251,6 +251,8 @@ export function initializeDatabase() {
     "ALTER TABLE users ADD COLUMN expo_push_token TEXT",
     "ALTER TABLE messages ADD COLUMN image_url TEXT",
     "ALTER TABLE admin_messages ADD COLUMN image_url TEXT",
+    "ALTER TABLE support_tickets ADD COLUMN admin_response TEXT",
+    "ALTER TABLE support_tickets ADD COLUMN email_sent_at TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }
