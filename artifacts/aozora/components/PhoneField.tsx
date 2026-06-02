@@ -99,6 +99,7 @@ export default function PhoneField({ label, value, onChange, colors, editable = 
   const digits = national.replace(/\D/g, "");
   const isValid = digits.length === country.maxLen;
   const hasInput = digits.length > 0;
+  const isPHWrong = country.code === "PH" && hasInput && !digits.startsWith("9");
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -163,7 +164,14 @@ export default function PhoneField({ label, value, onChange, colors, editable = 
 
       <View style={styles.hint}>
         {hasInput ? (
-          isValid ? (
+          isPHWrong ? (
+            <View style={styles.hintRow}>
+              <Feather name="x-circle" size={12} color="#ef4444" />
+              <Text style={[styles.hintText, { color: "#ef4444" }]}>
+                Mobile number is wrong — PH numbers must start with 9
+              </Text>
+            </View>
+          ) : isValid ? (
             <View style={styles.hintRow}>
               <Feather name="check-circle" size={12} color="#10b981" />
               <Text style={[styles.hintText, { color: "#10b981" }]}>Valid format</Text>

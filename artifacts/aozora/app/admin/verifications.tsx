@@ -35,6 +35,7 @@ const APPROVAL_CHECKLIST = [
   { id: "not_expired",   label: "ID is valid and not expired" },
   { id: "face_match",    label: "Face on ID matches the account holder" },
   { id: "type_match",    label: "ID type matches what was declared" },
+  { id: "age_confirmed", label: "Birthday on ID confirms user is 18 or older" },
 ];
 
 const STATUS_COLOR: Record<string, string> = {

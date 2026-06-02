@@ -424,6 +424,16 @@ export default function VerifyScreen() {
       toast.warning("Missing info", "Please fill in your name, contact (phone or email), and emergency contact before continuing.");
       return;
     }
+    const phoneDigits = phoneNational.replace(/\D/g, "");
+    if (phoneCountry.code === "PH" && phoneDigits && !phoneDigits.startsWith("9")) {
+      toast.error("Mobile number is wrong", "Philippine mobile numbers must start with 9 (e.g. 9XX XXX XXXX).");
+      return;
+    }
+    const emergencyDigits = emergencyNational.replace(/\D/g, "");
+    if (emergencyCountry.code === "PH" && emergencyDigits && !emergencyDigits.startsWith("9")) {
+      toast.error("Emergency contact number is wrong", "Philippine mobile numbers must start with 9 (e.g. 9XX XXX XXXX).");
+      return;
+    }
     updateProfile.mutate(
       {
         data: {
