@@ -3,8 +3,7 @@ import { db, sqlite } from "../db/index";
 import { appointments, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { createNotification } from "../lib/notifications";
-import { notifyUser } from "../lib/notifications";
+import { createNotification, notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -171,13 +170,6 @@ router.post("/appointments", requireAuth, async (req, res) => {
   const dorm = await db.select().from(dorms).where(eq(dorms.id, appt.dormId)).get();
 
   if (dorm) {
-    createNotification({
-      userId: dorm.ownerId,
-      type: "appointment_request",
-      title: "New Visit Request",
-      body: `${student?.fullName ?? "A student"} wants to visit ${dorm.name} on ${appt.preferredDate} at ${appt.preferredTime}.`,
-      relatedId: appt.id,
-      relatedType: "appointment",
     notifyUser(sqlite, dorm.ownerId, {
       type: "appointment_new",
       title: "New Visit Request 📅",

@@ -346,14 +346,6 @@ router.post("/admin/reports/:id/takedown", requireAuth, requireRole("admin"), (r
     )
     .run(reportId);
 
-  if (ownerId?.owner_id) {
-    createNotification({
-      userId: ownerId.owner_id,
-      type: "dorm_taken_down",
-      title: "Listing Taken Down",
-      body: `Your listing "${dorm.name}" has been taken down by an admin due to a reported violation.`,
-      relatedId: dorm.id,
-      relatedType: "dorm",
   if (dorm.owner_id) {
     notifyUser(sqlite, dorm.owner_id, {
       type: "dorm_taken_down",
@@ -410,11 +402,6 @@ router.post("/admin/reports/:id/suspend", requireAuth, requireRole("admin"), (re
     )
     .run(reportId);
 
-  createNotification({
-    userId: targetUserId,
-    type: "account_suspended",
-    title: "Account Suspended",
-    body: "Your account has been suspended due to a reported violation of our community guidelines. If you believe this is an error, please contact support.",
   notifyUser(sqlite, targetUserId, {
     type: "user_suspended",
     title: "Account Suspended",

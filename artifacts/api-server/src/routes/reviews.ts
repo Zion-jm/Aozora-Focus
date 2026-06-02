@@ -109,17 +109,6 @@ router.post("/dorms/:dormId/reviews", requireAuth, (req, res) => {
   ).run(stats.avg, stats.count, dormId);
 
   // Notify the dorm owner
-  const dormRow = sqlite.prepare("SELECT owner_id, name FROM dorms WHERE id = ?").get(dormId) as any;
-  if (dormRow?.owner_id) {
-    const reviewer = sqlite.prepare("SELECT full_name FROM users WHERE id = ?").get(userId) as any;
-    const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
-    createNotification({
-      userId: dormRow.owner_id,
-      type: "dorm_review_received",
-      title: `New review on ${dormRow.name}`,
-      body: `${reviewer?.full_name ?? "A student"} left a ${stars} review on your listing.`,
-      relatedId: dormId,
-      relatedType: "dorm",
   const dormInfo = sqlite.prepare("SELECT name, owner_id FROM dorms WHERE id = ?").get(dormId) as any;
   if (dormInfo?.owner_id) {
     notifyUser(sqlite, dormInfo.owner_id, {
@@ -250,11 +239,6 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
   // Notify the reviewed student
   const ownerRow = sqlite.prepare("SELECT full_name FROM users WHERE id = ?").get(reviewerId) as any;
   const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
-  createNotification({
-    userId: targetId,
-    type: "user_review_received",
-    title: "You received a new review",
-    body: `${ownerRow?.full_name ?? "An owner"} left you a ${stars} review.`,
   notifyUser(sqlite, targetId, {
     type: "review_new_user",
     title: "You Received a Review ⭐",

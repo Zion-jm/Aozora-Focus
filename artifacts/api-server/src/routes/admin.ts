@@ -3,8 +3,7 @@ import { db, sqlite } from "../db/index";
 import { users, verificationRecords, dorms, appointments } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
-import { createNotification } from "../lib/notifications";
-import { notifyUser } from "../lib/notifications";
+import { createNotification, notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -113,13 +112,6 @@ router.put("/admin/users/:userId/status", requireAuth, requireRole("admin"), asy
     return;
   }
 
-  createNotification({
-    userId,
-    type: isSuspended ? "account_suspended" : "account_unsuspended",
-    title: isSuspended ? "Account Suspended" : "Account Reinstated",
-    body: isSuspended
-      ? "Your account has been suspended by an admin. Contact support if you believe this is a mistake."
-      : "Your account suspension has been lifted. You can now use Aozora normally.",
   notifyUser(sqlite, userId, {
     type: isSuspended ? "user_suspended" : "user_unsuspended",
     title: isSuspended ? "Account Suspended" : "Account Reinstated",
@@ -179,19 +171,6 @@ router.put("/admin/verifications/:verificationId", requireAuth, requireRole("adm
 
   if (status === "approved") {
     await db.update(users).set({ verificationStatus: "verified" }).where(eq(users.id, verif.userId));
-    createNotification({
-      userId: verif.userId,
-      type: "id_verified",
-      title: "Identity Verified ✓",
-      body: "Your ID has been verified. You now have full access to all Aozora features.",
-    });
-  } else if (status === "rejected") {
-    await db.update(users).set({ verificationStatus: "rejected" }).where(eq(users.id, verif.userId));
-    createNotification({
-      userId: verif.userId,
-      type: "id_rejected",
-      title: "ID Verification Rejected",
-      body: `Your ID verification was rejected.${reviewNote ? ` Reason: ${reviewNote}` : " Please re-submit with a clearer photo."}`,
     notifyUser(sqlite, verif.userId, {
       type: "verification_approved",
       title: "ID Verified ✅",

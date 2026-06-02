@@ -82,15 +82,6 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <PushNotificationSetup />
-            <ToastProvider>
-              <ConfirmProvider>
-                <GestureHandlerRootView>
-                  <KeyboardProvider>
-                    <RootLayoutNav />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </ConfirmProvider>
-            </ToastProvider>
             <NotificationProvider>
               <ToastProvider>
                 <ConfirmProvider>

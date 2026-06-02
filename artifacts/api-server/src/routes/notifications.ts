@@ -27,41 +27,6 @@ router.get("/notifications", requireAuth, (req, res) => {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   res.json({ notifications, unreadCount });
-  const page = parseInt((req.query["page"] as string) ?? "1");
-  const limit = 30;
-  const unreadOnly = req.query["unread"] === "true";
-
-  const query = unreadOnly
-    ? "SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC"
-    : "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC";
-
-  const all = sqlite.prepare(query).all(userId) as any[];
-  const total = all.length;
-  const unreadCount = (
-    sqlite
-      .prepare(
-        "SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND is_read = 0"
-      )
-      .get(userId) as any
-  ).cnt as number;
-
-  const paginated = all.slice((page - 1) * limit, page * limit);
-
-  res.json({
-    notifications: paginated.map((n: any) => ({
-      id: n.id,
-      type: n.type,
-      title: n.title,
-      body: n.body,
-      data: n.data ? JSON.parse(n.data) : {},
-      isRead: !!n.is_read,
-      createdAt: n.created_at,
-    })),
-    total,
-    unreadCount,
-    page,
-    totalPages: Math.ceil(total / limit),
-  });
 });
 
 router.post("/notifications/read-all", requireAuth, (req, res) => {
@@ -70,17 +35,6 @@ router.post("/notifications/read-all", requireAuth, (req, res) => {
     .prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?")
     .run(userId);
   res.json({ success: true });
-});
-
-router.patch("/notifications/:id/read", requireAuth, (req, res) => {
-  const userId = req.user!.id;
-  const id = parseInt(req.params["id"]!);
-
-  const row = sqlite
-    .prepare("SELECT id FROM notifications WHERE id = ? AND user_id = ?")
-    .get(id, userId);
-  if (!row) {
-  res.json({ message: "All notifications marked as read" });
 });
 
 router.patch("/notifications/:id/read", requireAuth, (req, res) => {
@@ -102,18 +56,6 @@ router.patch("/notifications/:id/read", requireAuth, (req, res) => {
 });
 
 router.delete("/notifications/:id", requireAuth, (req, res) => {
-  const userId = req.user!.id;
-  const id = parseInt(req.params["id"]!);
-
-  const row = sqlite
-    .prepare("SELECT id FROM notifications WHERE id = ? AND user_id = ?")
-    .get(id, userId);
-  if (!row) {
-  sqlite.prepare("UPDATE notifications SET is_read = 1 WHERE id = ?").run(id);
-  res.json({ message: "Notification marked as read" });
-});
-
-router.delete("/notifications/:id", requireAuth, (req, res) => {
   const id = parseInt(req.params["id"]!);
   const userId = req.user!.id;
 
@@ -127,7 +69,6 @@ router.delete("/notifications/:id", requireAuth, (req, res) => {
 
   sqlite.prepare("DELETE FROM notifications WHERE id = ?").run(id);
   res.json({ success: true });
-  res.json({ message: "Notification deleted" });
 });
 
 export default router;

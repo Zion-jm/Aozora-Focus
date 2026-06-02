@@ -3,8 +3,7 @@ import { db, sqlite } from "../db/index";
 import { conversations, messages, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
-import { createNotification } from "../lib/notifications";
-import { notifyUser } from "../lib/notifications";
+import { createNotification, notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -319,13 +318,6 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
   const recipientId = conv.studentId === userId ? conv.ownerId : conv.studentId;
   const sender = await db.select().from(users).where(eq(users.id, userId)).get();
   const dorm = await db.select().from(dorms).where(eq(dorms.id, conv.dormId)).get();
-  createNotification({
-    userId: recipientId,
-    type: "new_message",
-    title: `New message from ${sender?.fullName ?? "Someone"}`,
-    body: dorm ? `${dorm.name}: ${content.length > 60 ? content.slice(0, 60) + "…" : content}` : content.length > 80 ? content.slice(0, 80) + "…" : content,
-    relatedId: convId,
-    relatedType: "conversation",
   const otherPartyId = conv.studentId === userId ? conv.ownerId : conv.studentId;
   notifyUser(sqlite, otherPartyId, {
     type: "message_new",

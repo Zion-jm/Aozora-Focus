@@ -58,7 +58,6 @@
   "dependencies": {
     "babel-preset-expo": "^54.0.11",
     "expo-notifications": "~0.32.17",
-    "expo-notifications": "^56.0.15",
     "react-native-maps": "1.18.0"
   }
 }

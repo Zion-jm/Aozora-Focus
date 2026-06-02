@@ -56,10 +56,24 @@ function needsRebuild() {
   return true;
 }
 
+function findNodeInc() {
+  const cacheDir = resolve(WORKSPACE_ROOT, ".cache/node-gyp");
+  // Try exact version first, then fall back to any available version
+  const exact = resolve(cacheDir, `${process.versions.node}/include/node`);
+  if (existsSync(exact)) return exact;
+  if (existsSync(cacheDir)) {
+    const versions = readdirSync(cacheDir).filter(v => existsSync(resolve(cacheDir, v, "include/node")));
+    if (versions.length > 0) return resolve(cacheDir, versions[0], "include/node");
+  }
+  // Fall back to system node headers
+  const sysInc = `/usr/include/node`;
+  if (existsSync(sysInc)) return sysInc;
+  throw new Error("[ensure-sqlite] Could not find Node.js headers for compilation.");
+}
+
 function buildNative() {
   const BUILD_DIR = resolve(SQLITE3_DIR, "build");
-  const nodeVersion = process.versions.node;
-  const NODE_INC = resolve(WORKSPACE_ROOT, `.cache/node-gyp/${nodeVersion}/include/node`);
+  const NODE_INC = findNodeInc();
 
   const SQLITE3_GEN_DIR = resolve(BUILD_DIR, "Release/obj/gen/sqlite3");
   const SQLITE3_C = resolve(SQLITE3_GEN_DIR, "sqlite3.c");

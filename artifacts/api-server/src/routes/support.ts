@@ -199,14 +199,6 @@ router.patch("/admin/support-tickets/:id", requireAuth, requireRole("admin"), as
 
   // Notify the user when their ticket is resolved
   if (status === "resolved" && ticket.user_id) {
-    createNotification({
-      userId: ticket.user_id,
-      type: "support_ticket_resolved",
-      title: "Support Ticket Resolved",
-      body: `Your support ticket "${ticket.subject}" has been marked as resolved.`,
-      relatedId: ticket.conversation_id ?? undefined,
-      relatedType: ticket.conversation_id ? "conversation" : undefined,
-  if (status === "resolved" && ticket.user_id) {
     notifyUser(sqlite, ticket.user_id, {
       type: "support_ticket_resolved",
       title: "Support Ticket Resolved ✅",
