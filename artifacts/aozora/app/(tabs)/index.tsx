@@ -16,10 +16,13 @@ import { getGetDormsQueryKey, useGetDorms } from "@workspace/api-client-react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const isOwner = user?.role === "owner";
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetDorms({
@@ -206,12 +209,25 @@ export default function ExploreScreen() {
           },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-          Explore
-        </Text>
-        <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-          Find your perfect dorm in Lopez
-        </Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+              Explore
+            </Text>
+            <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+              Find your perfect dorm in Lopez
+            </Text>
+          </View>
+          {isOwner && (
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: 12 }]}
+              onPress={() => router.push("/dorm/create")}
+              activeOpacity={0.85}
+            >
+              <Feather name="plus" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+        </View>
         <View
           style={[
             styles.searchBar,
@@ -292,6 +308,12 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
+  headerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
@@ -299,7 +321,12 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 15,
     marginTop: 2,
-    marginBottom: 12,
+  },
+  addBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   searchBar: {
     flexDirection: "row",

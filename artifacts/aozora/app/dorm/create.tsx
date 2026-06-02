@@ -18,6 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import { useColors } from "@/hooks/useColors";
 import { useToast } from "@/context/ToastContext";
+import LocationPickerMap from "@/components/LocationPickerMap";
 import {
   useCreateDorm,
   useUpdateDorm,
@@ -68,8 +69,8 @@ export default function CreateDormScreen() {
   const [monthlyRent, setMonthlyRent] = useState("");
   const [address, setAddress] = useState("");
   const [nearbyLandmark, setNearbyLandmark] = useState("");
-  const [latitude, setLatitude] = useState("13.8856");
-  const [longitude, setLongitude] = useState("122.2604");
+  const [latitude, setLatitude] = useState(13.8856);
+  const [longitude, setLongitude] = useState(122.2604);
   const [totalRooms, setTotalRooms] = useState("1");
   const [bedsPerRoom, setBedsPerRoom] = useState("1");
   const [availableBeds, setAvailableBeds] = useState("1");
@@ -90,8 +91,8 @@ export default function CreateDormScreen() {
     setMonthlyRent(String(d.monthlyRent ?? ""));
     setAddress(d.address ?? "");
     setNearbyLandmark(d.nearbyLandmark ?? "");
-    setLatitude(String(d.latitude ?? "13.8856"));
-    setLongitude(String(d.longitude ?? "122.2604"));
+    setLatitude(d.latitude ?? 13.8856);
+    setLongitude(d.longitude ?? 122.2604);
     setTotalRooms(String(d.totalRooms ?? "1"));
     setBedsPerRoom(String(d.bedsPerRoom ?? "1"));
     setAvailableBeds(String(d.availableBeds ?? "1"));
@@ -220,8 +221,8 @@ export default function CreateDormScreen() {
       monthlyRent: Number(monthlyRent),
       address: address.trim(),
       nearbyLandmark: nearbyLandmark.trim() || undefined,
-      latitude: Number(latitude),
-      longitude: Number(longitude),
+      latitude,
+      longitude,
       totalRooms: Number(totalRooms),
       bedsPerRoom: Number(bedsPerRoom),
       availableBeds: Number(availableBeds),
@@ -333,30 +334,12 @@ export default function CreateDormScreen() {
           onChangeText={setNearbyLandmark}
         />
 
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Latitude</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
-              placeholder="13.8856"
-              placeholderTextColor={colors.mutedForeground}
-              value={latitude}
-              onChangeText={setLatitude}
-              keyboardType="numeric"
-            />
-          </View>
-          <View style={styles.half}>
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Longitude</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]}
-              placeholder="122.2604"
-              placeholderTextColor={colors.mutedForeground}
-              value={longitude}
-              onChangeText={setLongitude}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Location on Map</Text>
+        <LocationPickerMap
+          latitude={latitude}
+          longitude={longitude}
+          onLocationChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
+        />
 
         <View style={styles.row}>
           <View style={styles.third}>
