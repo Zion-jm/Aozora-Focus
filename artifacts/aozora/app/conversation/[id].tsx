@@ -127,7 +127,7 @@ export default function ConversationScreen() {
       refetch().then(() => {
         if (convId) markRead.mutate({ conversationId: convId });
       });
-    }, 5000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [refetch, convId]);
 

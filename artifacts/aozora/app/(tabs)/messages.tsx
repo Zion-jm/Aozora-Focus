@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { useConfirm } from "@/context/ConfirmContext";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
@@ -39,8 +39,14 @@ export default function MessagesScreen() {
   const [folder, setFolder] = useState<"inbox" | "archive">("inbox");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetConversations({
-    query: { queryKey: getGetConversationsQueryKey(), refetchInterval: 8_000 },
+    query: { queryKey: getGetConversationsQueryKey(), refetchInterval: 3_000 },
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const conversations = (data as any)?.conversations || [];
   const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);

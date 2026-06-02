@@ -178,7 +178,7 @@ export default function NotificationsScreen() {
     useCallback(() => {
       setLoading(true);
       fetchNotifications();
-      const interval = setInterval(fetchNotifications, 8_000);
+      const interval = setInterval(fetchNotifications, 3_000);
       return () => clearInterval(interval);
     }, [fetchNotifications])
   );

@@ -157,7 +157,7 @@ export default function AdminConversationScreen() {
   }, [convId, token]);
 
   useEffect(() => {
-    const interval = setInterval(fetchMessages, 5000);
+    const interval = setInterval(fetchMessages, 2000);
     return () => clearInterval(interval);
   }, [convId, token]);
 

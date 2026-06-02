@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { useAuth } from "./AuthContext";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-const POLL_INTERVAL_MS = 8_000;
+const POLL_INTERVAL_MS = 3_000;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

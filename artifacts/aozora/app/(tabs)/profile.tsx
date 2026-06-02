@@ -15,8 +15,6 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 
-const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
 function MenuItem({
