@@ -12,6 +12,7 @@ import {
   Pressable,
   TextInput,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
 } from "react-native";
 import { useToast } from "@/context/ToastContext";
@@ -27,6 +28,14 @@ import {
   useAdminGetVerifications,
   useAdminReviewVerification,
 } from "@workspace/api-client-react";
+
+const APPROVAL_CHECKLIST = [
+  { id: "photo_clear",   label: "ID photo is clear and fully legible" },
+  { id: "name_match",    label: "Name on ID matches submitted full name" },
+  { id: "not_expired",   label: "ID is valid and not expired" },
+  { id: "face_match",    label: "Face on ID matches the account holder" },
+  { id: "type_match",    label: "ID type matches what was declared" },
+];
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "#f59e0b",
@@ -56,6 +65,7 @@ export default function AdminVerificationsScreen() {
     status: "approved" | "rejected";
   } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetVerifications({
     query: { queryKey: getAdminGetVerificationsQueryKey(), refetchInterval: 8_000 },
@@ -84,14 +94,30 @@ export default function AdminVerificationsScreen() {
 
   const openReviewModal = (item: any, status: "approved" | "rejected") => {
     setReviewNote("");
+    setCheckedItems(new Set());
     setReviewModal({ item, status });
   };
+
+  const toggleCheck = (id: string) => {
+    setCheckedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allChecked = checkedItems.size === APPROVAL_CHECKLIST.length;
 
   const submitReview = () => {
     if (!reviewModal) return;
     const { item, status } = reviewModal;
     if (status === "rejected" && !reviewNote.trim()) {
       toast.warning("Note required", "Please provide a reason for rejection.");
+      return;
+    }
+    if (status === "approved" && !allChecked) {
+      toast.warning("Checklist incomplete", "Please complete all verification checks before approving.");
       return;
     }
     review.mutate(
@@ -289,41 +315,110 @@ export default function AdminVerificationsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Note input */}
-            <View style={styles.reviewModalBody}>
-              <Text style={[styles.reviewNoteLabel, { color: colors.foreground }]}>
-                {reviewModal?.status === "rejected" ? "Reason for rejection" : "Note for user"}
-                {reviewModal?.status === "rejected" && (
-                  <Text style={{ color: "#ef4444" }}> *</Text>
-                )}
-              </Text>
-              <TextInput
-                style={[
-                  styles.reviewNoteInput,
-                  {
-                    borderColor: colors.border,
-                    color: colors.foreground,
-                    backgroundColor: colors.background,
-                    borderRadius: colors.radius,
-                  },
-                ]}
-                placeholder={
-                  reviewModal?.status === "rejected"
-                    ? "e.g. Image is too blurry, please resubmit with a clearer photo."
-                    : "Optional — any notes for this user."
-                }
-                placeholderTextColor={colors.mutedForeground}
-                value={reviewNote}
-                onChangeText={setReviewNote}
-                multiline
-                autoFocus
-              />
-              {reviewModal?.status === "rejected" && (
-                <Text style={[styles.reviewNoteHint, { color: colors.mutedForeground }]}>
-                  The user will see this reason so they can resubmit correctly.
-                </Text>
+            <ScrollView style={{ maxHeight: 480 }} keyboardShouldPersistTaps="handled">
+              {/* Approval checklist */}
+              {reviewModal?.status === "approved" && (
+                <View style={styles.checklistSection}>
+                  <View style={styles.checklistHeader}>
+                    <Feather name="clipboard" size={15} color={colors.foreground} />
+                    <Text style={[styles.checklistTitle, { color: colors.foreground }]}>
+                      Verification Checklist
+                    </Text>
+                    <View style={[
+                      styles.checklistBadge,
+                      { backgroundColor: allChecked ? "#10b98122" : colors.muted },
+                    ]}>
+                      <Text style={[
+                        styles.checklistBadgeText,
+                        { color: allChecked ? "#10b981" : colors.mutedForeground },
+                      ]}>
+                        {checkedItems.size}/{APPROVAL_CHECKLIST.length}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.checklistSub, { color: colors.mutedForeground }]}>
+                    Tick every item to enable approval.
+                  </Text>
+                  {APPROVAL_CHECKLIST.map((item) => {
+                    const checked = checkedItems.has(item.id);
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[
+                          styles.checklistRow,
+                          {
+                            borderColor: checked ? "#10b981" : colors.border,
+                            backgroundColor: checked ? "#10b98110" : colors.background,
+                            borderRadius: colors.radius,
+                          },
+                        ]}
+                        onPress={() => toggleCheck(item.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[
+                          styles.checkbox,
+                          {
+                            borderColor: checked ? "#10b981" : colors.border,
+                            backgroundColor: checked ? "#10b981" : "transparent",
+                          },
+                        ]}>
+                          {checked && <Feather name="check" size={11} color="#fff" />}
+                        </View>
+                        <Text style={[
+                          styles.checklistLabel,
+                          { color: checked ? colors.foreground : colors.mutedForeground },
+                        ]}>
+                          {item.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {!allChecked && (
+                    <View style={styles.checklistWarning}>
+                      <Feather name="alert-circle" size={13} color="#f59e0b" />
+                      <Text style={styles.checklistWarningText}>
+                        Complete all checks before approving.
+                      </Text>
+                    </View>
+                  )}
+                </View>
               )}
-            </View>
+
+              {/* Note input */}
+              <View style={styles.reviewModalBody}>
+                <Text style={[styles.reviewNoteLabel, { color: colors.foreground }]}>
+                  {reviewModal?.status === "rejected" ? "Reason for rejection" : "Note for user"}
+                  {reviewModal?.status === "rejected" && (
+                    <Text style={{ color: "#ef4444" }}> *</Text>
+                  )}
+                </Text>
+                <TextInput
+                  style={[
+                    styles.reviewNoteInput,
+                    {
+                      borderColor: colors.border,
+                      color: colors.foreground,
+                      backgroundColor: colors.background,
+                      borderRadius: colors.radius,
+                    },
+                  ]}
+                  placeholder={
+                    reviewModal?.status === "rejected"
+                      ? "e.g. Image is too blurry, please resubmit with a clearer photo."
+                      : "Optional — any notes for this user."
+                  }
+                  placeholderTextColor={colors.mutedForeground}
+                  value={reviewNote}
+                  onChangeText={setReviewNote}
+                  multiline
+                />
+                {reviewModal?.status === "rejected" && (
+                  <Text style={[styles.reviewNoteHint, { color: colors.mutedForeground }]}>
+                    The user will see this reason so they can resubmit correctly.
+                  </Text>
+                )}
+              </View>
+            </ScrollView>
 
             {/* Actions */}
             <View style={[styles.reviewModalFooter, { borderTopColor: colors.border }]}>
@@ -339,11 +434,11 @@ export default function AdminVerificationsScreen() {
                   {
                     backgroundColor: reviewModal?.status === "approved" ? "#10b981" : "#ef4444",
                     borderRadius: colors.radius,
-                    opacity: review.isPending ? 0.6 : 1,
+                    opacity: (review.isPending || (reviewModal?.status === "approved" && !allChecked)) ? 0.4 : 1,
                   },
                 ]}
                 onPress={submitReview}
-                disabled={review.isPending}
+                disabled={review.isPending || (reviewModal?.status === "approved" && !allChecked)}
               >
                 {review.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
@@ -485,4 +580,30 @@ const styles = StyleSheet.create({
   rejectBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
   btnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   empty: { paddingVertical: 60, alignItems: "center", gap: 12 },
+
+  checklistSection: { paddingHorizontal: 16, paddingTop: 16, gap: 8 },
+  checklistHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  checklistTitle: { fontSize: 14, fontWeight: "700", flex: 1 },
+  checklistBadge: {
+    paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: 20,
+  },
+  checklistBadgeText: { fontSize: 12, fontWeight: "700" },
+  checklistSub: { fontSize: 12, marginBottom: 4 },
+  checklistRow: {
+    flexDirection: "row", alignItems: "center",
+    gap: 10, padding: 12, borderWidth: 1,
+  },
+  checkbox: {
+    width: 20, height: 20, borderRadius: 5, borderWidth: 2,
+    alignItems: "center", justifyContent: "center",
+  },
+  checklistLabel: { flex: 1, fontSize: 14, lineHeight: 20 },
+  checklistWarning: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "#f59e0b18", borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    marginTop: 2,
+  },
+  checklistWarningText: { fontSize: 12, color: "#f59e0b", flex: 1 },
 });
