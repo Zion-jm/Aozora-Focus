@@ -1,5 +1,5 @@
 guessImports = false
-modules = ["nodejs-20", "web", "python-3.12", "bash"]
+modules = ["nodejs-20", "web", "python-3.12"]
 
 [deployment]
 router = "application"
@@ -21,6 +21,14 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Expo App"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -32,6 +40,29 @@ outputType = "webview"
 task = "shell.exec"
 args = "bash start.sh"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-server run dev"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Expo App"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/aozora run dev"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -54,10 +85,6 @@ localPort = 8080
 externalPort = 8080
 
 [[ports]]
-localPort = 8099
-externalPort = 8099
-
-[[ports]]
 localPort = 8100
 externalPort = 3003
 
@@ -76,6 +103,5 @@ channel = "stable-25_05"
 
 [userenv.shared]
 PORT = "8080"
-EXPO_PUBLIC_DOMAIN = "ae99a48c-f8d0-4c85-8bd0-335e890392c9-00-1pujxvnji6tvy.pike.replit.dev"
 NODE_ENV = "development"
 JWT_SECRET = "f4cd3bf4bc8e10c3824d0d0303130723489ea471467c292c15928b086c95e91862e6c775a5fdf41f99d47e217ed19605"
