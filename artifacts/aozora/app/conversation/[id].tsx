@@ -85,12 +85,9 @@ export default function ConversationScreen() {
   const send = useSendMessage({
     mutation: {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) }).then(() => {
-          flatRef.current?.scrollToOffset({ offset: 0, animated: true });
-        });
+        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) });
         qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
         setText("");
-        flatRef.current?.scrollToOffset({ offset: 0, animated: false });
       },
     },
   });
@@ -98,13 +95,6 @@ export default function ConversationScreen() {
   useEffect(() => {
     if (convId) markRead.mutate({ conversationId: convId });
   }, [convId]);
-
-  // Scroll to bottom (newest message) when data first loads
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => flatRef.current?.scrollToOffset({ offset: 0, animated: false }), 50);
-    }
-  }, [messages.length === 0]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -155,7 +145,7 @@ export default function ConversationScreen() {
     return -1;
   }, [messages, user?.id]);
 
-  // Build list with date dividers (chronological), then reverse for the inverted FlatList
+  // Build list with date dividers in chronological order (oldest first)
   const listItems = useMemo((): ListItem[] => {
     const items: ListItem[] = [];
     for (let i = 0; i < messages.length; i++) {
@@ -166,7 +156,7 @@ export default function ConversationScreen() {
       }
       items.push({ kind: "message", data: msg });
     }
-    return [...items].reverse();
+    return items;
   }, [messages]);
 
   const renderItem = ({ item }: { item: ListItem }) => {
@@ -301,7 +291,8 @@ export default function ConversationScreen() {
           data={listItems}
           keyExtractor={(item) => item.kind === "divider" ? item.id : `msg-${item.data.id}`}
           renderItem={renderItem}
-          inverted
+          onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: false })}
+          onLayout={() => flatRef.current?.scrollToEnd({ animated: false })}
           contentContainerStyle={[styles.listContent, { paddingBottom: 16 }]}
           ListEmptyComponent={
             <View style={styles.empty}>

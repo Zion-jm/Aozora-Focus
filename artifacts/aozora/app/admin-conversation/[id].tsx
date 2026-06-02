@@ -119,7 +119,7 @@ export default function AdminConversationScreen() {
 
   useEffect(() => {
     fetchMessages().then(() => {
-      setTimeout(() => flatRef.current?.scrollToOffset({ offset: 0, animated: false }), 50);
+      setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 50);
     });
   }, [convId, token]);
 
@@ -157,7 +157,7 @@ export default function AdminConversationScreen() {
       if (res.ok) {
         setText("");
         await fetchMessages();
-        flatRef.current?.scrollToOffset({ offset: 0, animated: true });
+        flatRef.current?.scrollToEnd({ animated: true });
       }
     } catch {
       // ignore
@@ -179,7 +179,7 @@ export default function AdminConversationScreen() {
     return -1;
   }, [messages, user?.id]);
 
-  // Build list with date dividers (chronological), then reverse for inverted FlatList
+  // Build list with date dividers in chronological order (oldest first)
   const listItems = useMemo((): ListItem[] => {
     const items: ListItem[] = [];
     for (let i = 0; i < messages.length; i++) {
@@ -190,7 +190,7 @@ export default function AdminConversationScreen() {
       }
       items.push({ kind: "message", data: msg });
     }
-    return [...items].reverse();
+    return items;
   }, [messages]);
 
   const renderItem = ({ item }: { item: ListItem }) => {
@@ -394,7 +394,8 @@ export default function AdminConversationScreen() {
           data={listItems}
           keyExtractor={(item) => item.kind === "divider" ? item.id : `msg-${item.data.id}`}
           renderItem={renderItem}
-          inverted
+          onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: false })}
+          onLayout={() => flatRef.current?.scrollToEnd({ animated: false })}
           contentContainerStyle={[styles.listContent, { paddingBottom: 16 }]}
           ListEmptyComponent={
             <View style={styles.empty}>
