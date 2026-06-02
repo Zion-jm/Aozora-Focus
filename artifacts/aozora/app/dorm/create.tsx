@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 
 import { useColors } from "@/hooks/useColors";
+import { useToast } from "@/context/ToastContext";
 import {
   useCreateDorm,
   useUpdateDorm,
