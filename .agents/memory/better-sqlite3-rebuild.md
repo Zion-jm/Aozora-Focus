@@ -39,7 +39,7 @@ ar crs "$BUILD_DIR/Release/obj.target/deps/sqlite3.a" \
 # 4. Compile better_sqlite3.cpp
 g++ -o "$BUILD_DIR/Release/obj.target/better_sqlite3/src/better_sqlite3.o" \
   ".../src/better_sqlite3.cpp" -DNDEBUG \
-  -I"$NODE_INC" -I"$NODE_INC/../src" ... -fPIC -pthread -m64 -O3 -std=c++17 -c
+  -I"$NODE_INC" -I"$NODE_INC/../src" ... -fPIC -pthread -m64 -O3 -std=c++20 -c
 
 # 5. Link
 g++ -shared -fPIC -nostartfiles -m64 \
@@ -51,7 +51,10 @@ g++ -shared -fPIC -nostartfiles -m64 \
 cp "$BUILD_DIR/Release/better_sqlite3.node" .cache/better-sqlite3/
 ```
 
-**Critical flag:** `SQLITE_ENABLE_COLUMN_METADATA` must be included or the binary fails to load with `undefined symbol: sqlite3_column_origin_name`.
+**Critical flags:**
+- Use `-std=c++20` (NOT c++17) for better_sqlite3.cpp — gcc 14 on NixOS stable-25_05 requires C++20 or later; using c++17 causes a hard `#error "C++20 or later required."` build failure.
+- The `.cache/node-gyp/<version>/include/node` path must match the **running** Node version exactly. If it doesn't exist, download the headers: `curl -sL https://nodejs.org/dist/v<VER>/node-v<VER>-headers.tar.gz | tar -xz --strip-components=1 -C ~/.cache/node-gyp/<VER>/`
+- `SQLITE_ENABLE_COLUMN_METADATA` must be included or the binary fails to load with `undefined symbol: sqlite3_column_origin_name`.
 
 **ensure-sqlite.mjs** and **scripts/post-merge.sh** are both updated to use this approach.
 

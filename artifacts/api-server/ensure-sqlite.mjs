@@ -141,7 +141,7 @@ function buildNative() {
     -I"${NODE_INC}/../deps/v8/include" \
     -I"${resolve(SQLITE3_DIR, "deps")}" \
     -I"${resolve(SQLITE3_DIR, "node_modules")}" \
-    -fPIC -pthread -Wall -m64 -O3 -std=c++17 -c`, { stdio: "inherit" });
+    -fPIC -pthread -Wall -m64 -O3 -std=c++20 -c`, { stdio: "inherit" });
 
   // Step 5: Link
   console.log("[ensure-sqlite] Linking better_sqlite3.node...");

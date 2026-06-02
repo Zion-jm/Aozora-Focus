@@ -71,7 +71,7 @@ if [ -d "$BETTER_SQLITE3_DIR" ]; then
       -I"$NODE_INC/../deps/v8/include" \
       -I"$BETTER_SQLITE3_DIR/deps" \
       -I"$BETTER_SQLITE3_DIR/node_modules" \
-      -fPIC -pthread -Wall -m64 -O3 -std=c++17 -c
+      -fPIC -pthread -Wall -m64 -O3 -std=c++20 -c
 
     # Step 4: Link
     mkdir -p "$BUILD_DIR/Release"
