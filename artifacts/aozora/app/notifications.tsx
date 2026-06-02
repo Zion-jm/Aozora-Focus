@@ -68,9 +68,20 @@ function notificationIcon(type: Notification["type"]): { name: React.ComponentPr
   }
 }
 
+/**
+ * SQLite datetime('now') returns "YYYY-MM-DD HH:MM:SS" with no T or Z.
+ * Without the Z suffix JS parses it as *local* time instead of UTC,
+ * causing an 8-hour error for UTC+8 users.
+ */
+function parseTs(ts: string): Date {
+  if (!ts) return new Date();
+  if (ts.includes("Z") || ts.includes("+") || (ts.includes("T") && ts.length > 19)) return new Date(ts);
+  return new Date(ts.replace(" ", "T") + "Z");
+}
+
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
-  const then = new Date(dateStr).getTime();
+  const then = parseTs(dateStr).getTime();
   const diffMs = now - then;
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
@@ -82,7 +93,7 @@ function formatRelativeTime(dateStr: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   if (diffDay === 1) return "Yesterday";
   if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+  return parseTs(dateStr).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
 }
 
 function NotificationItem({
@@ -170,23 +181,39 @@ export default function NotificationsScreen() {
     },
   });
 
-  const ADMIN_CONV_TYPES: Notification["type"][] = ["admin_message", "admin_warning", "support_ticket_resolved"];
+  const ADMIN_MSG_TYPES = ["admin_message", "admin_warning", "admin_message_new", "support_ticket_resolved"];
+  const MSG_TYPES = ["message_new", "new_message"];
+  const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
+    "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new"];
 
   const handlePress = useCallback(
     (n: Notification) => {
       if (!n.isRead) {
         markOneRead({ id: n.id });
       }
-      if (n.relatedType === "appointment" && n.relatedId) {
-        router.push(`/appointment/${n.relatedId}` as any);
-      } else if (n.relatedType === "dorm" && n.relatedId) {
-        router.push(`/dorm/${n.relatedId}` as any);
-      } else if (n.relatedType === "conversation" && n.relatedId) {
-        if (ADMIN_CONV_TYPES.includes(n.type)) {
-          router.push(`/admin-conversation/${n.relatedId}` as any);
+      const type = n.type as string;
+      // ── Navigate using relatedId/relatedType when available ──────────────────
+      if ((n as any).relatedType === "appointment" && (n as any).relatedId) {
+        router.push(`/appointment/${(n as any).relatedId}` as any);
+      } else if ((n as any).relatedType === "dorm" && (n as any).relatedId) {
+        router.push(`/dorm/${(n as any).relatedId}` as any);
+      } else if ((n as any).relatedType === "conversation" && (n as any).relatedId) {
+        if (ADMIN_MSG_TYPES.includes(type)) {
+          router.push(`/admin-conversation/${(n as any).relatedId}` as any);
         } else {
-          router.push(`/conversation/${n.relatedId}` as any);
+          router.push(`/conversation/${(n as any).relatedId}` as any);
         }
+      // ── Fallback: no relatedId stored (older notifications) ──────────────────
+      } else if (APPT_TYPES.includes(type)) {
+        router.push("/(tabs)/appointments" as any);
+      } else if (MSG_TYPES.includes(type)) {
+        router.push("/(tabs)/messages" as any);
+      } else if (ADMIN_MSG_TYPES.includes(type)) {
+        router.push("/(tabs)/messages" as any);
+      } else if (type === "dorm_approved" || type === "dorm_rejected" || type === "dorm_taken_down") {
+        router.push("/profile/my-dorms" as any);
+      } else if (type === "id_verified" || type === "id_rejected") {
+        router.push("/profile/verify" as any);
       }
     },
     [markOneRead]

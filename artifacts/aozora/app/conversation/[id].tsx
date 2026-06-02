@@ -85,9 +85,12 @@ export default function ConversationScreen() {
   const send = useSendMessage({
     mutation: {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) });
+        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) }).then(() => {
+          flatRef.current?.scrollToOffset({ offset: 0, animated: true });
+        });
         qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
         setText("");
+        flatRef.current?.scrollToOffset({ offset: 0, animated: false });
       },
     },
   });
@@ -95,6 +98,13 @@ export default function ConversationScreen() {
   useEffect(() => {
     if (convId) markRead.mutate({ conversationId: convId });
   }, [convId]);
+
+  // Scroll to bottom (newest message) when data first loads
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => flatRef.current?.scrollToOffset({ offset: 0, animated: false }), 50);
+    }
+  }, [messages.length === 0]);
 
   useEffect(() => {
     const interval = setInterval(() => {

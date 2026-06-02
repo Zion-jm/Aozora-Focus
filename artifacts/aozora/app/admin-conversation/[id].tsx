@@ -118,7 +118,9 @@ export default function AdminConversationScreen() {
   };
 
   useEffect(() => {
-    fetchMessages();
+    fetchMessages().then(() => {
+      setTimeout(() => flatRef.current?.scrollToOffset({ offset: 0, animated: false }), 50);
+    });
   }, [convId, token]);
 
   useEffect(() => {
@@ -155,6 +157,7 @@ export default function AdminConversationScreen() {
       if (res.ok) {
         setText("");
         await fetchMessages();
+        flatRef.current?.scrollToOffset({ offset: 0, animated: true });
       }
     } catch {
       // ignore
