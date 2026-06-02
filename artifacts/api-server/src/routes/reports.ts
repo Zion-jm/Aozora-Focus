@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
-import { createNotification } from "../lib/notifications";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
 
 const router = Router();

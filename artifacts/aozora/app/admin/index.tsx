@@ -16,6 +16,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { PageHeader } from "@/components/PageHeader";
 import { getAdminGetStatsQueryKey, useAdminGetStats } from "@workspace/api-client-react";
+import { timeAgo as formatRelative } from "../../utils/time";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -37,18 +38,6 @@ const DORM_COLORS = ["#10b981", "#f59e0b", "#ef4444"];
 const DORM_LABELS = ["Approved", "Pending", "Taken Down"];
 const USER_COLORS = ["#4f46e5", "#0ea5e9", "#ef4444"];
 const USER_LABELS = ["Students", "Owners", "Suspended"];
-
-function formatRelative(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
-}
 
 function DonutChart({ data, colors: themeColors }: { data: { value: number; color: string; label: string }[]; colors: any }) {
   const size = 130;

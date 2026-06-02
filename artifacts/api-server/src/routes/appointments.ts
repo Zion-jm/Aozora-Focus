@@ -3,7 +3,7 @@ import { db, sqlite } from "../db/index";
 import { appointments, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { createNotification, notifyUser } from "../lib/notifications";
+import { notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -270,53 +270,6 @@ router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
   const updated = result[0]!;
   const student = await db.select().from(users).where(eq(users.id, updated.studentId)).get();
 
-  if (status === "approved") {
-    createNotification({
-      userId: updated.studentId,
-      type: "appointment_approved",
-      title: "Visit Approved! 🎉",
-      body: `Your visit to ${dorm?.name ?? "the dorm"} on ${updated.preferredDate} at ${updated.preferredTime} has been approved.`,
-      relatedId: updated.id,
-      relatedType: "appointment",
-    });
-  } else if (status === "rejected") {
-    createNotification({
-      userId: updated.studentId,
-      type: "appointment_rejected",
-      title: "Visit Declined",
-      body: `Your visit request to ${dorm?.name ?? "the dorm"} was declined.${updated.ownerNote ? ` Note: ${updated.ownerNote}` : ""}`,
-      relatedId: updated.id,
-      relatedType: "appointment",
-    });
-  } else if (status === "cancelled" && dorm) {
-    createNotification({
-      userId: dorm.ownerId,
-      type: "appointment_cancelled",
-      title: "Visit Cancelled",
-      body: `${student?.fullName ?? "A student"} cancelled their visit to ${dorm.name} on ${updated.preferredDate}.`,
-      relatedId: updated.id,
-      relatedType: "appointment",
-    });
-  } else if (status === "completed") {
-    createNotification({
-      userId: updated.studentId,
-      type: "appointment_completed",
-      title: "Visit Completed",
-      body: `Your visit to ${dorm?.name ?? "the dorm"} has been marked complete. Leave a review to help others!`,
-      relatedId: updated.id,
-      relatedType: "appointment",
-    });
-  } else if (status === "no_show") {
-    createNotification({
-      userId: updated.studentId,
-      type: "appointment_no_show",
-      title: "Marked as No-Show",
-      body: `Your visit to ${dorm?.name ?? "the dorm"} on ${updated.preferredDate} was marked as no-show by the owner.`,
-      relatedId: updated.id,
-      relatedType: "appointment",
-    });
-  }
-  // ── Notifications based on status change ─────────────────────────────────
   if (status === "approved") {
     notifyUser(sqlite, updated.studentId, {
       type: "appointment_approved",

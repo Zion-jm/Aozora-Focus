@@ -111,7 +111,7 @@ export function upsertConversationNotification({
     // Non-fatal
   }
 
-  const path = `/conversation/${relatedId}`;
+  const path = type === "admin_message" ? `/admin-conversation/${relatedId}` : `/conversation/${relatedId}`;
   sendPushNotificationToUser(userId, title, body, { path }).catch(() => {});
 }
 

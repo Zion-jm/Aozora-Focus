@@ -3,7 +3,7 @@ import { db, sqlite } from "../db/index";
 import { users, verificationRecords, dorms, appointments } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
-import { createNotification, notifyUser } from "../lib/notifications";
+import { notifyUser } from "../lib/notifications";
 
 const router = Router();
 
@@ -220,25 +220,6 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
 
   const dorm = result[0]!;
 
-  if (status === "approved") {
-    createNotification({
-      userId: dorm.ownerId,
-      type: "dorm_approved",
-      title: "Listing Approved! 🎉",
-      body: `Your listing "${dorm.name}" has been approved and is now live on Aozora.`,
-      relatedId: dorm.id,
-      relatedType: "dorm",
-    });
-  } else if (status === "rejected") {
-    createNotification({
-      userId: dorm.ownerId,
-      type: "dorm_rejected",
-      title: "Listing Rejected",
-      body: `Your listing "${dorm.name}" was not approved.${note ? ` Reason: ${note}` : " Please update it and resubmit."}`,
-      relatedId: dorm.id,
-      relatedType: "dorm",
-    });
-  }
   const notifType =
     status === "approved" ? "dorm_approved" :
     status === "rejected" ? "dorm_rejected" : "dorm_taken_down";

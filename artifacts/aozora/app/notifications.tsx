@@ -22,6 +22,7 @@ import {
   getGetNotificationsQueryKey,
   type Notification,
 } from "@workspace/api-client-react";
+import { timeAgo as formatRelativeTime } from "../utils/time";
 
 function notificationIcon(type: Notification["type"]): { name: React.ComponentProps<typeof Feather>["name"]; color: string } {
   switch (type) {
@@ -66,34 +67,6 @@ function notificationIcon(type: Notification["type"]): { name: React.ComponentPr
     default:
       return { name: "bell", color: "#4f46e5" };
   }
-}
-
-/**
- * SQLite datetime('now') returns "YYYY-MM-DD HH:MM:SS" with no T or Z.
- * Without the Z suffix JS parses it as *local* time instead of UTC,
- * causing an 8-hour error for UTC+8 users.
- */
-function parseTs(ts: string): Date {
-  if (!ts) return new Date();
-  if (ts.includes("Z") || ts.includes("+") || (ts.includes("T") && ts.length > 19)) return new Date(ts);
-  return new Date(ts.replace(" ", "T") + "Z");
-}
-
-function formatRelativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = parseTs(dateStr).getTime();
-  const diffMs = now - then;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-
-  if (diffSec < 60) return "Just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  if (diffDay === 1) return "Yesterday";
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return parseTs(dateStr).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
 }
 
 function NotificationItem({

@@ -3,7 +3,7 @@ import { db, sqlite } from "../db/index";
 import { conversations, messages, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
-import { createNotification, notifyUser, upsertConversationNotification } from "../lib/notifications";
+import { notifyUser, upsertConversationNotification } from "../lib/notifications";
 
 const router = Router();
 

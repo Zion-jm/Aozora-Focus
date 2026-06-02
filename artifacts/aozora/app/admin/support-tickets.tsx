@@ -28,6 +28,8 @@ const TICKET_TYPE_COLORS: Record<string, string> = {
   "Other": "#8b5cf6",
 };
 
+import { timeAgo } from "../../utils/time";
+
 const TICKET_TYPE_ICONS: Record<string, React.ComponentProps<typeof Feather>["name"]> = {
   "Appeal Rejection": "shield-off",
   "Appeal Suspension": "user-x",
@@ -36,16 +38,6 @@ const TICKET_TYPE_ICONS: Record<string, React.ComponentProps<typeof Feather>["na
   "Payment/Listing Help": "home",
   "Other": "more-horizontal",
 };
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
 
 export default function AdminSupportTicketsScreen() {
   const colors = useColors();
