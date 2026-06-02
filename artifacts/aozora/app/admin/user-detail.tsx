@@ -134,6 +134,13 @@ export default function AdminUserDetailScreen() {
     });
   };
 
+  const handleViewViolations = () => {
+    router.push({
+      pathname: "/admin/user-violations",
+      params: { userId: String(uid), userName: user?.fullName ?? "" },
+    });
+  };
+
   const handleToggleSuspend = () => {
     const action = user?.isSuspended ? "Unsuspend" : "Suspend";
     showConfirm({
@@ -270,6 +277,26 @@ export default function AdminUserDetailScreen() {
             )}
           </View>
         </View>
+
+        {/* Quick actions */}
+        <TouchableOpacity
+          onPress={handleViewViolations}
+          style={[
+            styles.violationsBtn,
+            { backgroundColor: "#ef444410", borderColor: "#ef444430", borderRadius: colors.radius },
+          ]}
+        >
+          <View style={[styles.violationsBtnLeft, { backgroundColor: "#ef444418", borderRadius: 10 }]}>
+            <Feather name="alert-octagon" size={18} color="#ef4444" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.violationsBtnTitle, { color: "#ef4444" }]}>View Violation Record</Text>
+            <Text style={[styles.violationsBtnSub, { color: "#ef444490" }]}>
+              Risk score, history & recommended action
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={16} color="#ef4444" />
+        </TouchableOpacity>
 
         {/* Personal information */}
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>PERSONAL INFORMATION</Text>
@@ -630,6 +657,17 @@ const styles = StyleSheet.create({
   reviewNoteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
   reviewNoteText: { fontSize: 13 },
   noVerif: { borderWidth: 1, padding: 30, alignItems: "center", gap: 10 },
+
+  violationsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderWidth: 1,
+  },
+  violationsBtnLeft: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
+  violationsBtnTitle: { fontSize: 14, fontWeight: "700" },
+  violationsBtnSub: { fontSize: 12, marginTop: 1 },
 
   warnCard: { borderWidth: 1.5, padding: 14, gap: 10 },
   warnHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10 },

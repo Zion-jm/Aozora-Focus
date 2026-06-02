@@ -5,6 +5,36 @@ import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser } from "../lib/notifications";
 
+const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
+
+function computeScore(violRows: any[]): number {
+  const now = Date.now();
+  return violRows.reduce((sum, v) => {
+    const ageDays = (now - new Date(v.created_at).getTime()) / 86400000;
+    const weight = ageDays <= 30 ? 1.5 : ageDays <= 90 ? 1.0 : ageDays <= 180 ? 0.75 : 0.5;
+    return sum + (SEVERITY_POINTS[v.severity as number] ?? 1) * weight;
+  }, 0);
+}
+
+function scoreToLevel(score: number): string {
+  if (score <= 0) return "clean";
+  if (score < 5)  return "warning";
+  if (score < 10) return "short_suspension";
+  if (score < 20) return "long_suspension";
+  return "ban";
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  harassment:           "Harassment or Bullying",
+  spam:                 "Spam or Unsolicited Messages",
+  fake_listing:         "Fraudulent Dorm Listing",
+  fake_identity:        "Identity Misrepresentation",
+  hate_speech:          "Hate Speech or Discrimination",
+  inappropriate_content:"Inappropriate Content",
+  no_show:              "Repeated Appointment No-Shows",
+  other:                "Other Violation",
+};
+
 const router = Router();
 
 router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) => {
@@ -15,6 +45,8 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
 
   const pendingReports = (sqlite.prepare("SELECT COUNT(*) as cnt FROM reports WHERE status = 'pending'").get() as any)?.cnt ?? 0;
   const pendingSupportTickets = (sqlite.prepare("SELECT COUNT(*) as cnt FROM support_tickets WHERE status = 'pending'").get() as any)?.cnt ?? 0;
+  const totalViolations = (sqlite.prepare("SELECT COUNT(*) as cnt FROM violations").get() as any)?.cnt ?? 0;
+  const recentViolations = (sqlite.prepare("SELECT COUNT(*) as cnt FROM violations WHERE created_at >= datetime('now', '-7 days')").get() as any)?.cnt ?? 0;
 
   res.json({
     totalUsers: allUsers.length,
@@ -30,6 +62,8 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
     pendingAppointments: allAppts.filter((a) => a.status === "pending").length,
     pendingReports,
     pendingSupportTickets,
+    totalViolations,
+    recentViolations,
   });
 });
 
@@ -241,6 +275,130 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
   });
 
   res.json({ ...dorm, amenities: JSON.parse(dorm.amenities || "[]") });
+});
+
+router.get("/admin/violations", requireAuth, requireRole("admin"), async (_req, res) => {
+  const rows = sqlite.prepare(`
+    SELECT v.*,
+      u.full_name as user_name, u.avatar_url as user_avatar,
+      a.full_name as admin_name
+    FROM violations v
+    LEFT JOIN users u ON v.user_id = u.id
+    LEFT JOIN users a ON v.admin_id = a.id
+    ORDER BY v.created_at DESC
+  `).all() as any[];
+
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const levelMap: Record<number, string> = {};
+  for (const uid of userIds) {
+    const userViolations = rows.filter((r) => r.user_id === uid);
+    levelMap[uid] = scoreToLevel(computeScore(userViolations));
+  }
+
+  const violations = rows.map((r) => ({ ...r, level: levelMap[r.user_id] ?? "clean" }));
+
+  const bySeverity: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  rows.forEach((r) => { bySeverity[r.severity as number] = (bySeverity[r.severity as number] ?? 0) + 1; });
+
+  res.json({
+    violations,
+    stats: { total: rows.length, bySeverity },
+  });
+});
+
+router.get("/admin/users/:userId/violations", requireAuth, requireRole("admin"), async (req, res) => {
+  const userId = parseInt(req.params["userId"]!);
+  const rows = sqlite.prepare(`
+    SELECT v.*, a.full_name as admin_name
+    FROM violations v
+    LEFT JOIN users a ON v.admin_id = a.id
+    WHERE v.user_id = ?
+    ORDER BY v.created_at DESC
+  `).all(userId) as any[];
+
+  const score = computeScore(rows);
+  const level = scoreToLevel(score);
+  res.json({ violations: rows, score, level });
+});
+
+router.post("/admin/violations", requireAuth, requireRole("admin"), async (req, res) => {
+  const adminId = (req as any).user!.id;
+  const { userId, category, severity, description, notes } = req.body;
+
+  if (!userId || !category || !severity || !description) {
+    res.status(400).json({ error: "Bad request", message: "userId, category, severity, and description are required." });
+    return;
+  }
+
+  const result = sqlite.prepare(
+    `INSERT INTO violations (user_id, admin_id, category, severity, description, notes) VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(userId, adminId, category, severity, description, notes ?? null) as any;
+
+  const categoryLabel = CATEGORY_LABELS[category as string] ?? category;
+  notifyUser(sqlite, userId, {
+    type: "violation_logged",
+    title: "Community Guideline Violation",
+    body: `A violation has been recorded on your account: ${categoryLabel}. Repeated violations may result in suspension.`,
+    data: { path: "/(tabs)/profile" },
+  });
+
+  const allViolations = sqlite.prepare(
+    `SELECT * FROM violations WHERE user_id = ?`
+  ).all(userId) as any[];
+  const score = computeScore(allViolations);
+  const level = scoreToLevel(score);
+
+  res.json({ id: result.lastInsertRowid, score, level });
+});
+
+router.delete("/admin/violations/:id", requireAuth, requireRole("admin"), async (req, res) => {
+  const id = parseInt(req.params["id"]!);
+  sqlite.prepare("DELETE FROM violations WHERE id = ?").run(id);
+  res.json({ success: true });
+});
+
+router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("admin"), async (req, res) => {
+  const { userId, level } = req.body;
+
+  if (level === "clean") {
+    res.json({ success: true, action: "none" });
+    return;
+  }
+
+  const notifMap: Record<string, { title: string; body: string }> = {
+    warning: {
+      title: "Official Warning",
+      body: "You have received an official warning from Aozora administration due to community guideline violations.",
+    },
+    short_suspension: {
+      title: "Account Suspended (7 Days)",
+      body: "Due to repeated community guideline violations, your account has been suspended for 7 days.",
+    },
+    long_suspension: {
+      title: "Account Suspended (30 Days)",
+      body: "Due to serious community guideline violations, your account has been suspended for 30 days.",
+    },
+    ban: {
+      title: "Account Permanently Banned",
+      body: "Your account has been permanently banned from Aozora due to severe or repeated community guideline violations.",
+    },
+  };
+
+  if (level === "short_suspension" || level === "long_suspension" || level === "ban") {
+    await db.update(users).set({ isSuspended: true, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
+  }
+
+  const notif = notifMap[level as string];
+  if (notif) {
+    notifyUser(sqlite, userId, {
+      type: `violation_action_${level}`,
+      title: notif.title,
+      body: notif.body,
+      data: { path: "/(tabs)/profile" },
+    });
+  }
+
+  res.json({ success: true, action: level });
 });
 
 router.get("/admin/activity", requireAuth, requireRole("admin"), async (_req, res) => {

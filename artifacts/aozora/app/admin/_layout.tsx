@@ -100,9 +100,20 @@ export default function AdminLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="violations"
+        options={{
+          title: "Violations",
+          tabBarBadge: badge(s?.recentViolations),
+          tabBarIcon: ({ color }) => (
+            <Feather name="alert-octagon" size={21} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen name="rejected-listings" options={{ href: null }} />
       <Tabs.Screen name="suspended-users" options={{ href: null }} />
       <Tabs.Screen name="user-detail" options={{ href: null }} />
+      <Tabs.Screen name="user-violations" options={{ href: null }} />
     </Tabs>
   );
 }
