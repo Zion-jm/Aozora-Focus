@@ -217,6 +217,8 @@ export default function AdminReportsScreen() {
     const isDismissed = item.status === "dismissed";
     const alreadyWarned = !!item.warned_at;
     const alreadyTakenDown = !!item.taken_down_at;
+    const alreadySuspended = item.status === "reviewed" && !alreadyWarned && !alreadyTakenDown;
+    const alreadyActioned = alreadyWarned || alreadyTakenDown || alreadySuspended;
     const isDormReport = item.target_type === "dorm";
 
     // Subtitle shown under the target ID
@@ -285,16 +287,16 @@ export default function AdminReportsScreen() {
         <View style={[styles.quickActions, { borderTopColor: colors.border }]}>
           {isDormReport ? (
             <>
-              {/* Warn Owner — locks after first use */}
+              {/* Warn Owner — locked once any action is taken */}
               <TouchableOpacity
                 style={[
                   styles.quickBtn,
-                  isDismissed || alreadyWarned
+                  isDismissed || alreadyActioned
                     ? { backgroundColor: colors.secondary, borderColor: colors.border }
                     : { backgroundColor: "#f59e0b18", borderColor: "#f59e0b40" },
                 ]}
                 onPress={() => sendWarning(item.id, item.target_user_name)}
-                disabled={isAnyLoading || isDismissed || alreadyWarned}
+                disabled={isAnyLoading || isDismissed || alreadyActioned}
               >
                 {currentAction === "warn" ? (
                   <ActivityIndicator size="small" color={colors.mutedForeground} />
@@ -303,36 +305,36 @@ export default function AdminReportsScreen() {
                     <Feather
                       name="alert-triangle"
                       size={14}
-                      color={isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b"}
+                      color={isDismissed || alreadyActioned ? colors.mutedForeground : "#f59e0b"}
                     />
-                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b" }]}>
+                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyActioned ? colors.mutedForeground : "#f59e0b" }]}>
                       {alreadyWarned ? "Owner Warned" : "Warn Owner"}
                     </Text>
                   </>
                 )}
               </TouchableOpacity>
 
-              {/* Take Down Listing — locks after first use */}
+              {/* Take Down Listing — locked once any action is taken */}
               <TouchableOpacity
                 style={[
                   styles.quickBtn,
-                  isDismissed || alreadyTakenDown
+                  isDismissed || alreadyActioned
                     ? { backgroundColor: colors.secondary, borderColor: colors.border }
                     : { backgroundColor: "#ef444418", borderColor: "#ef444440" },
                 ]}
                 onPress={() => takeDownListing(item.id, item.target_dorm_name)}
-                disabled={isAnyLoading || isDismissed || alreadyTakenDown}
+                disabled={isAnyLoading || isDismissed || alreadyActioned}
               >
                 {currentAction === "takedown" ? (
-                  <ActivityIndicator size="small" color={isDismissed || alreadyTakenDown ? colors.mutedForeground : "#ef4444"} />
+                  <ActivityIndicator size="small" color={isDismissed || alreadyActioned ? colors.mutedForeground : "#ef4444"} />
                 ) : (
                   <>
                     <Feather
                       name="trash-2"
                       size={14}
-                      color={isDismissed || alreadyTakenDown ? colors.mutedForeground : "#ef4444"}
+                      color={isDismissed || alreadyActioned ? colors.mutedForeground : "#ef4444"}
                     />
-                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyTakenDown ? colors.mutedForeground : "#ef4444" }]}>
+                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyActioned ? colors.mutedForeground : "#ef4444" }]}>
                       {alreadyTakenDown ? "Taken Down" : "Take Down"}
                     </Text>
                   </>
@@ -341,16 +343,16 @@ export default function AdminReportsScreen() {
             </>
           ) : (
             <>
-              {/* Warn — locks after first use */}
+              {/* Warn — locked once any action is taken */}
               <TouchableOpacity
                 style={[
                   styles.quickBtn,
-                  isDismissed || alreadyWarned
+                  isDismissed || alreadyActioned
                     ? { backgroundColor: colors.secondary, borderColor: colors.border }
                     : { backgroundColor: "#f59e0b18", borderColor: "#f59e0b40" },
                 ]}
                 onPress={() => sendWarning(item.id, item.target_user_name)}
-                disabled={isAnyLoading || isDismissed || alreadyWarned}
+                disabled={isAnyLoading || isDismissed || alreadyActioned}
               >
                 {currentAction === "warn" ? (
                   <ActivityIndicator size="small" color={colors.mutedForeground} />
@@ -359,37 +361,37 @@ export default function AdminReportsScreen() {
                     <Feather
                       name="alert-triangle"
                       size={14}
-                      color={isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b"}
+                      color={isDismissed || alreadyActioned ? colors.mutedForeground : "#f59e0b"}
                     />
-                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyWarned ? colors.mutedForeground : "#f59e0b" }]}>
+                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyActioned ? colors.mutedForeground : "#f59e0b" }]}>
                       {alreadyWarned ? "Warned" : "Warn"}
                     </Text>
                   </>
                 )}
               </TouchableOpacity>
 
-              {/* Suspend — disabled if dismissed */}
+              {/* Suspend — locked once any action is taken */}
               <TouchableOpacity
                 style={[
                   styles.quickBtn,
-                  isDismissed
+                  isDismissed || alreadyActioned
                     ? { backgroundColor: colors.secondary, borderColor: colors.border }
                     : { backgroundColor: "#ef444418", borderColor: "#ef444440" },
                 ]}
                 onPress={() => suspendUser(item.id, item.target_user_name)}
-                disabled={isAnyLoading || isDismissed}
+                disabled={isAnyLoading || isDismissed || alreadyActioned}
               >
                 {currentAction === "suspend" ? (
-                  <ActivityIndicator size="small" color={isDismissed ? colors.mutedForeground : "#ef4444"} />
+                  <ActivityIndicator size="small" color={isDismissed || alreadyActioned ? colors.mutedForeground : "#ef4444"} />
                 ) : (
                   <>
                     <Feather
                       name="slash"
                       size={14}
-                      color={isDismissed ? colors.mutedForeground : "#ef4444"}
+                      color={isDismissed || alreadyActioned ? colors.mutedForeground : "#ef4444"}
                     />
-                    <Text style={[styles.quickBtnText, { color: isDismissed ? colors.mutedForeground : "#ef4444" }]}>
-                      Suspend
+                    <Text style={[styles.quickBtnText, { color: isDismissed || alreadyActioned ? colors.mutedForeground : "#ef4444" }]}>
+                      {alreadySuspended ? "User Suspended" : "Suspend"}
                     </Text>
                   </>
                 )}
@@ -402,26 +404,18 @@ export default function AdminReportsScreen() {
         {item.status === "pending" && (
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#10b98118", borderColor: "#10b98140" }]}
-              onPress={() => updateStatus(item.id, "reviewed")}
-              disabled={isAnyLoading}
-            >
-              {currentAction === "status" ? (
-                <ActivityIndicator size="small" color="#10b981" />
-              ) : (
-                <>
-                  <Feather name="check" size={14} color="#10b981" />
-                  <Text style={[styles.actionBtnText, { color: "#10b981" }]}>Mark Reviewed</Text>
-                </>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: colors.secondary, borderColor: colors.border }]}
               onPress={() => updateStatus(item.id, "dismissed")}
               disabled={isAnyLoading}
             >
-              <Feather name="x" size={14} color={colors.mutedForeground} />
-              <Text style={[styles.actionBtnText, { color: colors.mutedForeground }]}>Dismiss</Text>
+              {currentAction === "status" ? (
+                <ActivityIndicator size="small" color={colors.mutedForeground} />
+              ) : (
+                <>
+                  <Feather name="x" size={14} color={colors.mutedForeground} />
+                  <Text style={[styles.actionBtnText, { color: colors.mutedForeground }]}>Dismiss</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         )}
