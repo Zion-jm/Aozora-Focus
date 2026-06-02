@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,7 +25,6 @@ import { ReportModal } from "@/components/ReportModal";
 import {
   getListMessagesQueryKey,
   useListMessages,
-  useSendMessage,
   useMarkConversationRead,
   getGetConversationsQueryKey,
 } from "@workspace/api-client-react";
@@ -71,6 +72,8 @@ export default function ConversationScreen() {
   const { toast } = useToast();
   const { showConfirm } = useConfirm();
   const [text, setText] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const flatRef = useRef<FlatList>(null);
 
@@ -81,16 +84,6 @@ export default function ConversationScreen() {
   const messages: any[] = (data as any)?.messages || [];
 
   const markRead = useMarkConversationRead();
-
-  const send = useSendMessage({
-    mutation: {
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) });
-        qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
-        setText("");
-      },
-    },
-  });
 
   useEffect(() => {
     if (convId) markRead.mutate({ conversationId: convId });
@@ -105,9 +98,44 @@ export default function ConversationScreen() {
     return () => clearInterval(interval);
   }, [refetch, convId]);
 
-  const handleSend = () => {
-    if (!text.trim()) return;
-    send.mutate({ conversationId: convId, data: { content: text.trim() } });
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      toast.warning("Permission Required", "Photo library access is needed to send images.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: false,
+      quality: 0.6,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]?.base64) {
+      setImageUri(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!text.trim() && !imageUri) return;
+    setIsSending(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations/${convId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content: text.trim() || "", imageUrl: imageUri || undefined }),
+      });
+      if (res.ok) {
+        setText("");
+        setImageUri(null);
+        qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) });
+        qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+        flatRef.current?.scrollToEnd({ animated: true });
+      }
+    } catch {
+      toast.error("Error", "Could not send message.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleDelete = () => {
@@ -204,7 +232,16 @@ export default function ConversationScreen() {
               },
             ]}
           >
-            <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>{msg.content}</Text>
+            {msg.imageUrl && (
+              <Image
+                source={{ uri: msg.imageUrl }}
+                style={[styles.bubbleImage, { borderRadius: colors.radius - 4 }]}
+                resizeMode="cover"
+              />
+            )}
+            {!!msg.content && (
+              <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>{msg.content}</Text>
+            )}
             <Text style={[styles.timeText, { color: isMe ? "rgba(255,255,255,0.7)" : colors.mutedForeground }]}>
               {fmtTime(msg.createdAt)}
             </Text>

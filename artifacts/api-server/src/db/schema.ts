@@ -97,7 +97,8 @@ export const messages = sqliteTable("messages", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   conversationId: integer("conversation_id").notNull().references(() => conversations.id),
   senderId: integer("sender_id").notNull().references(() => users.id),
-  content: text("content").notNull(),
+  content: text("content").notNull().default(""),
+  imageUrl: text("image_url"),
   isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
 });

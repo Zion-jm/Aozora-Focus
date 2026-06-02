@@ -290,11 +290,11 @@ router.get("/conversations/:conversationId/messages", requireAuth, async (req, r
 
 router.post("/conversations/:conversationId/messages", requireAuth, async (req, res) => {
   const convId = parseInt(req.params["conversationId"]!);
-  const { content } = req.body;
+  const { content, imageUrl } = req.body;
   const userId = req.user!.id;
 
-  if (!content) {
-    res.status(400).json({ error: "Validation error", message: "content is required" });
+  if (!content && !imageUrl) {
+    res.status(400).json({ error: "Validation error", message: "content or imageUrl is required" });
     return;
   }
 
@@ -307,7 +307,8 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
   const result = await db.insert(messages).values({
     conversationId: convId,
     senderId: userId,
-    content,
+    content: content || "",
+    imageUrl: imageUrl || null,
     isRead: false,
   }).returning();
 
@@ -480,9 +481,11 @@ router.get("/admin-conversations/:id/messages", requireAuth, async (req, res) =>
     return;
   }
 
-  const msgs = sqlite.prepare(
-    "SELECT * FROM admin_messages WHERE conversation_id = ? ORDER BY created_at ASC"
-  ).all(convId) as any[];
+  // Sort in JS so both ISO (T) and SQLite-space formats compare correctly
+  const toMs = (ts: string) => new Date(ts.includes("T") ? ts : ts.replace(" ", "T") + "Z").getTime();
+  const msgs = (sqlite.prepare(
+    "SELECT * FROM admin_messages WHERE conversation_id = ?"
+  ).all(convId) as any[]).sort((a: any, b: any) => toMs(a.created_at) - toMs(b.created_at));
 
   const result = msgs.map((m: any) => {
     const sender = sqlite.prepare("SELECT id, full_name, avatar_url FROM users WHERE id = ?").get(m.sender_id) as any;
@@ -491,6 +494,7 @@ router.get("/admin-conversations/:id/messages", requireAuth, async (req, res) =>
       conversationId: m.conversation_id,
       senderId: m.sender_id,
       content: m.content,
+      imageUrl: m.image_url ?? null,
       isRead: !!m.is_read,
       createdAt: m.created_at,
       sender: sender
@@ -582,11 +586,11 @@ router.post("/admin-conversations/:id/unarchive", requireAuth, async (req, res) 
 // POST /admin-conversations/:id/messages
 router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) => {
   const convId = parseInt(req.params["id"]!);
-  const { content } = req.body;
+  const { content, imageUrl } = req.body;
   const userId = req.user!.id;
 
-  if (!content) {
-    res.status(400).json({ error: "Validation error", message: "content is required" });
+  if (!content && !imageUrl) {
+    res.status(400).json({ error: "Validation error", message: "content or imageUrl is required" });
     return;
   }
 
@@ -617,8 +621,8 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
   }
 
   const result = sqlite.prepare(
-    "INSERT INTO admin_messages (conversation_id, sender_id, content, is_read) VALUES (?, ?, ?, 0)"
-  ).run(convId, userId, content);
+    "INSERT INTO admin_messages (conversation_id, sender_id, content, image_url, is_read) VALUES (?, ?, ?, ?, 0)"
+  ).run(convId, userId, content || "", imageUrl || null);
 
   const nowTs = new Date().toISOString();
   sqlite.prepare("UPDATE admin_conversations SET updated_at = ?, admin_archived_at = NULL, user_archived_at = NULL WHERE id = ?").run(nowTs, convId);
@@ -653,20 +657,12 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
       });
     }
   }
-  const otherPartyId = conv.admin_id === userId ? conv.user_id : conv.admin_id;
-  notifyUser(sqlite, otherPartyId, {
-    type: "admin_message_new",
-    title: "New Message 💬",
-    body: `You received a message from ${req.user!.fullName}.`,
-    relatedId: convId,
-    relatedType: "conversation",
-  });
-
   res.status(201).json({
     id: msg.id,
     conversationId: msg.conversation_id,
     senderId: msg.sender_id,
     content: msg.content,
+    imageUrl: msg.image_url ?? null,
     isRead: !!msg.is_read,
     createdAt: msg.created_at,
   });

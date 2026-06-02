@@ -249,6 +249,8 @@ export function initializeDatabase() {
     "ALTER TABLE admin_conversations ADD COLUMN user_archived_at TEXT",
     "ALTER TABLE admin_conversations ADD COLUMN started_at TEXT",
     "ALTER TABLE users ADD COLUMN expo_push_token TEXT",
+    "ALTER TABLE messages ADD COLUMN image_url TEXT",
+    "ALTER TABLE admin_messages ADD COLUMN image_url TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }

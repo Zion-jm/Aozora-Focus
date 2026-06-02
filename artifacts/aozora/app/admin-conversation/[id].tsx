@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useToast } from "@/context/ToastContext";
 import { useConfirm } from "@/context/ConfirmContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -240,9 +242,18 @@ export default function AdminConversationScreen() {
               },
             ]}
           >
-            <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>
-              {msg.content}
-            </Text>
+            {msg.imageUrl && (
+              <Image
+                source={{ uri: msg.imageUrl }}
+                style={[styles.bubbleImage, { borderRadius: colors.radius - 4 }]}
+                resizeMode="cover"
+              />
+            )}
+            {!!msg.content && (
+              <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>
+                {msg.content}
+              </Text>
+            )}
             <Text style={[styles.timeText, { color: isMe ? "rgba(255,255,255,0.7)" : colors.mutedForeground }]}>
               {fmtTime(msg.createdAt)}
             </Text>

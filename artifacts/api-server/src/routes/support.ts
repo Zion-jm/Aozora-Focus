@@ -77,10 +77,11 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
      VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
   ).run(convId, userId, ticketType, subject, message, attachmentUrl ?? null, now, now);
 
-  // Insert the initial message into the conversation
+  // Insert the initial message — no explicit created_at so SQLite uses datetime('now')
+  // (ISO-format timestamps sort differently from SQLite's space-separated format in string ORDER BY)
   sqlite.prepare(
-    "INSERT INTO admin_messages (conversation_id, sender_id, content, is_read, created_at) VALUES (?, ?, ?, 0, ?)"
-  ).run(convId, userId, `[${ticketType}] ${subject}\n\n${message}`, now);
+    "INSERT INTO admin_messages (conversation_id, sender_id, content, is_read) VALUES (?, ?, ?, 0)"
+  ).run(convId, userId, `[${ticketType}] ${subject}\n\n${message}`);
 
   const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketResult.lastInsertRowid) as any;
   const conv = sqlite.prepare("SELECT * FROM admin_conversations WHERE id = ?").get(convId) as any;
