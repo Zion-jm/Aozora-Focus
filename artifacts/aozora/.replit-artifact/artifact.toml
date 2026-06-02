@@ -16,7 +16,7 @@ paths = [ "/" ]
 localPort = 20823
 
 [services.development]
-run = "pnpm --filter @workspace/aozora run dev"
+run = "fuser -k 20823/tcp 2>/dev/null; sleep 1; pnpm --filter @workspace/aozora run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/aozora", "run", "build" ]
