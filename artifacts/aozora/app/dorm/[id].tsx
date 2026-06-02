@@ -231,7 +231,7 @@ export default function DormDetailScreen() {
       });
       return res.json();
     },
-    enabled: !!token && !!dormIdNum && user?.role === "student",
+    enabled: !!token && !!dormIdNum && user?.role === "boarder",
   });
   const canBook: boolean = canBookData?.canBook ?? true;
   const canBookReason: string | undefined = canBookData?.reason;
@@ -510,7 +510,7 @@ export default function DormDetailScreen() {
         <View style={{ height: 16 }} />
       </ScrollView>
 
-      {user && user.role === "student" && (
+      {user && user.role === "boarder" && (
         <View
           style={[
             styles.ctaBar,

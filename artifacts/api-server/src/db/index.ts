@@ -20,7 +20,7 @@ export function initializeDatabase() {
       email TEXT,
       phone TEXT,
       password_hash TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'student',
+      role TEXT NOT NULL DEFAULT 'boarder',
       verification_status TEXT NOT NULL DEFAULT 'unverified',
       is_suspended INTEGER NOT NULL DEFAULT 0,
       avatar_url TEXT,

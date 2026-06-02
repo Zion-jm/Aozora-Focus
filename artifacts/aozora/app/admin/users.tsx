@@ -28,7 +28,7 @@ import {
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 const ROLE_COLOR: Record<string, string> = {
-  student: "#0ea5e9",
+  boarder: "#0ea5e9",
   owner: "#8b5cf6",
   admin: "#ef4444",
 };
@@ -111,7 +111,7 @@ export default function AdminUsersScreen() {
     }
   };
 
-  const FILTERS = ["all", "student", "owner", "admin"];
+  const FILTERS = ["all", "boarder", "owner", "admin"];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

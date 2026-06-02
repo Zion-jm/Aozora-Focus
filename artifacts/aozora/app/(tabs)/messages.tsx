@@ -371,7 +371,7 @@ export default function MessagesScreen() {
                   : folder === "archive"
                   ? "Hold down any conversation in your inbox to archive it."
                   : isAdmin
-                  ? "Go to Users to start a conversation with a student or owner."
+                  ? "Go to Users to start a conversation with a boarder or owner."
                   : "Browse dorms and message an owner to start chatting."}
               </Text>
             </View>

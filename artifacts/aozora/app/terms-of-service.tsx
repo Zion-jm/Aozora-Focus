@@ -31,7 +31,7 @@ const SECTIONS: Section[] = [
     title: "1. Acceptance of Terms",
     paragraphs: [
       `By creating an account or using ${PLATFORM_NAME}, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you may not use the platform.`,
-      `These terms apply to all users of the platform, including students, dorm owners, and administrators.`,
+      `These terms apply to all users of the platform, including boarders, dorm owners, and administrators.`,
     ],
   },
   {
@@ -83,7 +83,7 @@ const SECTIONS: Section[] = [
     icon: "calendar",
     title: "5. Visitation Appointments",
     paragraphs: [
-      `The appointment system is provided as a convenience tool to connect students and owners. ${PLATFORM_NAME} does not guarantee visit availability or owner responsiveness.`,
+      `The appointment system is provided as a convenience tool to connect boarders and owners. ${PLATFORM_NAME} does not guarantee visit availability or owner responsiveness.`,
       `Students are expected to attend confirmed appointments punctually. Repeated no-shows may result in restrictions on booking privileges.`,
     ],
     bullets: [

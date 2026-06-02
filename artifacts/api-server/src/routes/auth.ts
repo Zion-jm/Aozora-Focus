@@ -111,8 +111,8 @@ router.post("/auth/register", async (req, res) => {
     return;
   }
 
-  if (!["student", "owner"].includes(role)) {
-    res.status(400).json({ error: "Validation error", message: "Role must be student or owner" });
+  if (!["boarder", "owner"].includes(role)) {
+    res.status(400).json({ error: "Validation error", message: "Role must be boarder or owner" });
     return;
   }
 

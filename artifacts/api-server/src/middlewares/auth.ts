@@ -11,7 +11,7 @@ export interface AuthUser {
   fullName: string;
   email: string | null;
   phone: string | null;
-  role: "student" | "owner" | "admin";
+  role: "boarder" | "owner" | "admin";
   verificationStatus: "unverified" | "pending" | "verified" | "rejected";
   isSuspended: boolean;
   avatarUrl: string | null;

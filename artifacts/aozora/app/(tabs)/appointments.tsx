@@ -110,7 +110,7 @@ export default function AppointmentsScreen() {
           )}
         </View>
         <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-          {user?.role === "owner" ? "Review visit requests from students" : "Your scheduled dorm visits"}
+          {user?.role === "owner" ? "Review visit requests from boarders" : "Your scheduled dorm visits"}
         </Text>
 
         {/* Tabs */}
@@ -263,7 +263,7 @@ export default function AppointmentsScreen() {
               />
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{emptyTitle}</Text>
               <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>{emptySubtitle}</Text>
-              {!search.trim() && tab === "active" && user?.role === "student" && (
+              {!search.trim() && tab === "active" && user?.role === "boarder" && (
                 <TouchableOpacity
                   style={[styles.exploreBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
                   onPress={() => router.push("/(tabs)")}

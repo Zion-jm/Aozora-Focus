@@ -32,7 +32,7 @@ const GUIDELINES: Guideline[] = [
     title: "Be Respectful",
     accent: "#4f46e5",
     description:
-      "Every person on Aozora — student, owner, or admin — deserves to be treated with dignity. Keep all interactions courteous and professional.",
+      "Every person on Aozora — boarder, owner, or admin — deserves to be treated with dignity. Keep all interactions courteous and professional.",
     dos: [
       "Use polite, constructive language in messages and reviews.",
       "Respect cultural differences and diverse backgrounds.",
@@ -56,7 +56,7 @@ const GUIDELINES: Guideline[] = [
       "Provide accurate information in your profile and listings.",
       "Write reviews based on genuine, first-hand experience.",
       "Accurately represent availability, pricing, and amenities.",
-      "Disclose any issues with a dorm that students should know about.",
+      "Disclose any issues with a dorm that boarders should know about.",
     ],
     donts: [
       "Post fake, exaggerated, or misleading listings.",
@@ -158,7 +158,7 @@ const GUIDELINES: Guideline[] = [
     donts: [
       "Send bulk, repetitive, or irrelevant messages to multiple users.",
       "Use the platform to promote unrelated businesses or services.",
-      "Attempt to move students off-platform to avoid oversight.",
+      "Attempt to move boarders off-platform to avoid oversight.",
       "Request deposits or payments before a visit has been confirmed.",
     ],
   },
@@ -305,7 +305,7 @@ export default function CommunityGuidelinesScreen() {
           </View>
           <Text style={[styles.heroTitle, { color: colors.foreground }]}>Community Guidelines</Text>
           <Text style={[styles.heroSub, { color: colors.mutedForeground }]}>
-            Aozora is built on trust. These guidelines exist to keep our community safe, honest, and welcoming for every student and owner in Lopez, Quezon.
+            Aozora is built on trust. These guidelines exist to keep our community safe, honest, and welcoming for every boarder and owner in Lopez, Quezon.
           </Text>
           <View style={[styles.dateBadge, { backgroundColor: colors.secondary }]}>
             <Feather name="clock" size={12} color={colors.mutedForeground} />
@@ -377,7 +377,7 @@ export default function CommunityGuidelinesScreen() {
         </View>
 
         <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-          © {new Date().getFullYear()} {PLATFORM_NAME} · Built for Lopez, Quezon students.
+          © {new Date().getFullYear()} {PLATFORM_NAME} · Built for Lopez, Quezon boarders.
         </Text>
       </ScrollView>
     </View>

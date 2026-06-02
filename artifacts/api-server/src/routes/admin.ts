@@ -18,7 +18,7 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
 
   res.json({
     totalUsers: allUsers.length,
-    totalStudents: allUsers.filter((u) => u.role === "student").length,
+    totalBoarders: allUsers.filter((u) => u.role === "boarder").length,
     totalOwners: allUsers.filter((u) => u.role === "owner").length,
     suspendedUsers: allUsers.filter((u) => u.isSuspended).length,
     pendingVerifications: allVerifs.filter((v) => v.status === "pending").length,

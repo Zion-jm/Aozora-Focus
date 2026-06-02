@@ -223,7 +223,7 @@ export default function MyDormsScreen() {
               <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
                 {search.trim()
                   ? "Try a different name, address, or status"
-                  : "Create your first dorm listing and start accepting students"}
+                  : "Create your first dorm listing and start accepting boarders"}
               </Text>
               {!search.trim() && (
                 <TouchableOpacity

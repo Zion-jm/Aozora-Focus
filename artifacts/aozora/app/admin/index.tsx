@@ -37,7 +37,7 @@ const ACTIVITY_COLOR: Record<string, string> = {
 const DORM_COLORS = ["#10b981", "#f59e0b", "#ef4444"];
 const DORM_LABELS = ["Approved", "Pending", "Taken Down"];
 const USER_COLORS = ["#4f46e5", "#0ea5e9", "#ef4444"];
-const USER_LABELS = ["Students", "Owners", "Suspended"];
+const USER_LABELS = ["Boarders", "Owners", "Suspended"];
 
 function DonutChart({ data, colors: themeColors }: { data: { value: number; color: string; label: string }[]; colors: any }) {
   const size = 130;
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
     { value: s?.takenDownDorms ?? 0, color: DORM_COLORS[2], label: DORM_LABELS[2] },
   ];
   const userData = [
-    { value: s?.totalStudents ?? 0, color: USER_COLORS[0], label: USER_LABELS[0] },
+    { value: s?.totalBoarders ?? 0, color: USER_COLORS[0], label: USER_LABELS[0] },
     { value: s?.totalOwners ?? 0, color: USER_COLORS[1], label: USER_LABELS[1] },
     { value: s?.suspendedUsers ?? 0, color: USER_COLORS[2], label: USER_LABELS[2] },
   ];

@@ -65,7 +65,7 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [role, setRole] = useState<"student" | "owner">("student");
+  const [role, setRole] = useState<"boarder" | "owner">("boarder");
 
   const apiPost = async (path: string, body: Record<string, string>) => {
     const res = await fetch(`${BASE_URL}/api${path}`, {
@@ -577,21 +577,21 @@ export default function RegisterScreen() {
                       styles.roleButton,
                       {
                         borderColor:
-                          role === "student" ? colors.primary : colors.border,
+                          role === "boarder" ? colors.primary : colors.border,
                         borderRadius: colors.radius,
                         backgroundColor:
-                          role === "student"
+                          role === "boarder"
                             ? colors.primary
                             : colors.card,
                       },
                     ]}
-                    onPress={() => setRole("student")}
+                    onPress={() => setRole("boarder")}
                   >
                     <Feather
                       name="book-open"
                       size={16}
                       color={
-                        role === "student" ? "#fff" : colors.mutedForeground
+                        role === "boarder" ? "#fff" : colors.mutedForeground
                       }
                     />
                     <Text
@@ -599,13 +599,13 @@ export default function RegisterScreen() {
                         styles.roleButtonText,
                         {
                           color:
-                            role === "student"
+                            role === "boarder"
                               ? colors.primaryForeground
                               : colors.foreground,
                         },
                       ]}
                     >
-                      Student
+                      Boarder
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -656,12 +656,19 @@ export default function RegisterScreen() {
                   >
                     Terms of Service
                   </Text>
-                  {" "}and{" "}
+                  {", "}
                   <Text
                     style={[styles.consentLink, { color: colors.primary }]}
                     onPress={() => router.push("/community-guidelines")}
                   >
                     Community Guidelines
+                  </Text>
+                  {", and "}
+                  <Text
+                    style={[styles.consentLink, { color: colors.primary }]}
+                    onPress={() => router.push("/privacy-policy")}
+                  >
+                    Privacy Policy
                   </Text>
                   .
                 </Text>

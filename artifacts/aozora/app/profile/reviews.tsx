@@ -167,7 +167,7 @@ function StudentReceivedList({ reviews, colors }: { reviews: any[]; colors: any 
 // ─── OWNER: Written (student reviews) ─────────────────────────────────────────
 function OwnerWrittenList({ reviews, colors }: { reviews: any[]; colors: any }) {
   if (reviews.length === 0) {
-    return <EmptyState label="You haven't reviewed any students yet." colors={colors} />;
+    return <EmptyState label="You haven't reviewed any boarders yet." colors={colors} />;
   }
   return (
     <View style={styles.list}>
@@ -350,7 +350,7 @@ export default function ReviewsScreen() {
     }
 
     if (tab === "written") {
-      if (user?.role === "student") {
+      if (user?.role === "boarder") {
         return <StudentWrittenList reviews={sentData?.reviews ?? []} colors={colors} />;
       }
       if (user?.role === "owner") {
@@ -359,7 +359,7 @@ export default function ReviewsScreen() {
     }
 
     if (tab === "received") {
-      if (user?.role === "student") {
+      if (user?.role === "boarder") {
         return <StudentReceivedList reviews={receivedData?.reviews ?? []} colors={colors} />;
       }
       if (user?.role === "owner") {
@@ -370,7 +370,7 @@ export default function ReviewsScreen() {
     return null;
   }
 
-  const totalWritten = user?.role === "student"
+  const totalWritten = user?.role === "boarder"
     ? sentData?.reviews?.length ?? 0
     : sentData?.reviews?.length ?? 0;
   const totalReceived = user?.role === "owner"

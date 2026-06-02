@@ -58,7 +58,7 @@ router.get("/appointments", requireAuth, async (req, res) => {
 
   let allAppointments: (typeof appointments.$inferSelect)[];
 
-  if (user.role === "student") {
+  if (user.role === "boarder") {
     let q = db.select().from(appointments).where(eq(appointments.studentId, user.id)).$dynamic();
     allAppointments = await q.all();
   } else if (user.role === "owner") {
@@ -87,7 +87,7 @@ router.get("/appointments", requireAuth, async (req, res) => {
 
       let hasReview = false;
       if (appt.status === "completed") {
-        if (user.role === "student") {
+        if (user.role === "boarder") {
           const r = sqlite.prepare(
             "SELECT id FROM dorm_reviews WHERE dorm_id = ? AND reviewer_id = ? LIMIT 1"
           ).get(appt.dormId, user.id);
@@ -111,8 +111,8 @@ router.get("/dorms/:dormId/can-book", requireAuth, (req, res) => {
   const user = req.user!;
   const dormId = parseInt(req.params["dormId"]!);
 
-  if (user.role !== "student") {
-    res.json({ canBook: false, reason: "Only students can book visits" });
+  if (user.role !== "boarder") {
+    res.json({ canBook: false, reason: "Only boarders can book visits" });
     return;
   }
 
@@ -137,8 +137,8 @@ router.get("/dorms/:dormId/can-book", requireAuth, (req, res) => {
 router.post("/appointments", requireAuth, async (req, res) => {
   const { dormId, preferredDate, preferredTime, message } = req.body;
 
-  if (req.user!.role !== "student") {
-    res.status(403).json({ error: "Forbidden", message: "Only students can book visits" });
+  if (req.user!.role !== "boarder") {
+    res.status(403).json({ error: "Forbidden", message: "Only boarders can book visits" });
     return;
   }
 
@@ -147,7 +147,7 @@ router.post("/appointments", requireAuth, async (req, res) => {
     return;
   }
 
-  if (req.user!.role === "student") {
+  if (req.user!.role === "boarder") {
     const active = sqlite.prepare(
       "SELECT id FROM appointments WHERE student_id = ? AND dorm_id = ? AND status IN ('pending', 'approved') LIMIT 1"
     ).get(req.user!.id, dormId);
@@ -206,7 +206,7 @@ router.get("/appointments/:appointmentId", requireAuth, async (req, res) => {
 
   const dorm = await db.select().from(dorms).where(eq(dorms.id, appt.dormId)).get();
 
-  if (user.role === "student" && appt.studentId !== user.id) {
+  if (user.role === "boarder" && appt.studentId !== user.id) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -235,8 +235,8 @@ router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
 
   // Students can cancel their own pending or approved appointments
   if (status === "cancelled") {
-    if (user.role !== "student" || appt.studentId !== user.id) {
-      res.status(403).json({ error: "Forbidden", message: "Only the student can cancel their appointment" });
+    if (user.role !== "boarder" || appt.studentId !== user.id) {
+      res.status(403).json({ error: "Forbidden", message: "Only the boarder can cancel their appointment" });
       return;
     }
     if (appt.status !== "pending" && appt.status !== "approved") {

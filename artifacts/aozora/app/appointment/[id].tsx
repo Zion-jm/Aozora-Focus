@@ -117,17 +117,17 @@ export default function AppointmentDetailScreen() {
         <View style={[styles.statusCard, { backgroundColor: statusColor + "15", borderRadius: colors.radius }]}>
           <Feather name={statusIcon as any} size={28} color={statusColor} />
           <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
-          {isCancelled && user?.role === "student" && (
+          {isCancelled && user?.role === "boarder" && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
               You cancelled this visit
             </Text>
           )}
           {isCancelled && user?.role === "owner" && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
-              The student cancelled this visit
+              The boarder cancelled this visit
             </Text>
           )}
-          {isRejected && user?.role === "student" && (
+          {isRejected && user?.role === "boarder" && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
               The owner declined this visit request
             </Text>
@@ -137,7 +137,7 @@ export default function AppointmentDetailScreen() {
               You declined this visit request
             </Text>
           )}
-          {isApproved && user?.role === "student" && (
+          {isApproved && user?.role === "boarder" && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
               Your visit is confirmed — attend to unlock the review form
             </Text>
@@ -149,14 +149,14 @@ export default function AppointmentDetailScreen() {
           )}
           {isNoShow && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
-              The student did not show up for this visit
+              The boarder did not show up for this visit
             </Text>
           )}
           {isCompleted && (
             <Text style={[styles.statusHint, { color: colors.mutedForeground }]}>
-              {user?.role === "student"
+              {user?.role === "boarder"
                 ? "You can now leave a review for this dorm"
-                : "You can now leave a review for this student"}
+                : "You can now leave a review for this boarder"}
             </Text>
           )}
         </View>
@@ -240,7 +240,7 @@ export default function AppointmentDetailScreen() {
                 requireVerified(() =>
                   showConfirm({
                     title: "Approve Visit?",
-                    message: "The student will be notified.",
+                    message: "The boarder will be notified.",
                     confirmLabel: "Approve",
                     icon: "check-circle",
                     onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "approved" } }),
@@ -258,7 +258,7 @@ export default function AppointmentDetailScreen() {
                 requireVerified(() =>
                   showConfirm({
                     title: "Reject Visit?",
-                    message: "The student will be notified.",
+                    message: "The boarder will be notified.",
                     confirmLabel: "Reject",
                     destructive: true,
                     icon: "x-circle",
@@ -291,7 +291,7 @@ export default function AppointmentDetailScreen() {
                   requireVerified(() =>
                     showConfirm({
                       title: "Mark as Completed?",
-                      message: "This confirms the student attended their visit. Both of you will be able to leave a review.",
+                      message: "This confirms the boarder attended their visit. Both of you will be able to leave a review.",
                       confirmLabel: "Mark Completed",
                       icon: "award",
                       onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "completed" } }),
@@ -315,7 +315,7 @@ export default function AppointmentDetailScreen() {
                   requireVerified(() =>
                     showConfirm({
                       title: "Mark as Not Shown?",
-                      message: "This records that the student did not attend the visit. The booking will be moved to history.",
+                      message: "This records that the boarder did not attend the visit. The booking will be moved to history.",
                       confirmLabel: "Mark Not Shown",
                       destructive: true,
                       icon: "user-x",
@@ -339,7 +339,7 @@ export default function AppointmentDetailScreen() {
         )}
 
         {/* Student action: cancel (pending or approved only) */}
-        {user?.role === "student" && (isPending || isApproved) && (
+        {user?.role === "boarder" && (isPending || isApproved) && (
           <TouchableOpacity
             style={[styles.cancelBtn, { borderColor: colors.destructive + "60", borderRadius: colors.radius }]}
             onPress={() =>
@@ -378,7 +378,7 @@ export default function AppointmentDetailScreen() {
         )}
 
         {/* Review sections — only available after visit is completed */}
-        {isCompleted && user?.role === "student" && appt.dorm?.id && (
+        {isCompleted && user?.role === "boarder" && appt.dorm?.id && (
           <>
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
             <ReviewsSection

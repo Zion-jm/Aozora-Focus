@@ -110,7 +110,7 @@ router.get("/users/:userId", async (req, res) => {
 
   const showPhone =
     user.role === "owner" ||
-    (user.role === "student" && !!user.phonePublic);
+    (user.role === "boarder" && !!user.phonePublic);
 
   res.json({
     id: user.id,

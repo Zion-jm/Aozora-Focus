@@ -69,7 +69,7 @@ export default function PublicProfileScreen() {
   const { user: me, token } = useAuth();
 
   const [showDormPicker, setShowDormPicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState<"owner" | "student">("owner");
+  const [pickerMode, setPickerMode] = useState<"owner" | "boarder">("owner");
   const [isMessaging, setIsMessaging] = useState(false);
   const [showReport, setShowReport] = useState(false);
 
@@ -90,7 +90,7 @@ export default function PublicProfileScreen() {
   const { data: myDorms = [] } = useQuery<any[]>({
     queryKey: ["myDorms", me?.id],
     queryFn: () => fetchOwnerDorms(me!.id),
-    enabled: !!me && me.role === "owner" && profile?.role === "student" && !isOwnProfile,
+    enabled: !!me && me.role === "owner" && profile?.role === "boarder" && !isOwnProfile,
   });
 
   const { requireVerified } = useVerificationGate();
@@ -99,7 +99,7 @@ export default function PublicProfileScreen() {
   // Message an owner about their dorm (student → owner)
   const canMessageOwner = !!me && !isOwnProfile && profile?.role === "owner" && ownerDorms.length > 0;
   // Message a student about the viewer's dorm (owner → student)
-  const canMessageStudent = !!me && !isOwnProfile && me.role === "owner" && profile?.role === "student" && myDorms.length > 0;
+  const canMessageStudent = !!me && !isOwnProfile && me.role === "owner" && profile?.role === "boarder" && myDorms.length > 0;
   const canMessage = canMessageOwner || canMessageStudent;
   // Phone visible only if API returned it (handled server-side by phonePublic flag)
   const canCall = !!profile?.phone;
@@ -284,7 +284,7 @@ export default function PublicProfileScreen() {
               <View style={[styles.roleBadge, { backgroundColor: roleColor + "18" }]}>
                 {profile.role === "admin" && <Feather name="shield" size={12} color={roleColor} />}
                 {profile.role === "owner" && <Feather name="home" size={12} color={roleColor} />}
-                {profile.role === "student" && <Ionicons name="school" size={12} color={roleColor} />}
+                {profile.role === "boarder" && <Ionicons name="school" size={12} color={roleColor} />}
                 <Text style={[styles.roleBadgeText, { color: roleColor }]}>{roleLabel}</Text>
               </View>
               <View style={[styles.verifyBadge, { backgroundColor: verificationColor + "18" }]}>
@@ -450,15 +450,15 @@ export default function PublicProfileScreen() {
           >
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-              {pickerMode === "student"
+              {pickerMode === "boarder"
                 ? `Which of your listings do you want to message ${profile?.fullName?.split(" ")[0] ?? "them"} about?`
                 : "Which listing are you inquiring about?"}
             </Text>
-            {(pickerMode === "student" ? myDorms : ownerDorms).map((dorm: any) => (
+            {(pickerMode === "boarder" ? myDorms : ownerDorms).map((dorm: any) => (
               <TouchableOpacity
                 key={dorm.id}
                 style={[styles.pickerItem, { borderColor: colors.border }]}
-                onPress={() => pickerMode === "student" ? startConversationWithStudent(dorm) : startConversation(dorm)}
+                onPress={() => pickerMode === "boarder" ? startConversationWithStudent(dorm) : startConversation(dorm)}
                 activeOpacity={0.8}
               >
                 {dorm.coverPhotoUrl ? (

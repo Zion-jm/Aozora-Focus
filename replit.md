@@ -71,7 +71,7 @@ Screens: Explore, Map, Visits, Messages, Profile tabs + Dorm detail, Create list
 
 - Admin: `admin@aozora.ph` / `admin123`
 - Owner: `maria@example.com` / `owner123`
-- Student: `ana@example.com` / `student123`
+- Boarder: `ana@example.com` / `student123`
 
 ## User preferences
 

@@ -27,12 +27,12 @@ export function seedDatabase(db: Database.Database) {
   db.prepare(`
     INSERT INTO users (full_name, email, phone, password_hash, role, verification_status)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run("Ana Dela Cruz", "ana@example.com", "+63-9351234567", studentHash, "student", "unverified");
+  `).run("Ana Dela Cruz", "ana@example.com", "+63-9351234567", studentHash, "boarder", "unverified");
 
   db.prepare(`
     INSERT INTO users (full_name, email, phone, password_hash, role, verification_status)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run("Juan Mendoza", "juan@example.com", "+63-9461234567", studentHash, "student", "unverified");
+  `).run("Juan Mendoza", "juan@example.com", "+63-9461234567", studentHash, "boarder", "unverified");
 
   const amenities1 = JSON.stringify(["WiFi", "Air Conditioning", "Private Bathroom", "Kitchen", "Laundry"]);
   const amenities2 = JSON.stringify(["WiFi", "Fan", "Shared Bathroom", "Water", "CCTV"]);
@@ -60,7 +60,7 @@ export function seedDatabase(db: Database.Database) {
   `).run(
     2,
     "Blue Sky Boarding House",
-    "Affordable and spacious boarding house ideal for college students. Located just 5 minutes walk from Quezon National High School. Monthly rate includes water and electricity.",
+    "Affordable and spacious boarding house ideal for boarders. Located just 5 minutes walk from Quezon National High School. Monthly rate includes water and electricity.",
     2500,
     "Brgy. Magallanes, Lopez, Quezon",
     13.8910, 122.2550,
@@ -75,7 +75,7 @@ export function seedDatabase(db: Database.Database) {
   `).run(
     3,
     "Reyes Premium Suites",
-    "Premium dormitory with private rooms and modern amenities. Each room has its own bathroom and study area. Generator backup and free WiFi included. Perfect for working professionals and students.",
+    "Premium dormitory with private rooms and modern amenities. Each room has its own bathroom and study area. Generator backup and free WiFi included. Perfect for working professionals and boarders.",
     5500,
     "Brgy. Ilasan Norte, Lopez, Quezon",
     13.8820, 122.2680,
@@ -90,7 +90,7 @@ export function seedDatabase(db: Database.Database) {
   `).run(
     3,
     "Green Hills Dorm",
-    "Budget-friendly dormitory for students on a tight budget. Safe location near Lopez Market. Shared facilities but well-maintained. Great community atmosphere.",
+    "Budget-friendly dormitory for boarders on a tight budget. Safe location near Lopez Market. Shared facilities but well-maintained. Great community atmosphere.",
     1800,
     "Brgy. Calantipayan, Lopez, Quezon",
     13.8780, 122.2520,
@@ -140,9 +140,9 @@ export function seedReviewsIfEmpty(db: Database.Database) {
     db.prepare(`INSERT INTO appointments (student_id, dorm_id, preferred_date, preferred_time, message, status) VALUES (?, ?, ?, ?, ?, ?)`)
       .run(4, 3, "2026-04-20", "11:00 AM", "Interested in the premium suite.", "approved");
 
-    // Dorm reviews by students
+    // Dorm reviews by boarders
     db.prepare(`INSERT INTO dorm_reviews (dorm_id, reviewer_id, rating, comment) VALUES (?, ?, ?, ?)`)
-      .run(1, 4, 5, "Really clean and well-maintained. The owner Maria is very responsive. Highly recommend for students!");
+      .run(1, 4, 5, "Really clean and well-maintained. The owner Maria is very responsive. Highly recommend for boarders!");
     db.prepare(`INSERT INTO dorm_reviews (dorm_id, reviewer_id, rating, comment) VALUES (?, ?, ?, ?)`)
       .run(2, 5, 4, "Good value for money. Shared bathroom was always clean. WiFi could be faster but overall great stay.");
     db.prepare(`INSERT INTO dorm_reviews (dorm_id, reviewer_id, rating, comment) VALUES (?, ?, ?, ?)`)
@@ -153,13 +153,13 @@ export function seedReviewsIfEmpty(db: Database.Database) {
     db.prepare(`UPDATE dorms SET average_rating = 4.0, total_reviews = 1 WHERE id = 2`).run();
     db.prepare(`UPDATE dorms SET average_rating = 5.0, total_reviews = 1 WHERE id = 3`).run();
 
-    // Owner reviews for students (Maria reviews Ana and Juan, Carlos reviews Ana)
+    // Owner reviews for boarders (Maria reviews Ana and Juan, Carlos reviews Ana)
     db.prepare(`INSERT INTO user_reviews (reviewed_user_id, reviewer_id, rating, comment) VALUES (?, ?, ?, ?)`)
       .run(4, 2, 5, "Ana was an excellent tenant — punctual, respectful, and kept the room spotless. Would welcome her again anytime.");
     db.prepare(`INSERT INTO user_reviews (reviewed_user_id, reviewer_id, rating, comment) VALUES (?, ?, ?, ?)`)
       .run(5, 2, 4, "Juan was a good tenant overall. Paid on time and followed house rules. Minor noise issue but resolved quickly.");
     db.prepare(`INSERT INTO user_reviews (reviewed_user_id, reviewer_id, rating, comment) VALUES (?, ?, ?, ?)`)
-      .run(4, 3, 5, "Very responsible student. Treated the property with care and was always polite. Highly recommended tenant.");
+      .run(4, 3, 5, "Very responsible boarder. Treated the property with care and was always polite. Highly recommended tenant.");
 
     // Update user average ratings
     db.prepare(`UPDATE users SET average_rating = 5.0, total_reviews = 2 WHERE id = 4`).run();

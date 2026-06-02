@@ -84,7 +84,7 @@ export default function TurnedDownListingsScreen() {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getAdminGetDormsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
-        toast.success("Listing Restored", "The listing is now approved and visible to all students on the Explore page.");
+        toast.success("Listing Restored", "The listing is now approved and visible to all boarders on the Explore page.");
       },
       onError: () => toast.error("Error", "Could not restore listing. Please try again."),
     },
@@ -93,7 +93,7 @@ export default function TurnedDownListingsScreen() {
   const handleUndo = (dorm: any) => {
     showConfirm({
       title: "Restore Listing?",
-      message: `"${dorm.name}" will be marked as approved and shown to all students on the Explore page.`,
+      message: `"${dorm.name}" will be marked as approved and shown to all boarders on the Explore page.`,
       confirmLabel: "Restore",
       icon: "check-circle",
       onConfirm: () => update.mutate({ dormId: dorm.id, data: { status: "approved" } }),

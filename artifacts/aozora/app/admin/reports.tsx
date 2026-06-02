@@ -153,7 +153,7 @@ export default function AdminReportsScreen() {
     const name = dormName ?? "this listing";
     showConfirm({
       title: "Take Down Listing",
-      message: `Remove "${name}" from Aozora? The listing will be hidden from students immediately and the report will be marked as reviewed.`,
+      message: `Remove "${name}" from Aozora? The listing will be hidden from boarders immediately and the report will be marked as reviewed.`,
       confirmLabel: "Take Down",
       destructive: true,
       icon: "home",
@@ -169,7 +169,7 @@ export default function AdminReportsScreen() {
             throw new Error(err.error ?? "Failed to take down listing");
           }
           qc.invalidateQueries({ queryKey: ["adminReports"] });
-          toast.success("Listing Removed", `"${name}" has been taken down and is no longer visible to students.`);
+          toast.success("Listing Removed", `"${name}" has been taken down and is no longer visible to boarders.`);
         } catch (e: any) {
           toast.error("Error", e.message ?? "Could not take down listing.");
         } finally {

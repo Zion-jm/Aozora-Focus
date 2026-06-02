@@ -121,7 +121,7 @@ export default function AboutScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
-  const role = user?.role ?? "student";
+  const role = user?.role ?? "boarder";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -150,7 +150,7 @@ export default function AboutScreen() {
           <Text style={[styles.heroTitle, { color: colors.primary }]}>Aozora</Text>
           <Text style={[styles.heroTagline, { color: colors.foreground }]}>Home, but smarter.</Text>
           <Text style={[styles.heroDesc, { color: colors.mutedForeground }]}>
-            Aozora connects students in{" "}
+            Aozora connects boarders in{" "}
             <Text style={{ fontWeight: "600", color: colors.foreground }}>{LOCATION}</Text>
             {" "}with verified dormitories — making it easier to find a safe, affordable place to stay near school.
           </Text>
@@ -160,9 +160,9 @@ export default function AboutScreen() {
         </View>
 
         {/* Role-specific guide */}
-        {role === "student" && (
+        {role === "boarder" && (
           <>
-            <Text style={[styles.sectionHeading, { color: colors.foreground }]}>For Students</Text>
+            <Text style={[styles.sectionHeading, { color: colors.foreground }]}>For Boarders</Text>
             <InfoCard
               icon="search"
               title="Find Your Dorm"

@@ -175,7 +175,7 @@ router.post("/conversations", requireAuth, async (req, res) => {
   // Flow 2: Owner initiates conversation with a specific student about their own dorm
   if (targetStudentId) {
     if (dorm.ownerId !== userId) {
-      res.status(403).json({ error: "Forbidden", message: "You can only message students about your own dorms" });
+      res.status(403).json({ error: "Forbidden", message: "You can only message boarders about your own dorms" });
       return;
     }
 
@@ -319,7 +319,7 @@ router.delete("/conversations/:conversationId", requireAuth, async (req, res) =>
   }
 
   const now = new Date().toISOString();
-  if (role === "student" || conv.student_id === userId) {
+  if (role === "boarder" || conv.student_id === userId) {
     sqlite.prepare("UPDATE conversations SET student_deleted_at = ? WHERE id = ?").run(now, convId);
   } else {
     sqlite.prepare("UPDATE conversations SET owner_deleted_at = ? WHERE id = ?").run(now, convId);

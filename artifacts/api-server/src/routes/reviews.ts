@@ -37,8 +37,8 @@ router.get("/dorms/:dormId/reviews/can-review", requireAuth, (req, res) => {
   const dormId = parseInt(req.params["dormId"]!);
   const userId = req.user!.id;
 
-  if (req.user!.role !== "student") {
-    res.json({ canReview: false, reason: "Only students can review dorms" });
+  if (req.user!.role !== "boarder") {
+    res.json({ canReview: false, reason: "Only boarders can review dorms" });
     return;
   }
 
@@ -68,8 +68,8 @@ router.post("/dorms/:dormId/reviews", requireAuth, (req, res) => {
   const userId = req.user!.id;
   const { rating, comment } = req.body;
 
-  if (req.user!.role !== "student") {
-    res.status(403).json({ error: "Only students can review dorms" });
+  if (req.user!.role !== "boarder") {
+    res.status(403).json({ error: "Only boarders can review dorms" });
     return;
   }
   if (!rating || rating < 1 || rating > 5) {
@@ -154,7 +154,7 @@ router.get("/users/:userId/reviews/can-review", requireAuth, (req, res) => {
   const reviewerId = req.user!.id;
 
   if (req.user!.role !== "owner") {
-    res.json({ canReview: false, reason: "Only owners can review students" });
+    res.json({ canReview: false, reason: "Only owners can review boarders" });
     return;
   }
   if (reviewerId === targetId) {
@@ -170,7 +170,7 @@ router.get("/users/:userId/reviews/can-review", requireAuth, (req, res) => {
   `).get(reviewerId, targetId);
 
   if (!appt) {
-    res.json({ canReview: false, reason: "The student's visit must be marked as completed before you can leave a review", requiresCompletedVisit: true });
+    res.json({ canReview: false, reason: "The boarder's visit must be marked as completed before you can leave a review", requiresCompletedVisit: true });
     return;
   }
 
@@ -179,7 +179,7 @@ router.get("/users/:userId/reviews/can-review", requireAuth, (req, res) => {
   ).get(targetId, reviewerId);
 
   if (existing) {
-    res.json({ canReview: false, reason: "You've already reviewed this student" });
+    res.json({ canReview: false, reason: "You've already reviewed this boarder" });
     return;
   }
 
@@ -192,7 +192,7 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
   const { rating, comment } = req.body;
 
   if (req.user!.role !== "owner") {
-    res.status(403).json({ error: "Only owners can review students" });
+    res.status(403).json({ error: "Only owners can review boarders" });
     return;
   }
   if (!rating || rating < 1 || rating > 5) {
@@ -208,7 +208,7 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
   `).get(reviewerId, targetId);
 
   if (!appt) {
-    res.status(403).json({ error: "The student's visit must be marked as completed before you can leave a review" });
+    res.status(403).json({ error: "The boarder's visit must be marked as completed before you can leave a review" });
     return;
   }
 
@@ -217,7 +217,7 @@ router.post("/users/:userId/reviews", requireAuth, (req, res) => {
   ).get(targetId, reviewerId);
 
   if (existing) {
-    res.status(409).json({ error: "You've already reviewed this student" });
+    res.status(409).json({ error: "You've already reviewed this boarder" });
     return;
   }
 
@@ -396,7 +396,7 @@ router.get("/reviews/my-sent", requireAuth, (req, res) => {
   const userId = req.user!.id;
   const role = req.user!.role;
 
-  if (role === "student") {
+  if (role === "boarder") {
     const rows = (sqlite.prepare(`
       SELECT dr.id, dr.rating, dr.comment, dr.created_at,
              d.id as dorm_id, d.name as dorm_name, d.cover_photo_url
@@ -447,7 +447,7 @@ router.get("/reviews/my-received", requireAuth, (req, res) => {
   const userId = req.user!.id;
   const role = req.user!.role;
 
-  if (role === "student") {
+  if (role === "boarder") {
     const rows = (sqlite.prepare(`
       SELECT ur.id, ur.rating, ur.comment, ur.created_at,
              u.id as reviewer_id, u.full_name as reviewer_name, u.avatar_url as reviewer_avatar

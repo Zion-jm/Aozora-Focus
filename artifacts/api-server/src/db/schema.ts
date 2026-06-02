@@ -12,7 +12,7 @@ export const users = sqliteTable("users", {
   email: text("email"),
   phone: text("phone"),
   passwordHash: text("password_hash").notNull(),
-  role: text("role", { enum: ["student", "owner", "admin"] }).notNull().default("student"),
+  role: text("role", { enum: ["boarder", "owner", "admin"] }).notNull().default("boarder"),
   verificationStatus: text("verification_status", {
     enum: ["unverified", "pending", "verified", "rejected"],
   }).notNull().default("unverified"),

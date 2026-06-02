@@ -392,7 +392,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [student, owner]
+            enum: [boarder, owner]
         - name: status
           in: query
           schema:
@@ -907,7 +907,7 @@ components:
           nullable: true
         role:
           type: string
-          enum: [student, owner, admin]
+          enum: [boarder, owner, admin]
         verificationStatus:
           type: string
           enum: [unverified, pending, verified, rejected]
@@ -966,7 +966,7 @@ components:
           type: string
         role:
           type: string
-          enum: [student, owner]
+          enum: [boarder, owner]
       required: [fullName, password, role]
 
     LoginRequest:

@@ -25,7 +25,7 @@ import {
 } from "@workspace/api-client-react";
 
 const ROLE_COLOR: Record<string, string> = {
-  student: "#0ea5e9",
+  boarder: "#0ea5e9",
   owner: "#8b5cf6",
   admin: "#ef4444",
 };
