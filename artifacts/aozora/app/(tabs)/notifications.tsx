@@ -42,7 +42,8 @@ function getNotifIcon(type: string): { name: FeatherName; color: string } {
     case "appointment_no_show":   return { name: "user-x",          color: "#f59e0b" };
     case "appointment_cancelled": return { name: "x-circle",        color: "#f59e0b" };
     case "message_new":           return { name: "message-square",  color: "#6366f1" };
-    case "admin_message_new":     return { name: "alert-circle",    color: "#f59e0b" };
+    case "admin_message":         return { name: "message-square",  color: "#6366f1" };
+    case "admin_message_new":     return { name: "message-square",  color: "#6366f1" };
     case "dorm_approved":         return { name: "home",            color: "#10b981" };
     case "dorm_rejected":         return { name: "home",            color: "#ef4444" };
     case "dorm_taken_down":       return { name: "home",            color: "#ef4444" };

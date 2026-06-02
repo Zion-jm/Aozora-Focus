@@ -273,24 +273,15 @@ router.post("/admin/reports/:id/warn", requireAuth, requireRole("admin"), (req, 
     )
     .run(reportId);
 
-  notifyUser(sqlite, targetUserId, {
-    type: "user_warned",
-    title: "⚠️ Official Warning",
-    body: `You've received an official warning: ${report.reason}. Check your messages for details.`,
-    data: { path: `/admin-conversation/${conv.id}` },
-  });
-
   const msg = sqlite
     .prepare("SELECT * FROM admin_messages WHERE id = ?")
     .get(msgResult.lastInsertRowid) as any;
 
-  createNotification({
-    userId: targetUserId,
+  notifyUser(sqlite, targetUserId, {
     type: "admin_warning",
-    title: "⚠️ Official Warning Issued",
+    title: "⚠️ Official Warning",
     body: `You received an official warning regarding: ${report.reason}. Tap to view the message.`,
-    relatedId: conv.id,
-    relatedType: "conversation",
+    data: { path: `/admin-conversation/${conv.id}` },
   });
 
   res.status(201).json({
