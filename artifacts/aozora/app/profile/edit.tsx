@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,17 +9,21 @@ import {
   ActivityIndicator,
   Image,
   Switch,
+  Animated,
 } from "react-native";
 import { useToast } from "@/context/ToastContext";
 import { ActionSheet } from "@/components/ActionSheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useUpdateProfile } from "@workspace/api-client-react";
+import PhoneField, { parsePhone, buildPhone, type Country } from "@/components/PhoneField";
+
+const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 function Field({
   label,
@@ -67,14 +71,24 @@ function Field({
   );
 }
 
+type EmailChangeStep = "idle" | "entering" | "verifying";
+
 export default function EditProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, updateUser } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const { toast } = useToast();
 
   const [fullName, setFullName] = useState(user?.fullName ?? "");
-  const [phone, setPhone] = useState(user?.phone ?? "");
+
+  const parsedPhone = parsePhone(user?.phone ?? "");
+  const [phoneCountry, setPhoneCountry] = useState<Country>(parsedPhone.country);
+  const [phoneNational, setPhoneNational] = useState(parsedPhone.national);
+
+  const parsedEmergency = parsePhone(user?.emergencyContactPhone ?? "");
+  const [emergencyCountry, setEmergencyCountry] = useState<Country>(parsedEmergency.country);
+  const [emergencyNational, setEmergencyNational] = useState(parsedEmergency.national);
+
   const [birthday, setBirthday] = useState(user?.birthday ?? "");
   const [universityOrWorkplace, setUniversityOrWorkplace] = useState(
     user?.universityOrWorkplace ?? ""
@@ -82,15 +96,17 @@ export default function EditProfileScreen() {
   const [emergencyContactName, setEmergencyContactName] = useState(
     user?.emergencyContactName ?? ""
   );
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState(
-    user?.emergencyContactPhone ?? ""
-  );
   const [bio, setBio] = useState(user?.bio ?? "");
   const [phonePublic, setPhonePublic] = useState<boolean>(!!(user as any)?.phonePublic);
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl ?? null);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
-
   const [showAvatarSheet, setShowAvatarSheet] = useState(false);
+
+  const [emailStep, setEmailStep] = useState<EmailChangeStep>("idle");
+  const [newEmail, setNewEmail] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState(user?.email ?? "");
 
   const updateProfile = useUpdateProfile({
     mutation: {
@@ -146,19 +162,90 @@ export default function EditProfileScreen() {
       ? `data:image/jpeg;base64,${avatarBase64}`
       : avatarUri ?? undefined;
 
+    const fullPhone = buildPhone(phoneCountry, phoneNational);
+    const fullEmergency = buildPhone(emergencyCountry, emergencyNational);
+
     updateProfile.mutate({
       data: {
         fullName: fullName.trim(),
-        phone: phone || undefined,
+        phone: fullPhone || undefined,
         avatarUrl,
         birthday: birthday || undefined,
         universityOrWorkplace: universityOrWorkplace || undefined,
         emergencyContactName: emergencyContactName || undefined,
-        emergencyContactPhone: emergencyContactPhone || undefined,
+        emergencyContactPhone: fullEmergency || undefined,
         bio: bio || undefined,
         phonePublic: phonePublic as any,
       },
     });
+  };
+
+  const handleSendEmailOtp = async () => {
+    if (!newEmail.trim()) {
+      toast.warning("Email required", "Please enter your new email address.");
+      return;
+    }
+    setEmailLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/email-change/send-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newEmail: newEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error("Error", data.message ?? "Could not send verification code.");
+        return;
+      }
+      setEmailStep("verifying");
+      toast.success("Code Sent!", `A 6-digit code was sent to ${newEmail.trim()}.`);
+    } catch {
+      toast.error("Error", "Network error. Please try again.");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleConfirmEmail = async () => {
+    if (!emailOtp.trim() || emailOtp.trim().length !== 6) {
+      toast.warning("Invalid code", "Please enter the 6-digit code.");
+      return;
+    }
+    setEmailLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/email-change/confirm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newEmail: newEmail.trim(), code: emailOtp.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error("Error", data.message ?? "Verification failed. Please try again.");
+        return;
+      }
+      if (data.user) updateUser(data.user);
+      setCurrentEmail(newEmail.trim());
+      setNewEmail("");
+      setEmailOtp("");
+      setEmailStep("idle");
+      toast.success("Email Updated!", `Your login email is now ${newEmail.trim()}.`);
+    } catch {
+      toast.error("Error", "Network error. Please try again.");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleCancelEmailChange = () => {
+    setEmailStep("idle");
+    setNewEmail("");
+    setEmailOtp("");
   };
 
   const avatarLetter = (fullName || user?.fullName || "U")[0]?.toUpperCase() ?? "U";
@@ -194,6 +281,7 @@ export default function EditProfileScreen() {
 
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={() => setShowAvatarSheet(true)} style={styles.avatarWrap}>
@@ -233,15 +321,45 @@ export default function EditProfileScreen() {
           BASIC INFORMATION
         </Text>
 
-        <Field label="Full Name" value={fullName} onChange={setFullName} placeholder="Your full name" colors={colors} />
-        <Field label="Phone Number" value={phone} onChange={setPhone} placeholder="+63 9XX XXX XXXX" keyboardType="phone-pad" colors={colors} />
-        <View style={[styles.toggleRow, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+        <Field
+          label="Full Name"
+          value={fullName}
+          onChange={setFullName}
+          placeholder="Your full name"
+          colors={colors}
+        />
+
+        <PhoneField
+          label="Phone Number"
+          value={buildPhone(phoneCountry, phoneNational)}
+          onChange={(full) => {
+            const p = parsePhone(full);
+            setPhoneCountry(p.country);
+            setPhoneNational(p.national);
+          }}
+          colors={colors}
+        />
+
+        <View
+          style={[
+            styles.toggleRow,
+            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
+          ]}
+        >
           <View style={styles.toggleInfo}>
-            <Feather name={phonePublic ? "eye" : "eye-off"} size={16} color={phonePublic ? "#10b981" : colors.mutedForeground} />
+            <Feather
+              name={phonePublic ? "eye" : "eye-off"}
+              size={16}
+              color={phonePublic ? "#10b981" : colors.mutedForeground}
+            />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>Show number publicly</Text>
+              <Text style={[styles.toggleLabel, { color: colors.foreground }]}>
+                Show number publicly
+              </Text>
               <Text style={[styles.toggleSub, { color: colors.mutedForeground }]}>
-                {phonePublic ? "Your phone number is visible on your public profile" : "Your phone number is hidden from your public profile"}
+                {phonePublic
+                  ? "Your phone number is visible on your public profile"
+                  : "Your phone number is hidden from your public profile"}
               </Text>
             </View>
           </View>
@@ -252,23 +370,223 @@ export default function EditProfileScreen() {
             thumbColor="#fff"
           />
         </View>
+
+        {/* Email section */}
+        <View style={styles.emailSection}>
+          <View style={styles.emailHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Email Address</Text>
+              <View style={styles.emailCurrentRow}>
+                <Feather name="mail" size={14} color={colors.mutedForeground} />
+                <Text style={[styles.emailCurrent, { color: colors.foreground }]}>
+                  {currentEmail || "Not set"}
+                </Text>
+              </View>
+            </View>
+            {emailStep === "idle" && (
+              <TouchableOpacity
+                style={[styles.changeEmailBtn, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "40" }]}
+                onPress={() => setEmailStep("entering")}
+              >
+                <Feather name="edit-2" size={13} color={colors.primary} />
+                <Text style={[styles.changeEmailBtnText, { color: colors.primary }]}>Change</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {emailStep !== "idle" && (
+            <View
+              style={[
+                styles.emailChangeCard,
+                { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
+              ]}
+            >
+              {emailStep === "entering" && (
+                <>
+                  <View style={styles.emailStepHeader}>
+                    <View style={[styles.stepBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.stepBadgeText}>1</Text>
+                    </View>
+                    <Text style={[styles.emailStepTitle, { color: colors.foreground }]}>
+                      Enter your new email
+                    </Text>
+                  </View>
+                  <Text style={[styles.emailStepSub, { color: colors.mutedForeground }]}>
+                    We'll send a 6-digit verification code to confirm you own it.
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.emailInput,
+                      { borderColor: colors.border, backgroundColor: colors.background, color: colors.foreground, borderRadius: colors.radius },
+                    ]}
+                    placeholder="new@example.com"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={newEmail}
+                    onChangeText={setNewEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <View style={styles.emailBtnRow}>
+                    <TouchableOpacity
+                      style={[styles.cancelSmallBtn, { borderColor: colors.border }]}
+                      onPress={handleCancelEmailChange}
+                    >
+                      <Text style={[styles.cancelSmallText, { color: colors.mutedForeground }]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.sendCodeBtn,
+                        { backgroundColor: colors.primary },
+                        emailLoading && { opacity: 0.6 },
+                      ]}
+                      onPress={handleSendEmailOtp}
+                      disabled={emailLoading}
+                    >
+                      {emailLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Feather name="send" size={14} color="#fff" />
+                          <Text style={styles.sendCodeBtnText}>Send Code</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {emailStep === "verifying" && (
+                <>
+                  <View style={styles.emailStepHeader}>
+                    <View style={[styles.stepBadge, { backgroundColor: colors.primary }]}>
+                      <Text style={styles.stepBadgeText}>2</Text>
+                    </View>
+                    <Text style={[styles.emailStepTitle, { color: colors.foreground }]}>
+                      Enter verification code
+                    </Text>
+                  </View>
+                  <View style={styles.sentToRow}>
+                    <Feather name="mail" size={13} color={colors.primary} />
+                    <Text style={[styles.sentToText, { color: colors.mutedForeground }]}>
+                      Code sent to{" "}
+                      <Text style={{ color: colors.foreground, fontWeight: "600" }}>
+                        {newEmail}
+                      </Text>
+                    </Text>
+                  </View>
+                  <TextInput
+                    style={[
+                      styles.otpInput,
+                      {
+                        borderColor: colors.primary,
+                        backgroundColor: colors.background,
+                        color: colors.foreground,
+                        borderRadius: colors.radius,
+                      },
+                    ]}
+                    placeholder="_ _ _ _ _ _"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={emailOtp}
+                    onChangeText={(t) => setEmailOtp(t.replace(/\D/g, "").slice(0, 6))}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    textAlign="center"
+                  />
+                  <View style={styles.emailBtnRow}>
+                    <TouchableOpacity
+                      style={[styles.cancelSmallBtn, { borderColor: colors.border }]}
+                      onPress={() => setEmailStep("entering")}
+                    >
+                      <Feather name="arrow-left" size={13} color={colors.mutedForeground} />
+                      <Text style={[styles.cancelSmallText, { color: colors.mutedForeground }]}>Back</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.sendCodeBtn,
+                        { backgroundColor: "#10b981" },
+                        emailLoading && { opacity: 0.6 },
+                      ]}
+                      onPress={handleConfirmEmail}
+                      disabled={emailLoading}
+                    >
+                      {emailLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Feather name="check" size={14} color="#fff" />
+                          <Text style={styles.sendCodeBtnText}>Confirm</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.resendRow}
+                    onPress={handleSendEmailOtp}
+                    disabled={emailLoading}
+                  >
+                    <Text style={[styles.resendText, { color: colors.mutedForeground }]}>
+                      Didn't receive it?{" "}
+                      <Text style={{ color: colors.primary, fontWeight: "600" }}>Resend code</Text>
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          )}
+
+          {emailStep === "idle" && (
+            <Text style={[styles.emailNote, { color: colors.mutedForeground }]}>
+              Changing your email requires verification. Your new email will be used for login.
+            </Text>
+          )}
+        </View>
+
         <Field
-          label="Email Address"
-          value={user?.email ?? ""}
-          placeholder="Not set"
-          editable={false}
+          label="Birthday"
+          value={birthday}
+          onChange={setBirthday}
+          placeholder="YYYY-MM-DD (e.g. 1999-05-15)"
           colors={colors}
         />
-        <Field label="Birthday" value={birthday} onChange={setBirthday} placeholder="YYYY-MM-DD (e.g. 1999-05-15)" colors={colors} />
-        <Field label="University / Workplace" value={universityOrWorkplace} onChange={setUniversityOrWorkplace} placeholder="e.g. Quezon National High School" colors={colors} />
-        <Field label="Bio" value={bio} onChange={setBio} placeholder="Tell others a bit about yourself..." multiline colors={colors} />
+        <Field
+          label="University / Workplace"
+          value={universityOrWorkplace}
+          onChange={setUniversityOrWorkplace}
+          placeholder="e.g. Quezon National High School"
+          colors={colors}
+        />
+        <Field
+          label="Bio"
+          value={bio}
+          onChange={setBio}
+          placeholder="Tell others a bit about yourself..."
+          multiline
+          colors={colors}
+        />
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 8 }]}>
           EMERGENCY CONTACT
         </Text>
 
-        <Field label="Contact Person Name" value={emergencyContactName} onChange={setEmergencyContactName} placeholder="e.g. Maria Dela Cruz" colors={colors} />
-        <Field label="Contact Person Phone" value={emergencyContactPhone} onChange={setEmergencyContactPhone} placeholder="+63 9XX XXX XXXX" keyboardType="phone-pad" colors={colors} />
+        <Field
+          label="Contact Person Name"
+          value={emergencyContactName}
+          onChange={setEmergencyContactName}
+          placeholder="e.g. Maria Dela Cruz"
+          colors={colors}
+        />
+
+        <PhoneField
+          label="Contact Person Phone"
+          value={buildPhone(emergencyCountry, emergencyNational)}
+          onChange={(full) => {
+            const p = parsePhone(full);
+            setEmergencyCountry(p.country);
+            setEmergencyNational(p.national);
+          }}
+          colors={colors}
+        />
 
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 8 }]}>
           ACCOUNT INFO
@@ -402,12 +720,6 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 14, fontWeight: "600" },
   input: { borderWidth: 1, padding: 13, fontSize: 15 },
 
-  infoRow: { flexDirection: "row", borderWidth: 1, overflow: "hidden" },
-  infoRowItem: { flex: 1, alignItems: "center", paddingVertical: 14, gap: 4 },
-  infoRowDivider: { width: 1 },
-  infoRowLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.5 },
-  infoRowValue: { fontSize: 14, fontWeight: "700" },
-
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -420,6 +732,82 @@ const styles = StyleSheet.create({
   toggleInfo: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
   toggleLabel: { fontSize: 14, fontWeight: "600" },
   toggleSub: { fontSize: 12, marginTop: 1 },
+
+  emailSection: { gap: 8 },
+  emailHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  emailCurrentRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
+  emailCurrent: { fontSize: 15, fontWeight: "500" },
+  changeEmailBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  changeEmailBtnText: { fontSize: 13, fontWeight: "600" },
+  emailNote: { fontSize: 12, lineHeight: 17 },
+
+  emailChangeCard: {
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+  },
+  emailStepHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  stepBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepBadgeText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  emailStepTitle: { fontSize: 15, fontWeight: "700", flex: 1 },
+  emailStepSub: { fontSize: 13, lineHeight: 18 },
+  emailInput: {
+    borderWidth: 1,
+    padding: 13,
+    fontSize: 15,
+  },
+  otpInput: {
+    borderWidth: 2,
+    padding: 16,
+    fontSize: 28,
+    fontWeight: "700",
+    letterSpacing: 10,
+  },
+  emailBtnRow: { flexDirection: "row", gap: 10 },
+  cancelSmallBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  cancelSmallText: { fontSize: 14, fontWeight: "600" },
+  sendCodeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  sendCodeBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  sentToRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  sentToText: { fontSize: 13, flex: 1, lineHeight: 18 },
+  resendRow: { alignItems: "center", paddingTop: 4 },
+  resendText: { fontSize: 13 },
+
+  infoRow: { flexDirection: "row", borderWidth: 1, overflow: "hidden" },
+  infoRowItem: { flex: 1, alignItems: "center", paddingVertical: 14, gap: 4 },
+  infoRowDivider: { width: 1 },
+  infoRowLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.5 },
+  infoRowValue: { fontSize: 14, fontWeight: "700" },
 
   saveFooterBtn: {
     flexDirection: "row",

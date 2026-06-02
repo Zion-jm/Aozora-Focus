@@ -299,6 +299,114 @@ router.post("/auth/forgot-password/reset", async (req, res) => {
   res.json({ message: "Password updated successfully." });
 });
 
+// POST /auth/email-change/send-otp — send OTP to the new email (requires auth)
+router.post("/auth/email-change/send-otp", requireAuth, async (req, res) => {
+  const { newEmail } = req.body;
+  const userId = (req as any).user!.id;
+
+  if (!newEmail || !newEmail.trim()) {
+    res.status(400).json({ error: "Validation error", message: "newEmail is required." });
+    return;
+  }
+
+  const normalized = newEmail.trim().toLowerCase();
+
+  if (!EMAIL_RE.test(normalized)) {
+    res.status(400).json({ error: "Validation error", message: "Please enter a valid email address (e.g. yourname@gmail.com)." });
+    return;
+  }
+
+  const domainValid = await isEmailDomainValid(normalized);
+  if (!domainValid) {
+    res.status(400).json({ error: "Validation error", message: "This email address doesn't look real. Please check and try again." });
+    return;
+  }
+
+  const existing = await db.select().from(users).where(eq(users.email, normalized)).get();
+  if (existing) {
+    res.status(400).json({ error: "Validation error", message: "This email is already associated with another account." });
+    return;
+  }
+
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  const contact = `email_change:${userId}:${normalized}`;
+
+  sqlite.prepare("DELETE FROM otp_verifications WHERE contact = ? AND is_verified = 0").run(contact);
+  sqlite.prepare("INSERT INTO otp_verifications (contact, code, expires_at) VALUES (?, ?, ?)").run(contact, code, expiresAt);
+
+  try {
+    await sendOtpEmail(normalized, code);
+  } catch {
+    console.warn("[email-change/send-otp] Email delivery failed — falling back to console log.");
+    console.log(`\n====================================`);
+    console.log(`  Email change OTP for ${normalized}: ${code}`);
+    console.log(`====================================\n`);
+  }
+
+  res.json({ message: "Verification code sent to your new email address." });
+});
+
+// POST /auth/email-change/confirm — verify code and update the user's email (requires auth)
+router.post("/auth/email-change/confirm", requireAuth, async (req, res) => {
+  const { newEmail, code } = req.body;
+  const userId = (req as any).user!.id;
+
+  if (!newEmail || !code) {
+    res.status(400).json({ error: "Validation error", message: "newEmail and code are required." });
+    return;
+  }
+
+  const normalized = newEmail.trim().toLowerCase();
+  const contact = `email_change:${userId}:${normalized}`;
+
+  const otp = sqlite.prepare(
+    "SELECT * FROM otp_verifications WHERE contact = ? AND code = ? AND is_verified = 0 ORDER BY created_at DESC LIMIT 1"
+  ).get(contact, code.trim()) as any;
+
+  if (!otp) {
+    res.status(400).json({ error: "Invalid code", message: "The code is incorrect or has already been used." });
+    return;
+  }
+
+  if (new Date(otp.expires_at) < new Date()) {
+    res.status(400).json({ error: "Expired code", message: "The verification code has expired. Please request a new one." });
+    return;
+  }
+
+  const existing = await db.select().from(users).where(eq(users.email, normalized)).get();
+  if (existing) {
+    res.status(400).json({ error: "Validation error", message: "This email is already associated with another account." });
+    return;
+  }
+
+  await db.update(users).set({ email: normalized, updatedAt: new Date().toISOString() } as any).where(eq(users.id, userId));
+  sqlite.prepare("UPDATE otp_verifications SET is_verified = 1 WHERE id = ?").run(otp.id);
+
+  const updated = await db.select().from(users).where(eq(users.id, userId)).get();
+
+  res.json({
+    message: "Email updated successfully.",
+    user: updated ? {
+      id: updated.id,
+      fullName: updated.fullName,
+      email: updated.email,
+      phone: updated.phone,
+      role: updated.role,
+      verificationStatus: updated.verificationStatus,
+      isSuspended: updated.isSuspended,
+      avatarUrl: updated.avatarUrl,
+      birthday: updated.birthday ?? null,
+      universityOrWorkplace: updated.universityOrWorkplace ?? null,
+      emergencyContactName: updated.emergencyContactName ?? null,
+      emergencyContactPhone: updated.emergencyContactPhone ?? null,
+      bio: updated.bio ?? null,
+      phonePublic: updated.phonePublic ?? false,
+      createdAt: updated.createdAt,
+    } : null,
+  });
+});
+
 router.post("/auth/logout", (_req, res) => {
   res.json({ message: "Logged out successfully" });
 });
