@@ -57,15 +57,29 @@ function needsRebuild() {
 }
 
 function findNodeInc() {
+  // 1. Try the nix store path derived from the running Node.js binary (most reliable)
+  //    e.g. /nix/store/xxx-nodejs-20.20.0/bin/node → /nix/store/xxx-nodejs-20.20.0/include/node
+  const execPath = process.execPath; // e.g. /nix/store/<hash>-nodejs-20.x.x/bin/node
+  const nixNodeRoot = resolve(execPath, "../.."); // go up: bin/node → bin → package root
+  const nixInc = resolve(nixNodeRoot, "include/node");
+  if (existsSync(nixInc) && existsSync(resolve(nixInc, "v8.h"))) {
+    console.log("[ensure-sqlite] Using nix store Node.js headers:", nixInc);
+    return nixInc;
+  }
+
+  // 2. Try cached node-gyp headers — but only if they have v8.h (full headers)
   const cacheDir = resolve(WORKSPACE_ROOT, ".cache/node-gyp");
-  // Try exact version first, then fall back to any available version
   const exact = resolve(cacheDir, `${process.versions.node}/include/node`);
-  if (existsSync(exact)) return exact;
+  if (existsSync(exact) && existsSync(resolve(exact, "v8.h"))) return exact;
   if (existsSync(cacheDir)) {
-    const versions = readdirSync(cacheDir).filter(v => existsSync(resolve(cacheDir, v, "include/node")));
+    const versions = readdirSync(cacheDir).filter(v => {
+      const inc = resolve(cacheDir, v, "include/node");
+      return existsSync(inc) && existsSync(resolve(inc, "v8.h"));
+    });
     if (versions.length > 0) return resolve(cacheDir, versions[0], "include/node");
   }
-  // Fall back to system node headers
+
+  // 3. Fall back to system node headers
   const sysInc = `/usr/include/node`;
   if (existsSync(sysInc)) return sysInc;
   throw new Error("[ensure-sqlite] Could not find Node.js headers for compilation.");
