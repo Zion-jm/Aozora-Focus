@@ -30,6 +30,8 @@ export interface NotificationPayload {
   type: string;
   title: string;
   body: string;
+  relatedId?: number;
+  relatedType?: "dorm" | "appointment" | "conversation";
   data?: Record<string, unknown>;
 }
 
@@ -60,7 +62,11 @@ export function createNotification({
   }
 
   // Fire push in background (non-blocking)
-  sendPushNotificationToUser(userId, title, body).catch(() => {});
+  const data: Record<string, unknown> = {};
+  if (relatedType === "appointment" && relatedId) data.path = `/appointment/${relatedId}`;
+  else if (relatedType === "dorm" && relatedId) data.path = `/dorm/${relatedId}`;
+  else if (relatedType === "conversation" && relatedId) data.path = `/conversation/${relatedId}`;
+  sendPushNotificationToUser(userId, title, body, Object.keys(data).length ? data : undefined).catch(() => {});
 }
 
 export function notifyUser(
@@ -68,17 +74,25 @@ export function notifyUser(
   userId: number,
   payload: NotificationPayload
 ): void {
-  const { type, title, body, data = {} } = payload;
+  const { type, title, body, relatedId, relatedType, data = {} } = payload;
 
   try {
     db.prepare(
       "INSERT INTO notifications (user_id, type, title, body, related_id, related_type) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(userId, type, title, body, null, null);
+    ).run(userId, type, title, body, relatedId ?? null, relatedType ?? null);
   } catch {
     // Non-fatal
   }
 
-  sendPushNotificationToUser(userId, title, body).catch(() => {});
+  const pushData: Record<string, unknown> = { ...data };
+  // Auto-populate path from relatedType/relatedId if not already in data
+  if (!pushData.path) {
+    if (relatedType === "appointment" && relatedId) pushData.path = `/appointment/${relatedId}`;
+    else if (relatedType === "dorm" && relatedId) pushData.path = `/dorm/${relatedId}`;
+    else if (relatedType === "conversation" && relatedId) pushData.path = `/conversation/${relatedId}`;
+  }
+
+  sendPushNotificationToUser(userId, title, body, Object.keys(pushData).length ? pushData : undefined).catch(() => {});
 }
 
 export function notifyAllAdmins(
@@ -96,7 +110,8 @@ export function notifyAllAdmins(
 async function sendPushNotificationToUser(
   userId: number,
   title: string,
-  body: string
+  body: string,
+  data?: Record<string, unknown>
 ): Promise<void> {
   try {
     const rows = sqlite
@@ -111,6 +126,7 @@ async function sendPushNotificationToUser(
       title,
       body,
       priority: "high" as const,
+      ...(data ? { data } : {}),
     }));
 
     await fetch("https://exp.host/--/api/v2/push/send", {

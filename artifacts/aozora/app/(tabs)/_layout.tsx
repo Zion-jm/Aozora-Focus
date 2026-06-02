@@ -41,7 +41,7 @@ function NativeTabLayout() {
 function ClassicTabLayout() {
   const colors = useColors();
   const { user } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, unreadMessageCount } = useNotifications();
   const isAdmin = user?.role === "admin";
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -120,6 +120,7 @@ function ClassicTabLayout() {
         name="messages"
         options={{
           title: "Messages",
+          tabBarBadge: unreadMessageCount > 0 ? (unreadMessageCount > 99 ? "99+" : unreadMessageCount) : undefined,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="message" tintColor={color} size={24} />

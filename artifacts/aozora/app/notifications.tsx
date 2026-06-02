@@ -170,6 +170,8 @@ export default function NotificationsScreen() {
     },
   });
 
+  const ADMIN_CONV_TYPES: Notification["type"][] = ["admin_message", "admin_warning", "support_ticket_resolved"];
+
   const handlePress = useCallback(
     (n: Notification) => {
       if (!n.isRead) {
@@ -180,7 +182,11 @@ export default function NotificationsScreen() {
       } else if (n.relatedType === "dorm" && n.relatedId) {
         router.push(`/dorm/${n.relatedId}` as any);
       } else if (n.relatedType === "conversation" && n.relatedId) {
-        router.push(`/chat/${n.relatedId}` as any);
+        if (ADMIN_CONV_TYPES.includes(n.type)) {
+          router.push(`/admin-conversation/${n.relatedId}` as any);
+        } else {
+          router.push(`/conversation/${n.relatedId}` as any);
+        }
       }
     },
     [markOneRead]

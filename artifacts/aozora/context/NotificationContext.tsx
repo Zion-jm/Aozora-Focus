@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { useAuth } from "./AuthContext";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+const POLL_INTERVAL_MS = 8_000;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -23,12 +24,16 @@ Notifications.setNotificationHandler({
 
 interface NotificationContextType {
   unreadCount: number;
+  unreadMessageCount: number;
   refreshUnreadCount: () => Promise<void>;
+  refreshUnreadMessageCount: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
   unreadCount: 0,
+  unreadMessageCount: 0,
   refreshUnreadCount: async () => {},
+  refreshUnreadMessageCount: async () => {},
 });
 
 export function NotificationProvider({
@@ -38,6 +43,7 @@ export function NotificationProvider({
 }) {
   const { user, token } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const responseListenerRef = useRef<Notifications.Subscription | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -50,6 +56,26 @@ export function NotificationProvider({
       if (res.ok) {
         const data = await res.json();
         setUnreadCount(data.unreadCount ?? 0);
+      }
+    } catch {
+      // silently ignore network errors
+    }
+  }, [token]);
+
+  const refreshUnreadMessageCount = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const conversations: any[] = data.conversations ?? [];
+        const total = conversations.reduce(
+          (sum: number, c: any) => sum + (c.unreadCount || 0),
+          0
+        );
+        setUnreadMessageCount(total);
       }
     } catch {
       // silently ignore network errors
@@ -81,22 +107,27 @@ export function NotificationProvider({
     }
   }, [token]);
 
+  const pollAll = useCallback(async () => {
+    await Promise.all([refreshUnreadCount(), refreshUnreadMessageCount()]);
+  }, [refreshUnreadCount, refreshUnreadMessageCount]);
+
   useEffect(() => {
     if (!user || !token) {
       setUnreadCount(0);
+      setUnreadMessageCount(0);
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       return;
     }
 
-    refreshUnreadCount();
+    pollAll();
     registerPushToken();
 
-    pollIntervalRef.current = setInterval(refreshUnreadCount, 30_000);
+    pollIntervalRef.current = setInterval(pollAll, POLL_INTERVAL_MS);
 
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [user?.id, token, refreshUnreadCount, registerPushToken]);
+  }, [user?.id, token, pollAll, registerPushToken]);
 
   // Navigate to the relevant screen when a push notification is tapped
   useEffect(() => {
@@ -114,7 +145,9 @@ export function NotificationProvider({
   }, []);
 
   return (
-    <NotificationContext.Provider value={{ unreadCount, refreshUnreadCount }}>
+    <NotificationContext.Provider
+      value={{ unreadCount, unreadMessageCount, refreshUnreadCount, refreshUnreadMessageCount }}
+    >
       {children}
     </NotificationContext.Provider>
   );

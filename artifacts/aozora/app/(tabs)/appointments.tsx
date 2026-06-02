@@ -48,7 +48,7 @@ export default function AppointmentsScreen() {
   const [tab, setTab] = useState<Tab>("active");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetAppointments({
-    query: { queryKey: getGetAppointmentsQueryKey() },
+    query: { queryKey: getGetAppointmentsQueryKey(), refetchInterval: 10_000 },
   });
 
   const appointments = data?.appointments || [];

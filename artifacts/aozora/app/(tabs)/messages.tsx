@@ -49,7 +49,7 @@ export default function MessagesScreen() {
   const [folder, setFolder] = useState<"inbox" | "archive">("inbox");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetConversations({
-    query: { queryKey: getGetConversationsQueryKey() },
+    query: { queryKey: getGetConversationsQueryKey(), refetchInterval: 8_000 },
   });
 
   const conversations = (data as any)?.conversations || [];

@@ -137,6 +137,11 @@ router.get("/dorms/:dormId/can-book", requireAuth, (req, res) => {
 router.post("/appointments", requireAuth, async (req, res) => {
   const { dormId, preferredDate, preferredTime, message } = req.body;
 
+  if (req.user!.role !== "student") {
+    res.status(403).json({ error: "Forbidden", message: "Only students can book visits" });
+    return;
+  }
+
   if (!dormId || !preferredDate || !preferredTime) {
     res.status(400).json({ error: "Validation error", message: "dormId, preferredDate, preferredTime are required" });
     return;
@@ -174,6 +179,8 @@ router.post("/appointments", requireAuth, async (req, res) => {
       type: "appointment_new",
       title: "New Visit Request 📅",
       body: `${req.user!.fullName} wants to visit ${dorm.name} on ${appt.preferredDate}.`,
+      relatedId: appt.id,
+      relatedType: "appointment",
       data: { path: `/appointment/${appt.id}` },
     });
   }
@@ -315,35 +322,40 @@ router.put("/appointments/:appointmentId", requireAuth, async (req, res) => {
       type: "appointment_approved",
       title: "Visit Approved ✅",
       body: `Your visit to ${dorm?.name ?? "the dorm"} on ${updated.preferredDate} at ${updated.preferredTime} has been approved.`,
-      data: { path: `/appointment/${updated.id}` },
+      relatedId: updated.id,
+      relatedType: "appointment",
     });
   } else if (status === "rejected") {
     notifyUser(sqlite, updated.studentId, {
       type: "appointment_rejected",
       title: "Visit Request Declined",
       body: `Your visit request for ${dorm?.name ?? "the dorm"} was not approved.${updated.ownerNote ? ` Note: ${updated.ownerNote}` : ""}`,
-      data: { path: `/appointment/${updated.id}` },
+      relatedId: updated.id,
+      relatedType: "appointment",
     });
   } else if (status === "completed") {
     notifyUser(sqlite, updated.studentId, {
       type: "appointment_completed",
       title: "Visit Completed 🏠",
       body: `Your visit to ${dorm?.name ?? "the dorm"} is marked complete. Share your experience with a review!`,
-      data: { path: `/appointment/${updated.id}` },
+      relatedId: updated.id,
+      relatedType: "appointment",
     });
   } else if (status === "no_show") {
     notifyUser(sqlite, updated.studentId, {
       type: "appointment_no_show",
       title: "Missed Visit",
       body: `Your visit to ${dorm?.name ?? "the dorm"} was marked as a no-show.`,
-      data: { path: `/appointment/${updated.id}` },
+      relatedId: updated.id,
+      relatedType: "appointment",
     });
   } else if (status === "cancelled" && dorm) {
     notifyUser(sqlite, dorm.ownerId, {
       type: "appointment_cancelled",
       title: "Visit Cancelled",
       body: `${student?.fullName ?? "A student"} cancelled their visit to ${dorm.name}.`,
-      data: { path: `/appointment/${updated.id}` },
+      relatedId: updated.id,
+      relatedType: "appointment",
     });
   }
   // ─────────────────────────────────────────────────────────────────────────
