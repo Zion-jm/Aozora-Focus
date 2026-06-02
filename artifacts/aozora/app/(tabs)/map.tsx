@@ -22,7 +22,7 @@ export default function MapScreen() {
       >
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Map</Text>
         <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-          Dorms near Lopez, Quezon
+          Browse and filter available dorms
         </Text>
       </View>
       <View style={styles.mapContainer}>
