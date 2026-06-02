@@ -1,6 +1,6 @@
 const http = require("http");
 
-const EXPO_PORT = 20823;
+const EXPO_PORT = 8099;
 
 const server = http.createServer((req, res) => {
   const opts = {
