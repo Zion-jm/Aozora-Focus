@@ -9,6 +9,7 @@ import {
   Image,
   TextInput,
   Platform,
+  Modal,
 } from "react-native";
 import { useToast } from "@/context/ToastContext";
 import { ActionSheet } from "@/components/ActionSheet";
@@ -69,45 +70,79 @@ function BirthdayPickerField({
   required?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [ageError, setAgeError] = useState(false);
 
   const today = new Date();
+  const maxYear = today.getFullYear() - 18;
+  const maxMonth = today.getMonth() + 1;
+  const maxDay = today.getDate();
+
+  const isUnder18 = (year: number, month: number, day: number) => {
+    if (year > maxYear) return true;
+    if (year === maxYear && month > maxMonth) return true;
+    if (year === maxYear && month === maxMonth && day > maxDay) return true;
+    return false;
+  };
+
   const initFromValue = () => {
     if (value) {
       const [y, m, d] = value.split("-").map(Number);
       if (y && m && d) return { year: y, month: m, day: d };
     }
-    return { year: today.getFullYear() - 18, month: today.getMonth() + 1, day: today.getDate() };
+    return { year: maxYear, month: maxMonth, day: maxDay };
   };
 
   const [tempDate, setTempDate] = useState(initFromValue);
 
   const openPicker = () => {
     setTempDate(initFromValue());
+    setAgeError(false);
     setOpen(true);
   };
 
   const confirm = () => {
     const clampedDay = Math.min(tempDate.day, daysInMonth(tempDate.year, tempDate.month));
+    if (isUnder18(tempDate.year, tempDate.month, clampedDay)) {
+      setAgeError(true);
+      return;
+    }
     const mm = String(tempDate.month).padStart(2, "0");
     const dd = String(clampedDay).padStart(2, "0");
     onChange(`${tempDate.year}-${mm}-${dd}`);
+    setAgeError(false);
     setOpen(false);
   };
 
-  const prevMonth = () =>
+  const prevMonth = () => {
+    setAgeError(false);
     setTempDate((d) => {
       if (d.month === 1) return { ...d, month: 12, year: d.year - 1 };
       return { ...d, month: d.month - 1 };
     });
+  };
 
-  const nextMonth = () =>
+  const nextMonth = () => {
+    setAgeError(false);
     setTempDate((d) => {
-      if (d.month === 12) return { ...d, month: 1, year: d.year + 1 };
-      return { ...d, month: d.month + 1 };
+      const nextM = d.month === 12 ? 1 : d.month + 1;
+      const nextY = d.month === 12 ? d.year + 1 : d.year;
+      if (nextY > maxYear || (nextY === maxYear && nextM > maxMonth)) return d;
+      return { ...d, month: nextM, year: nextY };
     });
+  };
 
-  const prevYear = () => setTempDate((d) => ({ ...d, year: d.year - 1 }));
-  const nextYear = () => setTempDate((d) => ({ ...d, year: d.year + 1 }));
+  const prevYear = () => {
+    setAgeError(false);
+    setTempDate((d) => ({ ...d, year: d.year - 1 }));
+  };
+
+  const nextYear = () => {
+    setAgeError(false);
+    setTempDate((d) => {
+      if (d.year >= maxYear) return d;
+      return { ...d, year: d.year + 1 };
+    });
+  };
 
   const totalDays = daysInMonth(tempDate.year, tempDate.month);
   const firstDow = new Date(tempDate.year, tempDate.month - 1, 1).getDay();
@@ -223,6 +258,15 @@ function BirthdayPickerField({
                 );
               })}
             </View>
+
+            {ageError && (
+              <View style={styles.dpAgeError}>
+                <Feather name="alert-circle" size={14} color="#ef4444" />
+                <Text style={styles.dpAgeErrorText}>
+                  You must be at least 18 years old to verify.
+                </Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={[styles.dpConfirmBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
@@ -1134,4 +1178,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dpConfirmText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+
+  dpAgeError: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#ef444415",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  dpAgeErrorText: { fontSize: 13, color: "#ef4444", flex: 1, lineHeight: 18 },
 });
