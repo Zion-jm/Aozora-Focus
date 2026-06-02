@@ -662,6 +662,14 @@ router.post("/admin-conversations/:id/start", requireAuth, async (req, res) => {
   const now = new Date().toISOString();
   sqlite.prepare("UPDATE admin_conversations SET started_at = ?, updated_at = ? WHERE id = ?").run(now, now, convId);
 
+  const { notifyUser } = await import("../lib/notifications");
+  notifyUser(sqlite, conv.user_id, {
+    type: "support_ticket_opened",
+    title: "Your Support Ticket is Open 💬",
+    body: "An admin has opened your support ticket. You can now reply and communicate with the team.",
+    data: { path: `/admin-conversation/${convId}` },
+  });
+
   res.json({ startedAt: now });
 });
 

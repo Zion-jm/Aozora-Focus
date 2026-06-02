@@ -257,6 +257,9 @@ export default function ProfileScreen() {
           <MenuItem icon="star" label="My Reviews" onPress={() => router.push("/profile/reviews")} colors={colors} />
         )}
         {user?.role !== "admin" && (
+          <MenuItem icon="flag" label="My Reports" onPress={() => router.push("/my-reports")} colors={colors} />
+        )}
+        {user?.role !== "admin" && (
           <MenuItem icon="shield" label="Identity Verification" onPress={() => router.push("/profile/verify")} colors={colors} />
         )}
         {user?.role === "owner" && (

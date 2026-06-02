@@ -33,6 +33,79 @@ const VALID_REASONS = [
 
 const VALID_TARGET_TYPES = ["user", "dorm", "review"];
 
+router.get("/reports/my", requireAuth, (req, res) => {
+  const userId = (req as any).user.id;
+
+  const filed = sqlite.prepare(`
+    SELECT r.id, r.target_type, r.target_id, r.reason, r.details,
+           r.status, r.admin_note, r.warned_at, r.created_at, r.updated_at
+    FROM reports r
+    WHERE r.reporter_id = ?
+    ORDER BY r.created_at DESC
+  `).all(userId) as any[];
+
+  const allAgainst = sqlite.prepare(`
+    SELECT r.id, r.target_type, r.target_id, r.reason, r.details,
+           r.status, r.warned_at, r.created_at, r.updated_at
+    FROM reports r
+    WHERE r.reporter_id != ?
+    ORDER BY r.created_at DESC
+  `).all(userId) as any[];
+
+  const received = allAgainst.filter(
+    (row: any) => resolveTargetUserId(row.target_type, row.target_id) === userId
+  );
+
+  const enrichFiled = filed.map((row: any) => {
+    let targetName: string | null = null;
+    if (row.target_type === "user") {
+      const u = sqlite.prepare("SELECT full_name FROM users WHERE id = ?").get(row.target_id) as any;
+      targetName = u?.full_name ?? null;
+    } else if (row.target_type === "dorm") {
+      const d = sqlite.prepare("SELECT name FROM dorms WHERE id = ?").get(row.target_id) as any;
+      targetName = d?.name ?? null;
+    } else if (row.target_type === "review") {
+      targetName = "Review";
+    }
+    return {
+      id: row.id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      targetName,
+      reason: row.reason,
+      details: row.details,
+      status: row.status,
+      adminNote: row.admin_note,
+      warnedAt: row.warned_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  });
+
+  const enrichReceived = received.map((row: any) => {
+    let targetLabel: string | null = null;
+    if (row.target_type === "dorm") {
+      const d = sqlite.prepare("SELECT name FROM dorms WHERE id = ?").get(row.target_id) as any;
+      targetLabel = d?.name ?? null;
+    } else if (row.target_type === "review") {
+      targetLabel = "Your Review";
+    }
+    return {
+      id: row.id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      targetLabel,
+      reason: row.reason,
+      status: row.status,
+      warnedAt: row.warned_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  });
+
+  res.json({ filed: enrichFiled, received: enrichReceived });
+});
+
 router.post("/reports", requireAuth, (req, res) => {
   const user = (req as any).user;
   const { targetType, targetId, reason, details } = req.body;
