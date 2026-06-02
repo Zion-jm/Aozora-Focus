@@ -52,6 +52,8 @@ function RootLayoutNav() {
       <Stack.Screen name="profile/my-dorms" />
       <Stack.Screen name="profile/reviews" />
       <Stack.Screen name="admin-conversation/[id]" />
+      <Stack.Screen name="terms-of-service" />
+      <Stack.Screen name="community-guidelines" />
     </Stack>
   );
 }

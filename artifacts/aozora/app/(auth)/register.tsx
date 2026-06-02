@@ -645,6 +645,28 @@ export default function RegisterScreen() {
                 </View>
               </View>
 
+              {/* ToS + Community Guidelines consent */}
+              <View style={[styles.consentBox, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "25", borderRadius: colors.radius }]}>
+                <Feather name="info" size={14} color={colors.primary} style={{ marginTop: 1, flexShrink: 0 }} />
+                <Text style={[styles.consentText, { color: colors.mutedForeground }]}>
+                  By creating an account, you agree to our{" "}
+                  <Text
+                    style={[styles.consentLink, { color: colors.primary }]}
+                    onPress={() => router.push("/terms-of-service")}
+                  >
+                    Terms of Service
+                  </Text>
+                  {" "}and{" "}
+                  <Text
+                    style={[styles.consentLink, { color: colors.primary }]}
+                    onPress={() => router.push("/community-guidelines")}
+                  >
+                    Community Guidelines
+                  </Text>
+                  .
+                </Text>
+              </View>
+
               <TouchableOpacity
                 style={[
                   styles.button,
@@ -793,4 +815,15 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 28 },
   footerText: { fontSize: 15 },
   link: { fontSize: 15, fontWeight: "700" },
+
+  consentBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  consentText: { fontSize: 12, lineHeight: 18, flex: 1 },
+  consentLink: { fontWeight: "700" },
 });

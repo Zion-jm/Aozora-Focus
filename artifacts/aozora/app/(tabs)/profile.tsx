@@ -253,6 +253,8 @@ export default function ProfileScreen() {
           <MenuItem icon="inbox" label="My Support Tickets" onPress={() => router.push("/my-tickets")} colors={colors} />
         )}
         <MenuItem icon="help-circle" label="Help Center" onPress={() => router.push("/help-center")} colors={colors} />
+        <MenuItem icon="book-open" label="Community Guidelines" onPress={() => router.push("/community-guidelines")} colors={colors} />
+        <MenuItem icon="file-text" label="Terms of Service" onPress={() => router.push("/terms-of-service")} colors={colors} />
         <MenuItem icon="info" label="About Aozora" onPress={() => router.push("/about")} colors={colors} />
       </View>
 
