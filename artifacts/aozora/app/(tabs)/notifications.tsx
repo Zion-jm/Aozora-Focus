@@ -53,7 +53,7 @@ function getNotifIcon(type: string): { name: FeatherName; color: string } {
 export default function NotificationsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { refreshUnreadCount } = useNotifications();
 
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -92,6 +92,8 @@ export default function NotificationsScreen() {
     }
   };
 
+  const isAdmin = user?.role === "admin";
+
   const ADMIN_MSG_TYPES = ["admin_message", "admin_warning", "admin_message_new", "support_ticket_resolved"];
   const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
     "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new",
@@ -114,7 +116,30 @@ export default function NotificationsScreen() {
     }
 
     const type: string = notif.type ?? "";
-    if (notif.relatedType === "appointment" && notif.relatedId) {
+
+    // ── Support ticket routing ────────────────────────────────────────────────
+    if (type === "support_ticket_new") {
+      // Admin gets notified of a new ticket → open admin support queue
+      router.push("/admin/support-tickets" as any);
+      return;
+    }
+    if (type === "support_ticket_resolved") {
+      // User gets notified their ticket was resolved
+      if (notif.relatedType === "conversation" && notif.relatedId) {
+        // Has a linked admin conversation → go directly to the thread
+        router.push(`/admin-conversation/${notif.relatedId}` as any);
+      } else {
+        // No conversation (e.g. guest/email-only ticket) → go to My Tickets
+        router.push("/my-tickets" as any);
+      }
+      return;
+    }
+
+    // ── All other notification types ─────────────────────────────────────────
+    if (notif.relatedType === "support_ticket") {
+      // Fallback: any other support_ticket relatedType → support queue for admin, my-tickets for users
+      router.push(isAdmin ? "/admin/support-tickets" as any : "/my-tickets" as any);
+    } else if (notif.relatedType === "appointment" && notif.relatedId) {
       router.push(`/appointment/${notif.relatedId}` as any);
     } else if (notif.relatedType === "dorm" && notif.relatedId) {
       router.push(`/dorm/${notif.relatedId}` as any);

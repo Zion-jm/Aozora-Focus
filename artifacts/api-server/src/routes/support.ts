@@ -90,7 +90,8 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
     type: "support_ticket_new",
     title: "New Support Ticket 🎫",
     body: `${req.user!.fullName} submitted a support ticket: "${subject}"`,
-    data: { path: "/admin/support" },
+    relatedId: ticket.id as number,
+    relatedType: "support_ticket",
   });
 
   res.status(201).json({
@@ -133,7 +134,8 @@ router.post("/support-tickets/public", async (req, res) => {
     type: "support_ticket_new",
     title: "New Support Ticket (Guest) 🎫",
     body: `${guestName} submitted a support ticket: "${subject}"`,
-    data: { path: "/admin/support" },
+    relatedId: ticket.id as number,
+    relatedType: "support_ticket",
   });
 
   res.status(201).json({
@@ -252,9 +254,8 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
       type: "support_ticket_resolved",
       title: "Support Ticket Resolved ✅",
       body: `Your support ticket "${ticket.subject}" has been resolved.`,
-      data: ticket.conversation_id
-        ? { path: `/admin-conversation/${ticket.conversation_id}` }
-        : { path: "/(tabs)/profile" },
+      relatedId: ticket.conversation_id ?? ticketId,
+      relatedType: ticket.conversation_id ? "conversation" : "support_ticket",
     });
   }
 
@@ -296,9 +297,8 @@ router.patch("/admin/support-tickets/:id", requireAuth, requireRole("admin"), as
       type: "support_ticket_resolved",
       title: "Support Ticket Resolved ✅",
       body: `Your support ticket "${ticket.subject}" has been resolved.`,
-      data: ticket.conversation_id
-        ? { path: `/admin-conversation/${ticket.conversation_id}` }
-        : { path: "/(tabs)/profile" },
+      relatedId: ticket.conversation_id ?? ticketId,
+      relatedType: ticket.conversation_id ? "conversation" : "support_ticket",
     });
   }
 

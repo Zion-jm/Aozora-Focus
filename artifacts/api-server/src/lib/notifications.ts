@@ -35,7 +35,7 @@ export interface NotificationPayload {
   title: string;
   body: string;
   relatedId?: number;
-  relatedType?: "dorm" | "appointment" | "conversation";
+  relatedType?: "dorm" | "appointment" | "conversation" | "support_ticket";
   data?: Record<string, unknown>;
 }
 
