@@ -28,7 +28,6 @@ function getNotifIcon(type: string): { name: FeatherName; color: string } {
     case "appointment_completed": return { name: "check-square",    color: "#10b981" };
     case "appointment_no_show":   return { name: "user-x",          color: "#f59e0b" };
     case "appointment_cancelled": return { name: "x-circle",        color: "#f59e0b" };
-    case "message_new":           return { name: "message-square",  color: "#6366f1" };
     case "admin_message":         return { name: "message-square",  color: "#6366f1" };
     case "admin_message_new":     return { name: "message-square",  color: "#6366f1" };
     case "dorm_approved":         return { name: "home",            color: "#10b981" };
@@ -125,8 +124,6 @@ export default function NotificationsScreen() {
       }
     } else if (APPT_TYPES.includes(type)) {
       router.push("/(tabs)/appointments" as any);
-    } else if (type === "message_new" || type === "new_message") {
-      router.push("/(tabs)/messages" as any);
     } else if (ADMIN_MSG_TYPES.includes(type)) {
       router.push("/(tabs)/messages" as any);
     } else if (type === "dorm_approved" || type === "dorm_rejected" || type === "dorm_taken_down") {
@@ -196,7 +193,7 @@ export default function NotificationsScreen() {
             No notifications yet
           </Text>
           <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-            You'll be notified about visit updates, messages, and account activity.
+            You'll be notified about visit updates, reviews, and account activity.
           </Text>
         </View>
       ) : (

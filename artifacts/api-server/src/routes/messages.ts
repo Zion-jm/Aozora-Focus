@@ -3,7 +3,7 @@ import { db, sqlite } from "../db/index";
 import { conversations, messages, dorms, users } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
-import { notifyUser, upsertConversationNotification } from "../lib/notifications";
+import { upsertConversationNotification } from "../lib/notifications";
 
 const router = Router();
 
@@ -200,13 +200,6 @@ router.post("/conversations", requireAuth, async (req, res) => {
         isRead: false,
       });
       await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conv.id));
-      upsertConversationNotification({
-        userId: targetStudentId,
-        type: "message_new",
-        title: "New Message 💬",
-        body: `${req.user!.fullName} sent you a message.`,
-        relatedId: conv.id,
-      });
     }
 
     return res.status(201).json(await serializeConversation(conv, userId));
@@ -239,14 +232,6 @@ router.post("/conversations", requireAuth, async (req, res) => {
   });
 
   await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, conv.id));
-
-  upsertConversationNotification({
-    userId: dorm.ownerId,
-    type: "message_new",
-    title: "New Message 💬",
-    body: `${req.user!.fullName} sent you a message.`,
-    relatedId: conv.id,
-  });
 
   res.status(201).json(await serializeConversation(conv, userId));
 });
@@ -316,16 +301,6 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
   await db.update(conversations).set({ updatedAt: now }).where(eq(conversations.id, convId));
   // Auto-unarchive for both participants when a message is sent
   sqlite.prepare("UPDATE conversations SET student_archived_at = NULL, owner_archived_at = NULL WHERE id = ?").run(convId);
-
-  // Notify the other participant (upsert so repeated messages don't stack)
-  const recipientId = conv.studentId === userId ? conv.ownerId : conv.studentId;
-  upsertConversationNotification({
-    userId: recipientId,
-    type: "message_new",
-    title: "New Message 💬",
-    body: `${req.user!.fullName} sent you a message.`,
-    relatedId: convId,
-  });
 
   res.status(201).json(result[0]);
 });

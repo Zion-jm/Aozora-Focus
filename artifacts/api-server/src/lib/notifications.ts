@@ -11,20 +11,22 @@ export type NotificationType =
   | "appointment_new"
   | "dorm_approved"
   | "dorm_rejected"
+  | "dorm_submitted"
   | "dorm_taken_down"
   | "id_verified"
   | "id_rejected"
+  | "verification_submitted"
   | "account_suspended"
   | "account_unsuspended"
   | "user_suspended"
   | "user_unsuspended"
   | "admin_warning"
-  | "new_message"
-  | "message_new"
   | "admin_message"
   | "support_ticket_resolved"
   | "dorm_review_received"
-  | "user_review_received";
+  | "user_review_received"
+  | "report_new"
+  | "support_ticket_new";
 
 export interface NotificationPayload {
   type: string;

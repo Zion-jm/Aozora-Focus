@@ -46,7 +46,6 @@ interface PersonalInfo {
   email: string;
   universityOrWorkplace: string;
   birthday: string;
-  bio: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
 }
@@ -120,7 +119,6 @@ export default function VerifyScreen() {
     email: user?.email ?? "",
     universityOrWorkplace: user?.universityOrWorkplace ?? "",
     birthday: user?.birthday ?? "",
-    bio: user?.bio ?? "",
     emergencyContactName: user?.emergencyContactName ?? "",
     emergencyContactPhone: user?.emergencyContactPhone ?? "",
   });
@@ -179,7 +177,6 @@ export default function VerifyScreen() {
           universityOrWorkplace: info.universityOrWorkplace || undefined,
           emergencyContactName: info.emergencyContactName || undefined,
           emergencyContactPhone: info.emergencyContactPhone || undefined,
-          bio: info.bio || undefined,
         },
       },
       {
@@ -468,8 +465,6 @@ export default function VerifyScreen() {
               colors={colors}
               hint="Used to verify your age."
             />
-            <Field label="Bio / About You" value={info.bio} onChange={updateField("bio")} placeholder="Tell dorm owners a bit about yourself..." multiline colors={colors} />
-
             <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 8 }]}>
               EMERGENCY CONTACT
             </Text>
