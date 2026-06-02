@@ -102,6 +102,15 @@ export default function EditProfileScreen() {
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [showAvatarSheet, setShowAvatarSheet] = useState(false);
 
+  const [pwExpanded, setPwExpanded] = useState(false);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+
   const [emailStep, setEmailStep] = useState<EmailChangeStep>("idle");
   const [newEmail, setNewEmail] = useState("");
   const [emailOtp, setEmailOtp] = useState("");
@@ -270,6 +279,46 @@ export default function EditProfileScreen() {
     setEmailStep("idle");
     setNewEmail("");
     setEmailOtp("");
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPw) {
+      toast.warning("Required", "Please enter your current password.");
+      return;
+    }
+    if (newPw.length < 8) {
+      toast.warning("Too short", "New password must be at least 8 characters.");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      toast.warning("Mismatch", "New passwords do not match.");
+      return;
+    }
+    setPwLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error("Error", data.message ?? "Could not change password. Try again.");
+        return;
+      }
+      setCurrentPw("");
+      setNewPw("");
+      setConfirmPw("");
+      setPwExpanded(false);
+      toast.success("Password Changed!", "Your password has been updated.");
+    } catch {
+      toast.error("Error", "Network error. Please try again.");
+    } finally {
+      setPwLoading(false);
+    }
   };
 
   const avatarLetter = (fullName || user?.fullName || "U")[0]?.toUpperCase() ?? "U";
@@ -680,6 +729,162 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
+        {/* Change Password section */}
+        <View style={styles.pwSection}>
+          <View style={styles.pwHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Password</Text>
+              <Text style={[styles.pwHint, { color: colors.mutedForeground }]}>
+                Last changed: update anytime
+              </Text>
+            </View>
+            {!pwExpanded && (
+              <TouchableOpacity
+                style={[styles.changeEmailBtn, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "40" }]}
+                onPress={() => setPwExpanded(true)}
+              >
+                <Feather name="lock" size={13} color={colors.primary} />
+                <Text style={[styles.changeEmailBtnText, { color: colors.primary }]}>Change</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {pwExpanded && (
+            <View
+              style={[
+                styles.emailChangeCard,
+                { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
+              ]}
+            >
+              <View style={styles.emailStepHeader}>
+                <View style={[styles.stepBadge, { backgroundColor: "#6366f1" }]}>
+                  <Feather name="lock" size={13} color="#fff" />
+                </View>
+                <Text style={[styles.emailStepTitle, { color: colors.foreground }]}>
+                  Change your password
+                </Text>
+              </View>
+
+              {/* Current password */}
+              <View style={styles.pwFieldWrap}>
+                <Text style={[styles.pwFieldLabel, { color: colors.mutedForeground }]}>Current password</Text>
+                <View
+                  style={[
+                    styles.pwInputRow,
+                    { borderColor: colors.border, backgroundColor: colors.background, borderRadius: colors.radius },
+                  ]}
+                >
+                  <TextInput
+                    style={[styles.pwInput, { color: colors.foreground }]}
+                    placeholder="Enter current password"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={currentPw}
+                    onChangeText={setCurrentPw}
+                    secureTextEntry={!showCurrentPw}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setShowCurrentPw((v) => !v)} style={styles.pwEyeBtn}>
+                    <Feather name={showCurrentPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* New password */}
+              <View style={styles.pwFieldWrap}>
+                <Text style={[styles.pwFieldLabel, { color: colors.mutedForeground }]}>New password</Text>
+                <View
+                  style={[
+                    styles.pwInputRow,
+                    { borderColor: colors.border, backgroundColor: colors.background, borderRadius: colors.radius },
+                  ]}
+                >
+                  <TextInput
+                    style={[styles.pwInput, { color: colors.foreground }]}
+                    placeholder="At least 8 characters"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={newPw}
+                    onChangeText={setNewPw}
+                    secureTextEntry={!showNewPw}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setShowNewPw((v) => !v)} style={styles.pwEyeBtn}>
+                    <Feather name={showNewPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Confirm new password */}
+              <View style={styles.pwFieldWrap}>
+                <Text style={[styles.pwFieldLabel, { color: colors.mutedForeground }]}>Confirm new password</Text>
+                <View
+                  style={[
+                    styles.pwInputRow,
+                    {
+                      borderColor:
+                        confirmPw && confirmPw !== newPw
+                          ? "#ef4444"
+                          : colors.border,
+                      backgroundColor: colors.background,
+                      borderRadius: colors.radius,
+                    },
+                  ]}
+                >
+                  <TextInput
+                    style={[styles.pwInput, { color: colors.foreground }]}
+                    placeholder="Repeat new password"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={confirmPw}
+                    onChangeText={setConfirmPw}
+                    secureTextEntry={!showConfirmPw}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPw((v) => !v)} style={styles.pwEyeBtn}>
+                    <Feather name={showConfirmPw ? "eye-off" : "eye"} size={18} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+                {confirmPw.length > 0 && confirmPw !== newPw && (
+                  <Text style={styles.pwMismatch}>Passwords don't match</Text>
+                )}
+              </View>
+
+              <View style={styles.emailBtnRow}>
+                <TouchableOpacity
+                  style={[styles.cancelSmallBtn, { borderColor: colors.border }]}
+                  onPress={() => {
+                    setPwExpanded(false);
+                    setCurrentPw("");
+                    setNewPw("");
+                    setConfirmPw("");
+                  }}
+                >
+                  <Text style={[styles.cancelSmallText, { color: colors.mutedForeground }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.sendCodeBtn,
+                    { backgroundColor: "#6366f1" },
+                    pwLoading && { opacity: 0.6 },
+                  ]}
+                  onPress={handleChangePassword}
+                  disabled={pwLoading}
+                >
+                  {pwLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Feather name="check" size={14} color="#fff" />
+                      <Text style={styles.sendCodeBtnText}>Update Password</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+
         <TouchableOpacity
           style={[
             styles.saveFooterBtn,
@@ -840,6 +1045,21 @@ const styles = StyleSheet.create({
   sentToText: { fontSize: 13, flex: 1, lineHeight: 18 },
   resendRow: { alignItems: "center", paddingTop: 4 },
   resendText: { fontSize: 13 },
+
+  pwSection: { gap: 8 },
+  pwHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  pwHint: { fontSize: 12, marginTop: 3 },
+  pwFieldWrap: { gap: 5 },
+  pwFieldLabel: { fontSize: 12, fontWeight: "600", letterSpacing: 0.3 },
+  pwInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    paddingHorizontal: 12,
+  },
+  pwInput: { flex: 1, paddingVertical: 13, fontSize: 15 },
+  pwEyeBtn: { padding: 6 },
+  pwMismatch: { fontSize: 12, color: "#ef4444", marginTop: 2 },
 
   infoRow: { flexDirection: "row", borderWidth: 1, overflow: "hidden" },
   infoRowItem: { flex: 1, alignItems: "center", paddingVertical: 14, gap: 4 },

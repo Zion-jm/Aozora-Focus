@@ -407,6 +407,39 @@ router.post("/auth/email-change/confirm", requireAuth, async (req, res) => {
   });
 });
 
+// POST /auth/change-password — change password for the authenticated user
+router.post("/auth/change-password", requireAuth, async (req, res) => {
+  const userId = (req as any).user!.id;
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "Validation error", message: "currentPassword and newPassword are required." });
+    return;
+  }
+
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: "Validation error", message: "New password must be at least 8 characters." });
+    return;
+  }
+
+  const user = await db.select().from(users).where(eq(users.id, userId)).get();
+  if (!user) {
+    res.status(404).json({ error: "Not found", message: "User not found." });
+    return;
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    res.status(400).json({ error: "Validation error", message: "Current password is incorrect." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+
+  res.json({ message: "Password changed successfully." });
+});
+
 router.post("/auth/logout", (_req, res) => {
   res.json({ message: "Logged out successfully" });
 });
