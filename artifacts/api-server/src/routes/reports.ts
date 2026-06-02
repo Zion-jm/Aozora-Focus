@@ -3,6 +3,36 @@ import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
 
+const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
+
+function computeScore(violRows: any[]): number {
+  const now = Date.now();
+  return violRows.reduce((sum, v) => {
+    const ageDays = (now - new Date(v.created_at).getTime()) / 86400000;
+    const weight = ageDays <= 30 ? 1.5 : ageDays <= 90 ? 1.0 : ageDays <= 180 ? 0.75 : 0.5;
+    return sum + (SEVERITY_POINTS[v.severity as number] ?? 1) * weight;
+  }, 0);
+}
+
+function scoreToLevel(score: number): string {
+  if (score <= 0) return "clean";
+  if (score < 5)  return "warning";
+  if (score < 10) return "short_suspension";
+  if (score < 20) return "long_suspension";
+  return "ban";
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  harassment:            "Harassment or Bullying",
+  spam:                  "Spam or Unsolicited Messages",
+  fake_listing:          "Fraudulent Dorm Listing",
+  fake_identity:         "Identity Misrepresentation",
+  hate_speech:           "Hate Speech or Discrimination",
+  inappropriate_content: "Inappropriate Content",
+  no_show:               "Repeated Appointment No-Shows",
+  other:                 "Other Violation",
+};
+
 const router = Router();
 
 function resolveTargetUserId(targetType: string, targetId: number): number | null {
@@ -195,7 +225,7 @@ router.get("/admin/reports", requireAuth, requireRole("admin"), (req, res) => {
     SELECT
       r.id, r.target_type, r.target_id, r.reason, r.details,
       r.status, r.admin_note, r.created_at, r.updated_at,
-      r.warned_at, r.taken_down_at,
+      r.warned_at, r.taken_down_at, r.violation_logged_at,
       u.id   AS reporter_id,
       u.full_name AS reporter_name,
       u.email AS reporter_email
@@ -476,6 +506,79 @@ router.post("/admin/reports/:id/suspend", requireAuth, requireRole("admin"), (re
     targetUserId,
     targetUserName: targetUser.full_name,
     suspended: true,
+  });
+});
+
+router.post("/admin/reports/:id/log-violation", requireAuth, requireRole("admin"), (req, res) => {
+  const adminId = (req as any).user!.id;
+  const reportId = parseInt(req.params["id"]!);
+  const { category, severity, description, notes } = req.body;
+
+  if (!category || !severity || !description) {
+    res.status(400).json({ error: "category, severity, and description are required" });
+    return;
+  }
+
+  const report = sqlite.prepare("SELECT * FROM reports WHERE id = ?").get(reportId) as any;
+  if (!report) { res.status(404).json({ error: "Report not found" }); return; }
+
+  if (report.violation_logged_at) {
+    res.status(409).json({ error: "A violation has already been logged for this report" });
+    return;
+  }
+
+  const targetUserId = resolveTargetUserId(report.target_type, report.target_id);
+  if (!targetUserId) {
+    res.status(422).json({ error: "Could not resolve target user for this report" });
+    return;
+  }
+
+  const targetUser = sqlite
+    .prepare("SELECT id, full_name, role FROM users WHERE id = ?")
+    .get(targetUserId) as any;
+  if (!targetUser) { res.status(404).json({ error: "Target user not found" }); return; }
+  if (targetUser.role === "admin") {
+    res.status(403).json({ error: "Cannot log violations against an admin account" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  const result = sqlite
+    .prepare(
+      `INSERT INTO violations (user_id, admin_id, category, severity, description, notes, report_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(targetUserId, adminId, category, severity, description, notes ?? null, reportId) as any;
+
+  sqlite
+    .prepare(
+      `UPDATE reports
+       SET status = 'reviewed', violation_logged_at = datetime('now'), updated_at = datetime('now')
+       WHERE id = ?`
+    )
+    .run(reportId);
+
+  const categoryLabel = CATEGORY_LABELS[category as string] ?? category;
+  notifyUser(sqlite, targetUserId, {
+    type: "violation_logged",
+    title: "Community Guideline Violation",
+    body: `A violation has been recorded on your account: ${categoryLabel}. Repeated violations may result in suspension.`,
+    data: { path: "/(tabs)/profile" },
+  });
+
+  const allViolations = sqlite
+    .prepare("SELECT * FROM violations WHERE user_id = ?")
+    .all(targetUserId) as any[];
+  const score = computeScore(allViolations);
+  const level = scoreToLevel(score);
+
+  res.json({
+    violationId: result.lastInsertRowid,
+    userId: targetUserId,
+    userName: targetUser.full_name,
+    score,
+    level,
   });
 });
 
