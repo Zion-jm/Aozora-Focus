@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -107,6 +107,29 @@ export default function EditProfileScreen() {
   const [emailOtp, setEmailOtp] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
   const [currentEmail, setCurrentEmail] = useState(user?.email ?? "");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const emailTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (emailTimerRef.current) clearInterval(emailTimerRef.current);
+    };
+  }, []);
+
+  const startEmailCooldown = () => {
+    if (emailTimerRef.current) clearInterval(emailTimerRef.current);
+    setResendCooldown(60);
+    emailTimerRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(emailTimerRef.current!);
+          emailTimerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const updateProfile = useUpdateProfile({
     mutation: {
@@ -200,6 +223,7 @@ export default function EditProfileScreen() {
         toast.error("Error", data.message ?? "Could not send verification code.");
         return;
       }
+      startEmailCooldown();
       setEmailStep("verifying");
       toast.success("Code Sent!", `A 6-digit code was sent to ${newEmail.trim()}.`);
     } catch {
@@ -522,12 +546,26 @@ export default function EditProfileScreen() {
                   </View>
                   <TouchableOpacity
                     style={styles.resendRow}
-                    onPress={handleSendEmailOtp}
-                    disabled={emailLoading}
+                    onPress={() => {
+                      if (resendCooldown > 0 || emailLoading) return;
+                      handleSendEmailOtp();
+                    }}
+                    disabled={resendCooldown > 0 || emailLoading}
                   >
                     <Text style={[styles.resendText, { color: colors.mutedForeground }]}>
-                      Didn't receive it?{" "}
-                      <Text style={{ color: colors.primary, fontWeight: "600" }}>Resend code</Text>
+                      {resendCooldown > 0 ? (
+                        <>
+                          Resend in{" "}
+                          <Text style={{ color: colors.mutedForeground, fontWeight: "600" }}>
+                            0:{String(resendCooldown).padStart(2, "0")}
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          Didn't receive it?{" "}
+                          <Text style={{ color: colors.primary, fontWeight: "600" }}>Resend code</Text>
+                        </>
+                      )}
                     </Text>
                   </TouchableOpacity>
                 </>
