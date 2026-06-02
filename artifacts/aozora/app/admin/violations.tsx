@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 22, fontWeight: "800" },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
   body: { padding: 12, gap: 8 },
 

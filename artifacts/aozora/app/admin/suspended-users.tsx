@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "bold", color: "#fff" },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#fff" },
   headerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 1 },
   searchWrap: { paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
   searchBar: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 8 },

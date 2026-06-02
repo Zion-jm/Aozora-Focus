@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backBtn: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontWeight: "700" },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
   headerSub: { fontSize: 13, marginTop: 1 },
   logBtn: {
     flexDirection: "row",

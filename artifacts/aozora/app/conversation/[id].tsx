@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 12, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 16, fontWeight: "700", flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: "700", flex: 1 },
   listContent: { padding: 16, gap: 12 },
   dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 },
   dividerLine: { flex: 1, height: 1 },

@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 17, fontWeight: "700" },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
   errorText: { fontSize: 16, textAlign: "center" },
   backLink: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },

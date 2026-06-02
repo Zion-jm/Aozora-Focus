@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   backBtn: { padding: 4 },
-  headerTitle: { flex: 1, fontSize: 20, fontWeight: "700" },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: "700" },
   markAllBtn: { fontSize: 13, fontWeight: "600", width: 80, textAlign: "right" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32 },
   emptyIcon: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", marginBottom: 4 },
