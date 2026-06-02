@@ -1,9 +1,24 @@
 const { getDefaultConfig } = require("expo/metro-config");
 const path = require("path");
+const fs = require("fs");
 
 const config = getDefaultConfig(__dirname);
 
-// Use native file watcher to avoid FallbackWatcher ENOENT crashes on pnpm tmp dirs
+const workspaceRoot = path.resolve(__dirname, "../..");
+
+config.watchFolders = [workspaceRoot];
+
+// Exclude pnpm temp dirs and node_modules from being watched directly
+// to avoid ENOENT crashes on symlinked tmp directories
+config.resolver = {
+  ...config.resolver,
+  blockList: [
+    // Exclude pnpm temp/intermediate build files
+    /node_modules\/\.pnpm\/.*\/_tmp_.*/,
+    /node_modules\/\.pnpm\/.*\/node_modules\/.*_tmp_.*/,
+  ],
+};
+
 config.watcher = {
   watchman: {
     deferStates: ["hg.update"],
@@ -11,10 +26,8 @@ config.watcher = {
   healthCheck: {
     enabled: false,
   },
+  // Use native watcher, fallback watcher has issues with pnpm symlinks
+  additionalExts: [],
 };
-
-// Limit watched folders to avoid Metro scanning pnpm temp files
-const workspaceRoot = path.resolve(__dirname, "../..");
-config.watchFolders = [workspaceRoot];
 
 module.exports = config;
