@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewsSection } from "@/components/ReviewsSection";
@@ -91,6 +92,8 @@ export default function PublicProfileScreen() {
     queryFn: () => fetchOwnerDorms(me!.id),
     enabled: !!me && me.role === "owner" && profile?.role === "student" && !isOwnProfile,
   });
+
+  const { requireVerified } = useVerificationGate();
 
   const isOwnProfile = me?.id === userId;
   // Message an owner about their dorm (student → owner)
@@ -195,16 +198,18 @@ export default function PublicProfileScreen() {
   };
 
   const handleMessage = () => {
-    if (canMessageOwner) {
-      if (ownerDorms.length === 1) {
-        startConversation(ownerDorms[0]);
-      } else {
-        setPickerMode("owner");
-        setShowDormPicker(true);
+    requireVerified(() => {
+      if (canMessageOwner) {
+        if (ownerDorms.length === 1) {
+          startConversation(ownerDorms[0]);
+        } else {
+          setPickerMode("owner");
+          setShowDormPicker(true);
+        }
+      } else if (canMessageStudent) {
+        startConversationWithStudent(myDorms[0]);
       }
-    } else if (canMessageStudent) {
-      startConversationWithStudent(myDorms[0]);
-    }
+    });
   };
 
   return (
@@ -225,7 +230,7 @@ export default function PublicProfileScreen() {
         {!isOwnProfile && !!me && !!profile ? (
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => setShowReport(true)}
+            onPress={() => requireVerified(() => setShowReport(true))}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Feather name="flag" size={18} color={colors.mutedForeground} />

@@ -21,6 +21,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReviewsSection } from "@/components/ReviewsSection";
@@ -197,6 +198,8 @@ export default function DormDetailScreen() {
 
   const dormIdNum = Number(id);
 
+  const { requireVerified } = useVerificationGate();
+
   const { data: favData } = useCheckFavorite(dormIdNum, {
     query: { enabled: !!id && !!user, queryKey: getCheckFavoriteQueryKey(dormIdNum) },
   });
@@ -364,7 +367,7 @@ export default function DormDetailScreen() {
           {user && user.id !== (d as any)?.owner?.id && (
             <TouchableOpacity
               style={[styles.reportBtn, { backgroundColor: colors.card }]}
-              onPress={() => setShowReport(true)}
+              onPress={() => requireVerified(() => setShowReport(true))}
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             >
               <Feather name="flag" size={17} color={colors.mutedForeground} />
@@ -516,7 +519,7 @@ export default function DormDetailScreen() {
         >
           <TouchableOpacity
             style={[styles.secondaryBtn, { borderColor: colors.primary, borderRadius: colors.radius }]}
-            onPress={() => setShowMsgModal(true)}
+            onPress={() => requireVerified(() => setShowMsgModal(true))}
           >
             <Feather name="message-circle" size={18} color={colors.primary} />
             <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Message</Text>
@@ -524,7 +527,7 @@ export default function DormDetailScreen() {
           {canBook ? (
             <TouchableOpacity
               style={[styles.primaryBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
-              onPress={() => setShowBookModal(true)}
+              onPress={() => requireVerified(() => setShowBookModal(true))}
             >
               <Feather name="calendar" size={18} color="#fff" />
               <Text style={styles.primaryBtnText}>Book a Visit</Text>

@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 
 import { useAuth } from "@/context/AuthContext";
+import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ReportModal } from "@/components/ReportModal";
 
@@ -76,6 +77,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
   const { toast } = useToast();
   const { showConfirm } = useConfirm();
   const { user: currentUser } = useAuth();
+  const { requireVerified } = useVerificationGate();
   const qc = useQueryClient();
   const reviewsKey = [type === "dorm" ? "dormReviews" : "userReviews", targetId];
   const canReviewKey = ["canReview", type, targetId];
@@ -332,7 +334,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
                   ) : (
                     token && (
                       <TouchableOpacity
-                        onPress={() => setReportingReviewId(review.id)}
+                        onPress={() => requireVerified(() => setReportingReviewId(review.id))}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         style={styles.reviewFlagBtn}
                       >

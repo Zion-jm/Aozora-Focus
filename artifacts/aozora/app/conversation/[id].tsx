@@ -109,6 +109,8 @@ export default function ConversationScreen() {
   const [isSending, setIsSending] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const flatRef = useRef<FlatList>(null);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const lastTypingSentRef = useRef(0);
 
   const { data, isLoading, refetch } = useListMessages(convId, {
     query: { enabled: !!convId, queryKey: getListMessagesQueryKey(convId) },
@@ -130,6 +132,23 @@ export default function ConversationScreen() {
     }, 2000);
     return () => clearInterval(interval);
   }, [refetch, convId]);
+
+  useEffect(() => {
+    if (!convId || !token) return;
+    const poll = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/conversations/${convId}/typing`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setTypingUser(data.typing?.fullName ?? null);
+        }
+      } catch {}
+    };
+    const interval = setInterval(poll, 1500);
+    return () => clearInterval(interval);
+  }, [convId, token]);
 
   const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -414,6 +433,14 @@ export default function ConversationScreen() {
         </View>
       )}
 
+      {typingUser && (
+        <View style={{ backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 5 }}>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, fontStyle: "italic" }}>
+            {typingUser} is typing…
+          </Text>
+        </View>
+      )}
+
       <View
         style={[
           styles.inputBar,
@@ -446,7 +473,17 @@ export default function ConversationScreen() {
           placeholder="Type a message..."
           placeholderTextColor={colors.mutedForeground}
           value={text}
-          onChangeText={setText}
+          onChangeText={(val) => {
+            setText(val);
+            const now = Date.now();
+            if (val.trim() && now - lastTypingSentRef.current > 2000) {
+              lastTypingSentRef.current = now;
+              fetch(`${BASE_URL}/api/conversations/${convId}/typing`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+              }).catch(() => {});
+            }
+          }}
           multiline
           maxLength={1000}
           returnKeyType="default"

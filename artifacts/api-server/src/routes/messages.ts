@@ -691,4 +691,51 @@ router.post("/admin-conversations/:id/read", requireAuth, async (req, res) => {
   res.json({ message: "Marked as read" });
 });
 
+// ─── In-memory typing store (keyed by "conv:{id}" or "admin:{id}") ────────────
+const typingStore = new Map<string, { userId: number; fullName: string; expiresAt: number }>();
+
+// POST /api/conversations/:conversationId/typing
+router.post("/conversations/:conversationId/typing", requireAuth, (req, res) => {
+  const convId = parseInt(req.params.conversationId);
+  typingStore.set(`conv:${convId}`, {
+    userId: req.user!.id,
+    fullName: req.user!.fullName,
+    expiresAt: Date.now() + 3000,
+  });
+  res.json({ ok: true });
+});
+
+// GET /api/conversations/:conversationId/typing
+router.get("/conversations/:conversationId/typing", requireAuth, (req, res) => {
+  const convId = parseInt(req.params.conversationId);
+  const entry = typingStore.get(`conv:${convId}`);
+  if (!entry || entry.expiresAt < Date.now() || entry.userId === req.user!.id) {
+    res.json({ typing: null });
+    return;
+  }
+  res.json({ typing: { userId: entry.userId, fullName: entry.fullName } });
+});
+
+// POST /api/admin-conversations/:id/typing
+router.post("/admin-conversations/:id/typing", requireAuth, (req, res) => {
+  const convId = parseInt(req.params.id);
+  typingStore.set(`admin:${convId}`, {
+    userId: req.user!.id,
+    fullName: req.user!.fullName,
+    expiresAt: Date.now() + 3000,
+  });
+  res.json({ ok: true });
+});
+
+// GET /api/admin-conversations/:id/typing
+router.get("/admin-conversations/:id/typing", requireAuth, (req, res) => {
+  const convId = parseInt(req.params.id);
+  const entry = typingStore.get(`admin:${convId}`);
+  if (!entry || entry.expiresAt < Date.now() || entry.userId === req.user!.id) {
+    res.json({ typing: null });
+    return;
+  }
+  res.json({ typing: { userId: entry.userId, fullName: entry.fullName } });
+});
+
 export default router;

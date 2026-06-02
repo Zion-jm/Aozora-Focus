@@ -115,6 +115,8 @@ export default function AdminConversationScreen() {
   const [closedAt, setClosedAt] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [typingUser, setTypingUser] = useState<string | null>(null);
+  const lastTypingSentRef = useRef(0);
 
   const fetchMessages = async () => {
     if (!token || !convId) return;
@@ -158,6 +160,21 @@ export default function AdminConversationScreen() {
 
   useEffect(() => {
     const interval = setInterval(fetchMessages, 2000);
+    return () => clearInterval(interval);
+  }, [convId, token]);
+
+  useEffect(() => {
+    if (!convId || !token) return;
+    const poll = async () => {
+      try {
+        const res = await apiFetch(`/api/admin-conversations/${convId}/typing`, token);
+        if (res.ok) {
+          const data = await res.json();
+          setTypingUser(data.typing?.fullName ?? null);
+        }
+      } catch {}
+    };
+    const interval = setInterval(poll, 1500);
     return () => clearInterval(interval);
   }, [convId, token]);
 
@@ -585,6 +602,14 @@ export default function AdminConversationScreen() {
             </View>
           )}
 
+          {typingUser && (
+            <View style={{ backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 5 }}>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground, fontStyle: "italic" }}>
+                {typingUser} is typing…
+              </Text>
+            </View>
+          )}
+
           <View
             style={[
               styles.inputBar,
@@ -617,7 +642,14 @@ export default function AdminConversationScreen() {
               }
               placeholderTextColor={colors.mutedForeground}
               value={text}
-              onChangeText={setText}
+              onChangeText={(val) => {
+                setText(val);
+                const now = Date.now();
+                if (val.trim() && now - lastTypingSentRef.current > 2000) {
+                  lastTypingSentRef.current = now;
+                  apiFetch(`/api/admin-conversations/${convId}/typing`, token!, { method: "POST" }).catch(() => {});
+                }
+              }}
               multiline
               maxLength={1000}
               returnKeyType="default"

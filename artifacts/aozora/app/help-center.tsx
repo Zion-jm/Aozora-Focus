@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useColors } from "@/hooks/useColors";
+import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { useAuth } from "@/context/AuthContext";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
@@ -58,6 +59,8 @@ export default function HelpCenterScreen() {
   const [checkingExisting, setCheckingExisting] = useState(false);
   const [activeTicket, setActiveTicket] = useState<{ id: number; subject: string; conversationId: number | null } | null>(null);
 
+  const { requireVerified } = useVerificationGate();
+
   const isGuest = !user || !token;
   const isAdmin = user?.role === "admin";
   const visibleTicketTypes = isGuest ? GUEST_TICKET_TYPES : TICKET_TYPES;
@@ -82,6 +85,11 @@ export default function HelpCenterScreen() {
   }, [token, isAdmin, isGuest]);
 
   const handleSubmit = async () => {
+    if (!isGuest && !isAdmin) {
+      let verified = false;
+      requireVerified(() => { verified = true; });
+      if (!verified) return;
+    }
     if (activeTicket) return;
     if (!ticketType) { toast.warning("Required", "Please select a ticket type."); return; }
     if (!subject.trim()) { toast.warning("Required", "Please enter a subject."); return; }
