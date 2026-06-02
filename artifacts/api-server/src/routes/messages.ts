@@ -203,8 +203,9 @@ router.post("/conversations", requireAuth, async (req, res) => {
       notifyUser(sqlite, targetStudentId, {
         type: "message_new",
         title: "New Message 💬",
-        body: `${req.user!.fullName} sent you a message about ${dorm.name}.`,
-        data: { path: `/conversation/${conv.id}` },
+        body: `You received a message from ${req.user!.fullName}.`,
+        relatedId: conv.id,
+        relatedType: "conversation",
       });
     }
 
@@ -242,8 +243,9 @@ router.post("/conversations", requireAuth, async (req, res) => {
   notifyUser(sqlite, dorm.ownerId, {
     type: "message_new",
     title: "New Message 💬",
-    body: `${req.user!.fullName} sent you a message about ${dorm.name}.`,
-    data: { path: `/conversation/${conv.id}` },
+    body: `You received a message from ${req.user!.fullName}.`,
+    relatedId: conv.id,
+    relatedType: "conversation",
   });
 
   res.status(201).json(await serializeConversation(conv, userId));
@@ -322,8 +324,9 @@ router.post("/conversations/:conversationId/messages", requireAuth, async (req, 
   notifyUser(sqlite, otherPartyId, {
     type: "message_new",
     title: "New Message 💬",
-    body: `${req.user!.fullName} sent you a message.`,
-    data: { path: `/conversation/${convId}` },
+    body: `You received a message from ${req.user!.fullName}.`,
+    relatedId: convId,
+    relatedType: "conversation",
   });
 
   res.status(201).json(result[0]);
@@ -631,7 +634,9 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
       userId: recipientId,
       type: "admin_message",
       title: conv.admin_id === userId ? "Admin replied to your support ticket" : `New support message from ${senderUser?.full_name ?? "You"}`,
-      body: content.length > 80 ? content.slice(0, 80) + "…" : content,
+      body: conv.admin_id === userId
+        ? `You received a reply from Admin.`
+        : `You received a message from ${senderUser?.full_name ?? "a user"}.`,
       relatedId: convId,
       relatedType: "conversation",
     });
@@ -642,7 +647,7 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
         userId: recipientId,
         type: "admin_message",
         title: "New message from Admin",
-        body: content.length > 80 ? content.slice(0, 80) + "…" : content,
+        body: `You received a message from Admin.`,
         relatedId: convId,
         relatedType: "conversation",
       });
@@ -652,8 +657,9 @@ router.post("/admin-conversations/:id/messages", requireAuth, async (req, res) =
   notifyUser(sqlite, otherPartyId, {
     type: "admin_message_new",
     title: "New Message 💬",
-    body: `${req.user!.fullName} sent you a message.`,
-    data: { path: `/admin-conversation/${convId}` },
+    body: `You received a message from ${req.user!.fullName}.`,
+    relatedId: convId,
+    relatedType: "conversation",
   });
 
   res.status(201).json({
