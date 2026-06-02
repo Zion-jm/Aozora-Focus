@@ -277,6 +277,41 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
   res.json({ ...dorm, amenities: JSON.parse(dorm.amenities || "[]") });
 });
 
+router.get("/admin/top-risk-users", requireAuth, requireRole("admin"), async (_req, res) => {
+  const rows = sqlite.prepare(`
+    SELECT v.*, u.full_name as user_name, u.avatar_url as user_avatar, u.is_suspended as user_suspended
+    FROM violations v
+    LEFT JOIN users u ON v.user_id = u.id
+  `).all() as any[];
+
+  const byUser: Record<number, { name: string; avatar: string | null; suspended: boolean; violations: any[] }> = {};
+  for (const r of rows) {
+    if (!byUser[r.user_id]) {
+      byUser[r.user_id] = { name: r.user_name ?? "Unknown", avatar: r.user_avatar ?? null, suspended: !!r.user_suspended, violations: [] };
+    }
+    byUser[r.user_id]!.violations.push(r);
+  }
+
+  const ranked = Object.entries(byUser)
+    .map(([userId, data]) => {
+      const score = computeScore(data.violations);
+      return {
+        userId: parseInt(userId),
+        name: data.name,
+        avatarUrl: data.avatar,
+        isSuspended: data.suspended,
+        score: Math.round(score * 10) / 10,
+        level: scoreToLevel(score),
+        violationCount: data.violations.length,
+      };
+    })
+    .filter((u) => u.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  res.json({ users: ranked });
+});
+
 router.get("/admin/violations", requireAuth, requireRole("admin"), async (_req, res) => {
   const rows = sqlite.prepare(`
     SELECT v.*,

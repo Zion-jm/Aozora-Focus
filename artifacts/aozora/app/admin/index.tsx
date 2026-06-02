@@ -22,6 +22,23 @@ const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 type ActivityItem = { type: string; label: string; at: string };
 
+type RiskUser = {
+  userId: number;
+  name: string;
+  avatarUrl: string | null;
+  isSuspended: boolean;
+  score: number;
+  level: string;
+  violationCount: number;
+};
+
+const RISK_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  warning:          { label: "Warning",      color: "#f59e0b", bg: "#f59e0b18" },
+  short_suspension: { label: "7-Day Susp.",  color: "#f97316", bg: "#f9731618" },
+  long_suspension:  { label: "30-Day Susp.", color: "#ef4444", bg: "#ef444418" },
+  ban:              { label: "Ban",           color: "#7c3aed", bg: "#7c3aed18" },
+};
+
 const ACTIVITY_ICON: Record<string, any> = {
   user: "user-plus",
   dorm: "home",
@@ -164,6 +181,19 @@ export default function AdminDashboard() {
   });
   const activity: ActivityItem[] = activityData?.activity ?? [];
 
+  const { data: riskData } = useQuery({
+    queryKey: ["adminTopRiskUsers"],
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/api/admin/top-risk-users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+    enabled: !!token,
+    refetchInterval: 15_000,
+  });
+  const topRiskUsers: RiskUser[] = riskData?.users ?? [];
+
   const dormData = [
     { value: s?.approvedDorms ?? 0, color: DORM_COLORS[0], label: DORM_LABELS[0] },
     { value: s?.pendingDorms ?? 0, color: DORM_COLORS[1], label: DORM_LABELS[1] },
@@ -197,6 +227,73 @@ export default function AdminDashboard() {
                   <AlertRow icon="shield" label="ID verifications to review" count={s?.pendingVerifications} color="#ef4444" onPress={() => router.push("/admin/verifications")} colors={colors} />
                   <AlertRow icon="flag" label="Reports pending review" count={s?.pendingReports} color="#f97316" onPress={() => router.push("/admin/reports")} colors={colors} />
                   <AlertRow icon="message-square" label="Support tickets open" count={s?.pendingSupportTickets} color="#8b5cf6" onPress={() => router.push("/admin/support-tickets")} colors={colors} />
+                </View>
+              </View>
+            )}
+
+            {topRiskUsers.length > 0 && (
+              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={[styles.riskCardIcon, { backgroundColor: "#ef444418" }]}>
+                      <Feather name="alert-triangle" size={15} color="#ef4444" />
+                    </View>
+                    <Text style={[styles.cardTitle, { color: colors.foreground }]}>High-Risk Users</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => router.push("/admin/violations")} activeOpacity={0.7}>
+                    <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.mutedForeground, marginBottom: 12 }]}>
+                  Top {topRiskUsers.length} user{topRiskUsers.length !== 1 ? "s" : ""} by risk score
+                </Text>
+                <View style={{ gap: 10 }}>
+                  {topRiskUsers.map((user, i) => {
+                    const cfg = RISK_CONFIG[user.level];
+                    const initials = user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+                    const rankColor = i === 0 ? "#ef4444" : i === 1 ? "#f97316" : "#f59e0b";
+                    return (
+                      <TouchableOpacity
+                        key={user.userId}
+                        style={[styles.riskRow, { backgroundColor: colors.secondary, borderColor: colors.border, borderRadius: colors.radius }]}
+                        onPress={() => router.push({ pathname: "/admin/user-violations", params: { userId: user.userId } })}
+                        activeOpacity={0.75}
+                      >
+                        <View style={[styles.rankBadge, { backgroundColor: rankColor + "22" }]}>
+                          <Text style={[styles.rankText, { color: rankColor }]}>#{i + 1}</Text>
+                        </View>
+
+                        <View style={[styles.riskAvatar, { backgroundColor: rankColor + "25" }]}>
+                          <Text style={[styles.riskAvatarText, { color: rankColor }]}>{initials}</Text>
+                        </View>
+
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            <Text style={[styles.riskName, { color: colors.foreground }]} numberOfLines={1}>{user.name}</Text>
+                            {user.isSuspended && (
+                              <View style={styles.suspendedPill}>
+                                <Text style={styles.suspendedText}>Suspended</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={[styles.riskMeta, { color: colors.mutedForeground }]}>
+                            {user.violationCount} violation{user.violationCount !== 1 ? "s" : ""}
+                          </Text>
+                        </View>
+
+                        <View style={{ alignItems: "flex-end", gap: 4 }}>
+                          {cfg && (
+                            <View style={[styles.levelPill, { backgroundColor: cfg.bg }]}>
+                              <Text style={[styles.levelText, { color: cfg.color }]}>{cfg.label}</Text>
+                            </View>
+                          )}
+                          <Text style={[styles.scoreText, { color: rankColor }]}>{user.score} pts</Text>
+                        </View>
+
+                        <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -340,4 +437,18 @@ const styles = StyleSheet.create({
   navTileLabel: { fontSize: 13, fontWeight: "600", lineHeight: 18 },
   badge: { position: "absolute", top: 10, right: 10, backgroundColor: "#ef4444", borderRadius: 10, minWidth: 20, height: 20, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  riskCardIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  seeAll: { fontSize: 13, fontWeight: "600" },
+  riskRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderWidth: 1 },
+  rankBadge: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  rankText: { fontSize: 11, fontWeight: "800" },
+  riskAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  riskAvatarText: { fontSize: 13, fontWeight: "800" },
+  riskName: { fontSize: 14, fontWeight: "600", flex: 1 },
+  riskMeta: { fontSize: 12, marginTop: 2 },
+  suspendedPill: { backgroundColor: "#ef444418", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  suspendedText: { fontSize: 10, fontWeight: "700", color: "#ef4444" },
+  levelPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  levelText: { fontSize: 11, fontWeight: "700" },
+  scoreText: { fontSize: 12, fontWeight: "800" },
 });
