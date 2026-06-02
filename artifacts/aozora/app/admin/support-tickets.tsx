@@ -66,6 +66,11 @@ function getResponseOptions(ticketType: string): [ResponseOption, ResponseOption
         { label: "Takedown Reversed", responseType: "takedown_reversed", color: "#10b981", icon: "refresh-cw" },
         { label: "Takedown Upheld", responseType: "takedown_upheld", color: "#f97316", icon: "slash" },
       ];
+    case "Report a Technical Bug":
+      return [
+        { label: "Bug Fixed", responseType: "bug_fixed", color: "#10b981", icon: "check-circle" },
+        { label: "Bug In Progress", responseType: "bug_in_progress", color: "#f59e0b", icon: "clock" },
+      ];
     default:
       return [
         { label: "Request Resolved", responseType: "request_resolved", color: "#10b981", icon: "check-circle" },
@@ -83,6 +88,8 @@ const RESPONSE_LABELS: Record<string, string> = {
   takedown_upheld: "Takedown Upheld",
   request_resolved: "Request Resolved",
   request_denied: "Request Denied",
+  bug_fixed: "Bug Fixed",
+  bug_in_progress: "Bug In Progress",
 };
 
 export default function AdminSupportTicketsScreen() {

@@ -183,6 +183,7 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
     "decision_overturned", "rejection_stands",
     "takedown_reversed", "takedown_upheld",
     "request_resolved", "request_denied",
+    "bug_fixed", "bug_in_progress",
   ];
 
   if (!responseType || !VALID_TYPES.includes(responseType)) {

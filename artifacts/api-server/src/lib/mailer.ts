@@ -81,6 +81,18 @@ const RESPONSE_CONFIGS: Record<string, { subject: string; headline: string; body
     body: "After reviewing your support request, our admin team was unable to fulfill it at this time. If you have additional context or believe this was a mistake, you are welcome to submit a new request through our Help Center.",
     color: "#f97316",
   },
+  bug_fixed: {
+    subject: "Your Bug Report Has Been Resolved — Aozora",
+    headline: "Great news — the bug you reported has been fixed!",
+    body: "Thank you for taking the time to report this issue. Our engineering team has identified and resolved the bug. The fix is now live and you should no longer experience this problem. If the issue persists, please don't hesitate to submit a new report.",
+    color: "#10b981",
+  },
+  bug_in_progress: {
+    subject: "Your Bug Report Is Being Worked On — Aozora",
+    headline: "We're on it — your bug report is in progress.",
+    body: "Thank you for reporting this issue. Our engineering team has acknowledged the bug and is actively working on a fix. We appreciate your patience and will have it resolved as soon as possible. You don't need to take any further action.",
+    color: "#f59e0b",
+  },
 };
 
 export async function sendSupportResponseEmail(opts: {

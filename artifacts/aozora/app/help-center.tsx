@@ -30,6 +30,11 @@ const TICKET_TYPES = [
   { value: "Other", label: "Other", icon: "more-horizontal" as const, color: "#8b5cf6" },
 ];
 
+const GUEST_TICKET_TYPES = [
+  { value: "Appeal Suspension", label: "Appeal Suspension", icon: "user-x" as const, color: "#dc2626" },
+  { value: "Report a Technical Bug", label: "Report a Technical Bug", icon: "tool" as const, color: "#f59e0b" },
+];
+
 export default function HelpCenterScreen() {
   const { toast } = useToast();
   const colors = useColors();
@@ -55,6 +60,7 @@ export default function HelpCenterScreen() {
 
   const isGuest = !user || !token;
   const isAdmin = user?.role === "admin";
+  const visibleTicketTypes = isGuest ? GUEST_TICKET_TYPES : TICKET_TYPES;
   const selectedType = TICKET_TYPES.find((t) => t.value === ticketType);
 
   // Check for existing pending ticket (authenticated non-admin users only)
@@ -384,7 +390,7 @@ export default function HelpCenterScreen() {
           <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Ticket Type</Text>
-            {TICKET_TYPES.map((t) => (
+            {visibleTicketTypes.map((t) => (
               <TouchableOpacity
                 key={t.value}
                 style={[

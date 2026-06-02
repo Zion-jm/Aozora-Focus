@@ -25,20 +25,20 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [suspended, setSuspended] = useState(false);
 
   const { mutate: doLogin, isPending } = useLogin({
     mutation: {
       onSuccess: (data) => {
+        setSuspended(false);
         login(data.token, data.user);
         router.replace("/(tabs)");
       },
       onError: (err: any) => {
         if (err?.status === 403) {
-          toast.error(
-            "Account Suspended",
-            "Your account has been suspended. Please contact support."
-          );
+          setSuspended(true);
         } else {
+          setSuspended(false);
           toast.error("Login Failed", "Invalid email or password. Please try again.");
         }
       },
@@ -191,6 +191,26 @@ export default function LoginScreen() {
               </Link>
             </View>
           </View>
+
+          {suspended && (
+            <View style={styles.suspendedBanner}>
+              <View style={styles.suspendedBannerTop}>
+                <Feather name="lock" size={16} color="#ef4444" />
+                <Text style={styles.suspendedBannerTitle}>Account Suspended</Text>
+              </View>
+              <Text style={styles.suspendedBannerBody}>
+                Your account has been suspended. You can appeal this decision by contacting our support team.
+              </Text>
+              <TouchableOpacity
+                style={styles.suspendedAppealBtn}
+                onPress={() => router.push("/help-center?type=appeal_suspension")}
+                activeOpacity={0.85}
+              >
+                <Feather name="shield" size={14} color="#fff" />
+                <Text style={styles.suspendedAppealBtnText}>Appeal My Suspension</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.supportBtn}
@@ -372,5 +392,44 @@ const styles = StyleSheet.create({
   supportText: {
     fontSize: 12,
     color: "rgba(255,255,255,0.45)",
+  },
+
+  suspendedBanner: {
+    backgroundColor: "rgba(239,68,68,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.35)",
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  suspendedBannerTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  suspendedBannerTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#ef4444",
+  },
+  suspendedBannerBody: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    lineHeight: 19,
+  },
+  suspendedAppealBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: "#ef4444",
+    borderRadius: 10,
+    paddingVertical: 11,
+    marginTop: 2,
+  },
+  suspendedAppealBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
   },
 });
