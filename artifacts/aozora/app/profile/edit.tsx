@@ -149,12 +149,7 @@ function BirthdayPickerField({
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const selectedDay = (() => {
-    if (!value) return null;
-    const [y, m, d] = value.split("-").map(Number);
-    if (y === tempDate.year && m === tempDate.month) return d;
-    return null;
-  })();
+  const selectedDay = tempDate.day;
 
   return (
     <View style={styles.fieldWrap}>
