@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 
 const LAST_UPDATED = "June 2025";
-const CONTACT_EMAIL = "support@aozora.ph";
+const CONTACT_EMAIL = "aozorayourdormmate@gmail.com";
 const PLATFORM_NAME = "Aozora";
 
 type Guideline = {

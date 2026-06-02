@@ -15,7 +15,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 
 const APP_VERSION = "1.0.0";
-const SUPPORT_EMAIL = "support@aozora.ph";
+const SUPPORT_EMAIL = "aozorayourdormmate@gmail.com";
 const LOCATION = "Lopez, Quezon, Philippines";
 
 type Section = {
