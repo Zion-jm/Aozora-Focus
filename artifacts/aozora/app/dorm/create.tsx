@@ -17,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 
 import { useColors } from "@/hooks/useColors";
+import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { useToast } from "@/context/ToastContext";
 import LocationPickerMap from "@/components/LocationPickerMap";
 import {
@@ -58,6 +59,7 @@ export default function CreateDormScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { token } = useAuth();
+  const { requireVerified } = useVerificationGate();
   const { toast } = useToast();
 
   const { edit } = useLocalSearchParams<{ edit?: string }>();
@@ -200,6 +202,11 @@ export default function CreateDormScreen() {
   };
 
   const handleSubmit = async () => {
+    if (!isEditMode) {
+      let verified = false;
+      requireVerified(() => { verified = true; });
+      if (!verified) return;
+    }
     if (!name.trim() || !address.trim() || !monthlyRent) {
       toast.warning("Missing Fields", "Please fill in name, address, and monthly rent.");
       return;

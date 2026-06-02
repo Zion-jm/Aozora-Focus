@@ -18,6 +18,7 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { PageHeader } from "@/components/PageHeader";
 import {
   getGetMyDormListingsQueryKey,
@@ -38,6 +39,7 @@ export default function MyDormsScreen() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { showConfirm } = useConfirm();
+  const { requireVerified } = useVerificationGate();
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useGetMyDormListings({
@@ -71,7 +73,7 @@ export default function MyDormsScreen() {
         right={
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: colors.primary, borderRadius: 8 }]}
-            onPress={() => router.push("/dorm/create")}
+            onPress={() => requireVerified(() => router.push("/dorm/create"))}
           >
             <Feather name="plus" size={18} color="#fff" />
           </TouchableOpacity>
@@ -226,7 +228,7 @@ export default function MyDormsScreen() {
               {!search.trim() && (
                 <TouchableOpacity
                   style={[styles.createBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
-                  onPress={() => router.push("/dorm/create")}
+                  onPress={() => requireVerified(() => router.push("/dorm/create"))}
                 >
                   <Feather name="plus" size={18} color="#fff" />
                   <Text style={{ color: "#fff", fontWeight: "600", fontSize: 15 }}>Create Listing</Text>

@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { useAuth } from "@/context/AuthContext";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -50,6 +51,7 @@ export default function AppointmentDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, token } = useAuth();
+  const { requireVerified } = useVerificationGate();
   const qc = useQueryClient();
 
   const { data, isLoading } = useGetAppointmentById(id!, {
@@ -235,13 +237,15 @@ export default function AppointmentDetailScreen() {
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#10b981", borderRadius: colors.radius }]}
               onPress={() =>
-                showConfirm({
-                  title: "Approve Visit?",
-                  message: "The student will be notified.",
-                  confirmLabel: "Approve",
-                  icon: "check-circle",
-                  onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "approved" } }),
-                })
+                requireVerified(() =>
+                  showConfirm({
+                    title: "Approve Visit?",
+                    message: "The student will be notified.",
+                    confirmLabel: "Approve",
+                    icon: "check-circle",
+                    onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "approved" } }),
+                  })
+                )
               }
               disabled={update.isPending}
             >
@@ -251,14 +255,16 @@ export default function AppointmentDetailScreen() {
             <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#ef4444", borderRadius: colors.radius }]}
               onPress={() =>
-                showConfirm({
-                  title: "Reject Visit?",
-                  message: "The student will be notified.",
-                  confirmLabel: "Reject",
-                  destructive: true,
-                  icon: "x-circle",
-                  onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "rejected" } }),
-                })
+                requireVerified(() =>
+                  showConfirm({
+                    title: "Reject Visit?",
+                    message: "The student will be notified.",
+                    confirmLabel: "Reject",
+                    destructive: true,
+                    icon: "x-circle",
+                    onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "rejected" } }),
+                  })
+                )
               }
               disabled={update.isPending}
             >
@@ -282,13 +288,15 @@ export default function AppointmentDetailScreen() {
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#0ea5e9", borderRadius: colors.radius, flex: 1 }]}
                 onPress={() =>
-                  showConfirm({
-                    title: "Mark as Completed?",
-                    message: "This confirms the student attended their visit. Both of you will be able to leave a review.",
-                    confirmLabel: "Mark Completed",
-                    icon: "award",
-                    onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "completed" } }),
-                  })
+                  requireVerified(() =>
+                    showConfirm({
+                      title: "Mark as Completed?",
+                      message: "This confirms the student attended their visit. Both of you will be able to leave a review.",
+                      confirmLabel: "Mark Completed",
+                      icon: "award",
+                      onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "completed" } }),
+                    })
+                  )
                 }
                 disabled={update.isPending}
               >
@@ -304,14 +312,16 @@ export default function AppointmentDetailScreen() {
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#f97316", borderRadius: colors.radius, flex: 1 }]}
                 onPress={() =>
-                  showConfirm({
-                    title: "Mark as Not Shown?",
-                    message: "This records that the student did not attend the visit. The booking will be moved to history.",
-                    confirmLabel: "Mark Not Shown",
-                    destructive: true,
-                    icon: "user-x",
-                    onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "no_show" } }),
-                  })
+                  requireVerified(() =>
+                    showConfirm({
+                      title: "Mark as Not Shown?",
+                      message: "This records that the student did not attend the visit. The booking will be moved to history.",
+                      confirmLabel: "Mark Not Shown",
+                      destructive: true,
+                      icon: "user-x",
+                      onConfirm: () => update.mutate({ appointmentId: Number(id!), data: { status: "no_show" } }),
+                    })
+                  )
                 }
                 disabled={update.isPending}
               >
