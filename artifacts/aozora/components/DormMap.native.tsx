@@ -21,6 +21,30 @@ const LOPEZ_COORDS = {
   longitudeDelta: 0.05,
 };
 
+// Hard bounds — the map cannot be scrolled outside Lopez, Quezon
+const LOPEZ_BOUNDS = {
+  minLat: 13.82,
+  maxLat: 13.95,
+  minLng: 122.20,
+  maxLng: 122.33,
+  // Max zoom-out: ~0.13° ≈ covers the whole municipality comfortably
+  maxDelta: 0.13,
+};
+
+function clampRegion(region: typeof LOPEZ_COORDS): typeof LOPEZ_COORDS {
+  const latDelta = Math.min(region.latitudeDelta, LOPEZ_BOUNDS.maxDelta);
+  const lngDelta = Math.min(region.longitudeDelta, LOPEZ_BOUNDS.maxDelta);
+  const latitude = Math.max(
+    LOPEZ_BOUNDS.minLat + latDelta / 2,
+    Math.min(LOPEZ_BOUNDS.maxLat - latDelta / 2, region.latitude)
+  );
+  const longitude = Math.max(
+    LOPEZ_BOUNDS.minLng + lngDelta / 2,
+    Math.min(LOPEZ_BOUNDS.maxLng - lngDelta / 2, region.longitude)
+  );
+  return { latitude, longitude, latitudeDelta: latDelta, longitudeDelta: lngDelta };
+}
+
 type MapFilter = "all" | "available" | "under4k" | "wifi" | "ac";
 
 const MAP_FILTERS: { key: MapFilter; label: string }[] = [
@@ -55,6 +79,19 @@ export default function DormMap() {
   const { data } = useGetDorms({ query: { queryKey: getGetDormsQueryKey() } });
   const [selected, setSelected] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState<MapFilter>("all");
+  const [region, setRegion] = useState(LOPEZ_COORDS);
+
+  const handleRegionChangeComplete = (r: typeof LOPEZ_COORDS) => {
+    const clamped = clampRegion(r);
+    const needsSnap =
+      Math.abs(clamped.latitude - r.latitude) > 0.0001 ||
+      Math.abs(clamped.longitude - r.longitude) > 0.0001 ||
+      Math.abs(clamped.latitudeDelta - r.latitudeDelta) > 0.0001;
+    setRegion(clamped);
+    if (needsSnap) {
+      mapRef.current?.animateToRegion(clamped, 250);
+    }
+  };
 
   const allDorms = useMemo(
     () => (data?.dorms || []).filter((d: any) => d.latitude && d.longitude && d.status === "approved"),
@@ -72,6 +109,7 @@ export default function DormMap() {
   }, [allDorms, activeFilter]);
 
   const recenter = () => {
+    setRegion(LOPEZ_COORDS);
     mapRef.current?.animateToRegion(LOPEZ_COORDS, 500);
   };
 
@@ -92,7 +130,8 @@ export default function DormMap() {
       <MapView
         ref={mapRef}
         style={styles.map}
-        initialRegion={LOPEZ_COORDS}
+        region={region}
+        onRegionChangeComplete={handleRegionChangeComplete}
         showsUserLocation
         onPress={handleDismiss}
       >
