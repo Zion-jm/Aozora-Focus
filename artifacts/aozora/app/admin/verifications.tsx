@@ -58,7 +58,7 @@ export default function AdminVerificationsScreen() {
   const [reviewNote, setReviewNote] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetVerifications({
-    query: { queryKey: getAdminGetVerificationsQueryKey() },
+    query: { queryKey: getAdminGetVerificationsQueryKey(), refetchInterval: 8_000 },
   });
 
   const all = (data as any)?.verifications || [];

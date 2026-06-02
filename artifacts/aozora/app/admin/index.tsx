@@ -147,7 +147,7 @@ export default function AdminDashboard() {
   const { token } = useAuth();
 
   const { data, isLoading } = useAdminGetStats({
-    query: { queryKey: getAdminGetStatsQueryKey() },
+    query: { queryKey: getAdminGetStatsQueryKey(), refetchInterval: 8_000 },
   });
   const s = data as any;
 
@@ -160,6 +160,7 @@ export default function AdminDashboard() {
       return res.json();
     },
     enabled: !!token,
+    refetchInterval: 8_000,
   });
   const activity: ActivityItem[] = activityData?.activity ?? [];
 

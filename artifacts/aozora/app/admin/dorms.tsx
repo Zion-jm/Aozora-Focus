@@ -44,7 +44,7 @@ export default function AdminDormsScreen() {
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetDorms({
-    query: { queryKey: getAdminGetDormsQueryKey() },
+    query: { queryKey: getAdminGetDormsQueryKey(), refetchInterval: 8_000 },
   });
 
   const allDorms = (data as any)?.dorms || [];

@@ -131,7 +131,17 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="notifications"
-        options={{ href: null }}
+        options={{
+          title: "Alerts",
+          href: isAdmin ? undefined : null,
+          tabBarBadge: isAdmin && unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : undefined,
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="bell" tintColor={color} size={24} />
+            ) : (
+              <Feather name="bell" size={22} color={color} />
+            ),
+        }}
       />
       <Tabs.Screen
         name="profile"

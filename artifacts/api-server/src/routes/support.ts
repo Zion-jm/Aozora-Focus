@@ -111,6 +111,16 @@ router.post("/support-tickets/public", async (req, res) => {
     return;
   }
 
+  // Email must belong to a registered account
+  const existingUser = sqlite.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").get(guestEmail) as any;
+  if (!existingUser) {
+    res.status(403).json({
+      error: "Email not registered",
+      message: "The email address you entered is not registered in Aozora. Please use the email address linked to your account.",
+    });
+    return;
+  }
+
   const now = new Date().toISOString();
   const ticketResult = sqlite.prepare(
     `INSERT INTO support_tickets (guest_name, guest_email, ticket_type, subject, message, status, created_at, updated_at)

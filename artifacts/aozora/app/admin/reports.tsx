@@ -78,6 +78,7 @@ export default function AdminReportsScreen() {
       return res.json();
     },
     enabled: !!token,
+    refetchInterval: 8_000,
   });
 
   const allReports: any[] = data?.reports ?? [];

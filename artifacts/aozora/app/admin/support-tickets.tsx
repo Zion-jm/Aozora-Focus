@@ -121,7 +121,13 @@ export default function AdminSupportTicketsScreen() {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchTickets(); }, [token]));
+  useFocusEffect(
+    useCallback(() => {
+      fetchTickets();
+      const interval = setInterval(fetchTickets, 8_000);
+      return () => clearInterval(interval);
+    }, [token])
+  );
 
   const handleResolve = async (ticketId: number, newStatus: "pending" | "resolved") => {
     if (!token) return;

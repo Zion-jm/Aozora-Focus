@@ -11,7 +11,7 @@ function badge(n: number | undefined): number | undefined {
 export default function AdminLayout() {
   const colors = useColors();
   const { data } = useAdminGetStats({
-    query: { queryKey: getAdminGetStatsQueryKey() },
+    query: { queryKey: getAdminGetStatsQueryKey(), refetchInterval: 8_000 },
   });
   const s = data as any;
 

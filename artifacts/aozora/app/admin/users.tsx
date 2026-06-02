@@ -45,7 +45,7 @@ export default function AdminUsersScreen() {
   const [messagingUserId, setMessagingUserId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetUsers({
-    query: { queryKey: getAdminGetUsersQueryKey() },
+    query: { queryKey: getAdminGetUsersQueryKey(), refetchInterval: 8_000 },
   });
 
   const allUsers = (data as any)?.users || [];
