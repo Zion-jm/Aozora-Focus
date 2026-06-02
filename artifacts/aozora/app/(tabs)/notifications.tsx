@@ -104,6 +104,10 @@ export default function NotificationsScreen() {
     }
   };
 
+  const ADMIN_MSG_TYPES = ["admin_message", "admin_warning", "admin_message_new", "support_ticket_resolved"];
+  const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
+    "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new"];
+
   const handleTap = async (notif: any) => {
     if (!notif.isRead && token) {
       try {
@@ -119,8 +123,28 @@ export default function NotificationsScreen() {
         // ignore
       }
     }
-    if (notif.data?.path) {
-      router.push(notif.data.path);
+
+    const type: string = notif.type ?? "";
+    if (notif.relatedType === "appointment" && notif.relatedId) {
+      router.push(`/appointment/${notif.relatedId}` as any);
+    } else if (notif.relatedType === "dorm" && notif.relatedId) {
+      router.push(`/dorm/${notif.relatedId}` as any);
+    } else if (notif.relatedType === "conversation" && notif.relatedId) {
+      if (ADMIN_MSG_TYPES.includes(type)) {
+        router.push(`/admin-conversation/${notif.relatedId}` as any);
+      } else {
+        router.push(`/conversation/${notif.relatedId}` as any);
+      }
+    } else if (APPT_TYPES.includes(type)) {
+      router.push("/(tabs)/appointments" as any);
+    } else if (type === "message_new" || type === "new_message") {
+      router.push("/(tabs)/messages" as any);
+    } else if (ADMIN_MSG_TYPES.includes(type)) {
+      router.push("/(tabs)/messages" as any);
+    } else if (type === "dorm_approved" || type === "dorm_rejected" || type === "dorm_taken_down") {
+      router.push("/profile/my-dorms" as any);
+    } else if (type === "id_verified" || type === "id_rejected") {
+      router.push("/profile/verify" as any);
     }
   };
 

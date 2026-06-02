@@ -69,6 +69,52 @@ export function createNotification({
   sendPushNotificationToUser(userId, title, body, Object.keys(data).length ? data : undefined).catch(() => {});
 }
 
+/**
+ * For message-type notifications: update the existing unread notification for the same
+ * conversation so the user isn't flooded with one notification per message.
+ * If no unread notification exists yet, insert a new one.
+ */
+export function upsertConversationNotification({
+  userId,
+  type,
+  title,
+  body,
+  relatedId,
+}: {
+  userId: number;
+  type: "message_new" | "admin_message";
+  title: string;
+  body: string;
+  relatedId: number;
+}) {
+  try {
+    const existing = sqlite
+      .prepare(
+        "SELECT id FROM notifications WHERE user_id = ? AND type = ? AND related_id = ? AND is_read = 0"
+      )
+      .get(userId, type, relatedId) as { id: number } | undefined;
+
+    if (existing) {
+      sqlite
+        .prepare(
+          "UPDATE notifications SET title = ?, body = ?, created_at = datetime('now') WHERE id = ?"
+        )
+        .run(title, body, existing.id);
+    } else {
+      sqlite
+        .prepare(
+          "INSERT INTO notifications (user_id, type, title, body, related_id, related_type) VALUES (?, ?, ?, ?, ?, 'conversation')"
+        )
+        .run(userId, type, title, body, relatedId);
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  const path = `/conversation/${relatedId}`;
+  sendPushNotificationToUser(userId, title, body, { path }).catch(() => {});
+}
+
 export function notifyUser(
   db: Database.Database,
   userId: number,
