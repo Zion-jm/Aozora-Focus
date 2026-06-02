@@ -10,6 +10,7 @@ import {
   TextInput,
   Platform,
   Modal,
+  Pressable,
 } from "react-native";
 import { useToast } from "@/context/ToastContext";
 import { ActionSheet } from "@/components/ActionSheet";
@@ -187,18 +188,13 @@ function BirthdayPickerField({
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity
-          style={styles.dpBackdrop}
-          activeOpacity={1}
-          onPress={() => setOpen(false)}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
+        <View style={styles.dpBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
+          <View
             style={[
               styles.dpCard,
               { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius + 4 },
             ]}
-            onPress={() => {}}
           >
             <View style={styles.dpHeader}>
               <TouchableOpacity onPress={prevYear} style={styles.dpNavBtn}>
@@ -275,8 +271,8 @@ function BirthdayPickerField({
               <Feather name="check" size={16} color="#fff" />
               <Text style={styles.dpConfirmText}>Confirm</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
