@@ -14,7 +14,6 @@ import { router } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { UserAvatar } from "@/components/UserAvatar";
-import { useGetNotifications } from "@workspace/api-client-react";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -53,9 +52,6 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { showConfirm } = useConfirm();
-  const { data: notifData } = useGetNotifications({ query: { refetchInterval: 30_000 } });
-  const unreadCount = notifData?.unreadCount ?? 0;
-
   const handleLogout = () => {
     showConfirm({
       title: "Log out",
@@ -108,20 +104,6 @@ export default function ProfileScreen() {
         ]}
       >
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/notifications")}
-          style={styles.bellBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="bell" size={22} color={colors.foreground} />
-          {unreadCount > 0 && (
-            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.badgeText}>
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
         {user?.role === "admin" && (
           <TouchableOpacity
             onPress={() => router.push("/admin")}
@@ -289,9 +271,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   adminBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  bellBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  badge: { position: "absolute", top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
-  badgeText: { color: "#fff", fontSize: 9, fontWeight: "700" },
   headerTitle: { fontSize: 28, fontWeight: "800" },
   profileCard: { margin: 16, borderRadius: 16, borderWidth: 1, padding: 24, alignItems: "center", gap: 8 },
   name: { fontSize: 22, fontWeight: "bold" },
