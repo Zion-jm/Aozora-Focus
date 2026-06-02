@@ -203,12 +203,7 @@ export default function PublicProfileScreen() {
         setShowDormPicker(true);
       }
     } else if (canMessageStudent) {
-      if (myDorms.length === 1) {
-        startConversationWithStudent(myDorms[0]);
-      } else {
-        setPickerMode("student");
-        setShowDormPicker(true);
-      }
+      startConversationWithStudent(myDorms[0]);
     }
   };
 
