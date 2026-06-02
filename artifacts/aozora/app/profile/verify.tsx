@@ -27,6 +27,7 @@ import {
   customFetch,
 } from "@workspace/api-client-react";
 import type { VerificationRecord } from "@workspace/api-client-react";
+import PhoneField, { parsePhone, buildPhone, type Country } from "@/components/PhoneField";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -37,6 +38,205 @@ const ID_TYPES = [
   "PhilSys ID",
   "Student ID",
 ];
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+function formatBirthday(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function BirthdayPickerField({
+  label,
+  value,
+  onChange,
+  colors,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  colors: any;
+  required?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const today = new Date();
+  const initFromValue = () => {
+    if (value) {
+      const [y, m, d] = value.split("-").map(Number);
+      if (y && m && d) return { year: y, month: m, day: d };
+    }
+    return { year: today.getFullYear() - 18, month: today.getMonth() + 1, day: today.getDate() };
+  };
+
+  const [tempDate, setTempDate] = useState(initFromValue);
+
+  const openPicker = () => {
+    setTempDate(initFromValue());
+    setOpen(true);
+  };
+
+  const confirm = () => {
+    const clampedDay = Math.min(tempDate.day, daysInMonth(tempDate.year, tempDate.month));
+    const mm = String(tempDate.month).padStart(2, "0");
+    const dd = String(clampedDay).padStart(2, "0");
+    onChange(`${tempDate.year}-${mm}-${dd}`);
+    setOpen(false);
+  };
+
+  const prevMonth = () =>
+    setTempDate((d) => {
+      if (d.month === 1) return { ...d, month: 12, year: d.year - 1 };
+      return { ...d, month: d.month - 1 };
+    });
+
+  const nextMonth = () =>
+    setTempDate((d) => {
+      if (d.month === 12) return { ...d, month: 1, year: d.year + 1 };
+      return { ...d, month: d.month + 1 };
+    });
+
+  const prevYear = () => setTempDate((d) => ({ ...d, year: d.year - 1 }));
+  const nextYear = () => setTempDate((d) => ({ ...d, year: d.year + 1 }));
+
+  const totalDays = daysInMonth(tempDate.year, tempDate.month);
+  const firstDow = new Date(tempDate.year, tempDate.month - 1, 1).getDay();
+  const cells: (number | null)[] = [
+    ...Array(firstDow).fill(null),
+    ...Array.from({ length: totalDays }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const selectedDay = (() => {
+    if (!value) return null;
+    const [y, m, d] = value.split("-").map(Number);
+    if (y === tempDate.year && m === tempDate.month) return d;
+    return null;
+  })();
+
+  return (
+    <View style={styles.fieldWrap}>
+      <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+        {label}
+        {required && <Text style={{ color: colors.destructive }}> *</Text>}
+      </Text>
+      <TouchableOpacity
+        onPress={openPicker}
+        style={[
+          styles.input,
+          styles.datePickerRow,
+          { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius },
+        ]}
+        activeOpacity={0.7}
+      >
+        <Feather name="calendar" size={16} color={value ? colors.foreground : colors.mutedForeground} />
+        <Text
+          style={[
+            styles.datePickerText,
+            { color: value ? colors.foreground : colors.mutedForeground },
+          ]}
+        >
+          {value ? formatBirthday(value) : "Select your birthday"}
+        </Text>
+        <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <TouchableOpacity
+          style={styles.dpBackdrop}
+          activeOpacity={1}
+          onPress={() => setOpen(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[
+              styles.dpCard,
+              { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius + 4 },
+            ]}
+            onPress={() => {}}
+          >
+            <View style={styles.dpHeader}>
+              <TouchableOpacity onPress={prevYear} style={styles.dpNavBtn}>
+                <Feather name="chevrons-left" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={prevMonth} style={styles.dpNavBtn}>
+                <Feather name="chevron-left" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+              <Text style={[styles.dpHeaderTitle, { color: colors.foreground }]}>
+                {MONTHS[tempDate.month - 1]} {tempDate.year}
+              </Text>
+              <TouchableOpacity onPress={nextMonth} style={styles.dpNavBtn}>
+                <Feather name="chevron-right" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={nextYear} style={styles.dpNavBtn}>
+                <Feather name="chevrons-right" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dpDowRow}>
+              {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+                <Text key={d} style={[styles.dpDowLabel, { color: colors.mutedForeground }]}>{d}</Text>
+              ))}
+            </View>
+
+            <View style={styles.dpGrid}>
+              {cells.map((day, idx) => {
+                const isSelected = day !== null && day === selectedDay;
+                const isToday =
+                  day !== null &&
+                  tempDate.year === today.getFullYear() &&
+                  tempDate.month === today.getMonth() + 1 &&
+                  day === today.getDate();
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.dpCell,
+                      isSelected && { backgroundColor: colors.primary, borderRadius: 20 },
+                    ]}
+                    onPress={() => day && setTempDate((d) => ({ ...d, day }))}
+                    disabled={!day}
+                    activeOpacity={0.7}
+                  >
+                    {day !== null && (
+                      <Text
+                        style={[
+                          styles.dpCellText,
+                          { color: isSelected ? "#fff" : isToday ? colors.primary : colors.foreground },
+                          isToday && !isSelected && { fontWeight: "700" },
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.dpConfirmBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+              onPress={confirm}
+            >
+              <Feather name="check" size={16} color="#fff" />
+              <Text style={styles.dpConfirmText}>Confirm</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+}
 
 type Step = "personal" | "id";
 
@@ -113,6 +313,15 @@ export default function VerifyScreen() {
   };
 
   const [step, setStep] = useState<Step>("personal");
+
+  const parsedPhone = parsePhone(user?.phone ?? "");
+  const [phoneCountry, setPhoneCountry] = useState<Country>(parsedPhone.country);
+  const [phoneNational, setPhoneNational] = useState(parsedPhone.national);
+
+  const parsedEmergency = parsePhone(user?.emergencyContactPhone ?? "");
+  const [emergencyCountry, setEmergencyCountry] = useState<Country>(parsedEmergency.country);
+  const [emergencyNational, setEmergencyNational] = useState(parsedEmergency.national);
+
   const [info, setInfo] = useState<PersonalInfo>({
     fullName: user?.fullName ?? "",
     phone: user?.phone ?? "",
@@ -155,11 +364,14 @@ export default function VerifyScreen() {
   const updateField = (key: keyof PersonalInfo) => (val: string) =>
     setInfo((prev) => ({ ...prev, [key]: val }));
 
+  const fullPhone = buildPhone(phoneCountry, phoneNational);
+  const fullEmergency = buildPhone(emergencyCountry, emergencyNational);
+
   const personalInfoComplete =
     info.fullName.trim() &&
-    (info.phone.trim() || info.email.trim()) &&
+    (fullPhone || info.email.trim()) &&
     info.emergencyContactName.trim() &&
-    info.emergencyContactPhone.trim();
+    fullEmergency;
 
   const [showPhotoSheet, setShowPhotoSheet] = useState(false);
 
@@ -172,11 +384,11 @@ export default function VerifyScreen() {
       {
         data: {
           fullName: info.fullName,
-          phone: info.phone || undefined,
+          phone: fullPhone || undefined,
           birthday: info.birthday || undefined,
           universityOrWorkplace: info.universityOrWorkplace || undefined,
           emergencyContactName: info.emergencyContactName || undefined,
-          emergencyContactPhone: info.emergencyContactPhone || undefined,
+          emergencyContactPhone: fullEmergency || undefined,
         },
       },
       {
@@ -454,23 +666,39 @@ export default function VerifyScreen() {
             </Text>
 
             <Field label="Full Name" value={info.fullName} onChange={updateField("fullName")} placeholder="e.g. Ana Dela Cruz" colors={colors} required />
-            <Field label="Phone Number" value={info.phone} onChange={updateField("phone")} placeholder="+63 9XX XXX XXXX" keyboardType="phone-pad" colors={colors} />
+            <PhoneField
+              label="Phone Number"
+              value={fullPhone}
+              onChange={(full) => {
+                const p = parsePhone(full);
+                setPhoneCountry(p.country);
+                setPhoneNational(p.national);
+              }}
+              colors={colors}
+            />
             <Field label="Email Address" value={info.email} onChange={updateField("email")} placeholder="you@example.com" keyboardType="email-address" colors={colors} />
             <Field label="University / Workplace" value={info.universityOrWorkplace} onChange={updateField("universityOrWorkplace")} placeholder="e.g. Quezon National High School" colors={colors} />
-            <Field
+            <BirthdayPickerField
               label="Birthday"
               value={info.birthday}
               onChange={updateField("birthday")}
-              placeholder="YYYY-MM-DD (e.g. 1999-05-15)"
               colors={colors}
-              hint="Used to verify your age."
             />
             <Text style={[styles.sectionTitle, { color: colors.mutedForeground, marginTop: 8 }]}>
               EMERGENCY CONTACT
             </Text>
 
             <Field label="Contact Person Name" value={info.emergencyContactName} onChange={updateField("emergencyContactName")} placeholder="e.g. Maria Dela Cruz" colors={colors} required />
-            <Field label="Contact Person Phone" value={info.emergencyContactPhone} onChange={updateField("emergencyContactPhone")} placeholder="+63 9XX XXX XXXX" keyboardType="phone-pad" colors={colors} required />
+            <PhoneField
+              label="Contact Person Phone"
+              value={fullEmergency}
+              onChange={(full) => {
+                const p = parsePhone(full);
+                setEmergencyCountry(p.country);
+                setEmergencyNational(p.national);
+              }}
+              colors={colors}
+            />
 
             <View
               style={[
@@ -847,4 +1075,63 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   appealVerifyBtnText: { fontSize: 16, fontWeight: "700", color: "#ef4444" },
+
+  datePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  datePickerText: { flex: 1, fontSize: 15 },
+
+  dpBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  dpCard: {
+    width: "100%",
+    maxWidth: 340,
+    padding: 20,
+    borderWidth: 1,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  dpHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dpNavBtn: { padding: 6 },
+  dpHeaderTitle: { fontSize: 16, fontWeight: "700", flex: 1, textAlign: "center" },
+  dpDowRow: { flexDirection: "row" },
+  dpDowLabel: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    paddingBottom: 6,
+  },
+  dpGrid: { flexDirection: "row", flexWrap: "wrap" },
+  dpCell: {
+    width: `${100 / 7}%` as any,
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dpCellText: { fontSize: 14 },
+  dpConfirmBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 13,
+    marginTop: 4,
+  },
+  dpConfirmText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });
