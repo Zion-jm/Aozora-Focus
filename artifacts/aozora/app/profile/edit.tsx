@@ -10,6 +10,8 @@ import {
   Image,
   Switch,
   Animated,
+  Modal,
+  Platform,
 } from "react-native";
 import { useToast } from "@/context/ToastContext";
 import { ActionSheet } from "@/components/ActionSheet";
@@ -67,6 +69,204 @@ function Field({
         editable={editable}
         autoCapitalize={keyboardType === "email-address" ? "none" : "sentences"}
       />
+    </View>
+  );
+}
+
+const MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
+function formatBirthday(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function BirthdayPickerField({
+  label,
+  value,
+  onChange,
+  colors,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  colors: any;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const today = new Date();
+  const initFromValue = () => {
+    if (value) {
+      const [y, m, d] = value.split("-").map(Number);
+      if (y && m && d) return { year: y, month: m, day: d };
+    }
+    return { year: today.getFullYear() - 18, month: today.getMonth() + 1, day: today.getDate() };
+  };
+
+  const [tempDate, setTempDate] = useState(initFromValue);
+
+  const openPicker = () => {
+    setTempDate(initFromValue());
+    setOpen(true);
+  };
+
+  const confirm = () => {
+    const clampedDay = Math.min(tempDate.day, daysInMonth(tempDate.year, tempDate.month));
+    const mm = String(tempDate.month).padStart(2, "0");
+    const dd = String(clampedDay).padStart(2, "0");
+    onChange(`${tempDate.year}-${mm}-${dd}`);
+    setOpen(false);
+  };
+
+  const prevMonth = () =>
+    setTempDate((d) => {
+      if (d.month === 1) return { ...d, month: 12, year: d.year - 1 };
+      return { ...d, month: d.month - 1 };
+    });
+
+  const nextMonth = () =>
+    setTempDate((d) => {
+      if (d.month === 12) return { ...d, month: 1, year: d.year + 1 };
+      return { ...d, month: d.month + 1 };
+    });
+
+  const prevYear = () => setTempDate((d) => ({ ...d, year: d.year - 1 }));
+  const nextYear = () => setTempDate((d) => ({ ...d, year: d.year + 1 }));
+
+  const totalDays = daysInMonth(tempDate.year, tempDate.month);
+  const firstDow = new Date(tempDate.year, tempDate.month - 1, 1).getDay();
+  const cells: (number | null)[] = [
+    ...Array(firstDow).fill(null),
+    ...Array.from({ length: totalDays }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const selectedDay = (() => {
+    if (!value) return null;
+    const [y, m, d] = value.split("-").map(Number);
+    if (y === tempDate.year && m === tempDate.month) return d;
+    return null;
+  })();
+
+  return (
+    <View style={styles.fieldWrap}>
+      <Text style={[styles.fieldLabel, { color: colors.foreground }]}>{label}</Text>
+      <TouchableOpacity
+        onPress={openPicker}
+        style={[
+          styles.input,
+          styles.datePickerRow,
+          { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius },
+        ]}
+        activeOpacity={0.7}
+      >
+        <Feather name="calendar" size={16} color={value ? colors.foreground : colors.mutedForeground} />
+        <Text
+          style={[
+            styles.datePickerText,
+            { color: value ? colors.foreground : colors.mutedForeground },
+          ]}
+        >
+          {value ? formatBirthday(value) : "Select your birthday"}
+        </Text>
+        <Feather name="chevron-down" size={16} color={colors.mutedForeground} />
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <TouchableOpacity
+          style={styles.dpBackdrop}
+          activeOpacity={1}
+          onPress={() => setOpen(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[
+              styles.dpCard,
+              { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius + 4 },
+            ]}
+            onPress={() => {}}
+          >
+            {/* Month + Year nav */}
+            <View style={styles.dpHeader}>
+              <TouchableOpacity onPress={prevYear} style={styles.dpNavBtn}>
+                <Feather name="chevrons-left" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={prevMonth} style={styles.dpNavBtn}>
+                <Feather name="chevron-left" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+              <Text style={[styles.dpHeaderTitle, { color: colors.foreground }]}>
+                {MONTHS[tempDate.month - 1]} {tempDate.year}
+              </Text>
+              <TouchableOpacity onPress={nextMonth} style={styles.dpNavBtn}>
+                <Feather name="chevron-right" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={nextYear} style={styles.dpNavBtn}>
+                <Feather name="chevrons-right" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Day-of-week labels */}
+            <View style={styles.dpDowRow}>
+              {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+                <Text key={d} style={[styles.dpDowLabel, { color: colors.mutedForeground }]}>{d}</Text>
+              ))}
+            </View>
+
+            {/* Day grid */}
+            <View style={styles.dpGrid}>
+              {cells.map((day, idx) => {
+                const isSelected = day !== null && day === selectedDay;
+                const isToday =
+                  day !== null &&
+                  tempDate.year === today.getFullYear() &&
+                  tempDate.month === today.getMonth() + 1 &&
+                  day === today.getDate();
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.dpCell,
+                      isSelected && { backgroundColor: colors.primary, borderRadius: 20 },
+                    ]}
+                    onPress={() => day && setTempDate((d) => ({ ...d, day }))}
+                    disabled={!day}
+                    activeOpacity={0.7}
+                  >
+                    {day !== null && (
+                      <Text
+                        style={[
+                          styles.dpCellText,
+                          { color: isSelected ? "#fff" : isToday ? colors.primary : colors.foreground },
+                          isToday && !isSelected && { fontWeight: "700" },
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Confirm */}
+            <TouchableOpacity
+              style={[styles.dpConfirmBtn, { backgroundColor: colors.primary, borderRadius: colors.radius }]}
+              onPress={confirm}
+            >
+              <Feather name="check" size={16} color="#fff" />
+              <Text style={styles.dpConfirmText}>Confirm</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -629,11 +829,10 @@ export default function EditProfileScreen() {
           )}
         </View>
 
-        <Field
+        <BirthdayPickerField
           label="Birthday"
           value={birthday}
           onChange={setBirthday}
-          placeholder="YYYY-MM-DD (e.g. 1999-05-15)"
           colors={colors}
         />
         <Field
@@ -1076,4 +1275,63 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveFooterBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+
+  datePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  datePickerText: { flex: 1, fontSize: 15 },
+
+  dpBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  dpCard: {
+    width: "100%",
+    maxWidth: 340,
+    padding: 20,
+    borderWidth: 1,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  dpHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dpNavBtn: { padding: 6 },
+  dpHeaderTitle: { fontSize: 16, fontWeight: "700", flex: 1, textAlign: "center" },
+  dpDowRow: { flexDirection: "row" },
+  dpDowLabel: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    paddingBottom: 6,
+  },
+  dpGrid: { flexDirection: "row", flexWrap: "wrap" },
+  dpCell: {
+    width: `${100 / 7}%` as any,
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dpCellText: { fontSize: 14 },
+  dpConfirmBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 13,
+    marginTop: 4,
+  },
+  dpConfirmText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });
