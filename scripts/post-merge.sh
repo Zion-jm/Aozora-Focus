@@ -20,6 +20,12 @@ if [ -d "$BETTER_SQLITE3_DIR" ]; then
   if ! node -e "require('./$BETTER_SQLITE3_DIR')" 2>/dev/null; then
     echo "[post-merge] Binary missing or broken — rebuilding better-sqlite3 from source..."
 
+    # Ensure node-gyp is available and download node headers
+    if ! which node-gyp > /dev/null 2>&1; then
+      npm install -g node-gyp 2>/dev/null || true
+    fi
+    node-gyp install --ensure 2>/dev/null || true
+
     # Step 1: Compile sqlite3.c (the largest step)
     SQLITE3_C="$BUILD_DIR/Release/obj/gen/sqlite3/sqlite3.c"
     SQLITE3_O="$BUILD_DIR/Release/obj.target/sqlite3/gen/sqlite3/sqlite3.o"
