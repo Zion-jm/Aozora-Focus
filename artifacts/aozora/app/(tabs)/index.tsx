@@ -215,7 +215,7 @@ export default function ExploreScreen() {
               Explore
             </Text>
             <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-              Find your perfect dorm in Lopez
+              Find the perfect dorm for you
             </Text>
           </View>
           {isOwner && (
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
   headerSubtitle: {
     fontSize: 15,

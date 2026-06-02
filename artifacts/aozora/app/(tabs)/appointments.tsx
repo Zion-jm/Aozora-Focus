@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
   headerRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 4 },
-  headerTitle: { fontSize: 28, fontWeight: "bold" },
+  headerTitle: { fontSize: 28, fontWeight: "800" },
   badge: { borderRadius: 12, minWidth: 24, height: 24, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
   badgeText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
   headerSubtitle: { fontSize: 15, marginTop: 4, marginBottom: 12 },

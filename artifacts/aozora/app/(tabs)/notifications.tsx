@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 24, fontWeight: "700" },
+  headerTitle: { fontSize: 28, fontWeight: "800" },
   markAllBar: {
     flexDirection: "row",
     alignItems: "center",
