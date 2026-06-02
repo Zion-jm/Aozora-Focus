@@ -22,30 +22,31 @@ type FeatherName = React.ComponentProps<typeof Feather>["name"];
 
 function getNotifIcon(type: string): { name: FeatherName; color: string } {
   switch (type) {
-    case "appointment_new":       return { name: "calendar",        color: "#6366f1" };
-    case "appointment_approved":  return { name: "check-circle",    color: "#10b981" };
-    case "appointment_rejected":  return { name: "x-circle",        color: "#ef4444" };
-    case "appointment_completed": return { name: "check-square",    color: "#10b981" };
-    case "appointment_no_show":   return { name: "user-x",          color: "#f59e0b" };
-    case "appointment_cancelled": return { name: "x-circle",        color: "#f59e0b" };
-    case "admin_message":         return { name: "message-square",  color: "#6366f1" };
-    case "admin_message_new":     return { name: "message-square",  color: "#6366f1" };
-    case "dorm_approved":         return { name: "home",            color: "#10b981" };
-    case "dorm_rejected":         return { name: "home",            color: "#ef4444" };
-    case "dorm_taken_down":       return { name: "home",            color: "#ef4444" };
-    case "dorm_submitted":        return { name: "home",            color: "#6366f1" };
-    case "verification_approved": return { name: "shield",          color: "#10b981" };
-    case "verification_rejected": return { name: "shield",          color: "#ef4444" };
-    case "verification_submitted":return { name: "shield",          color: "#6366f1" };
-    case "user_suspended":        return { name: "user-x",          color: "#ef4444" };
-    case "user_unsuspended":      return { name: "user-check",      color: "#10b981" };
-    case "user_warned":           return { name: "alert-triangle",  color: "#f59e0b" };
-    case "support_ticket_new":    return { name: "help-circle",     color: "#6366f1" };
-    case "support_ticket_resolved":return { name: "check-circle",   color: "#10b981" };
-    case "review_new_dorm":       return { name: "star",            color: "#f59e0b" };
-    case "review_new_user":       return { name: "star",            color: "#f59e0b" };
-    case "report_new":            return { name: "flag",            color: "#f59e0b" };
-    default:                      return { name: "bell",            color: "#6366f1" };
+    case "appointment_new":        return { name: "calendar",        color: "#6366f1" };
+    case "appointment_approved":   return { name: "check-circle",    color: "#10b981" };
+    case "appointment_rejected":   return { name: "x-circle",        color: "#ef4444" };
+    case "appointment_completed":  return { name: "check-square",    color: "#10b981" };
+    case "appointment_no_show":    return { name: "user-x",          color: "#f59e0b" };
+    case "appointment_cancelled":  return { name: "x-circle",        color: "#f59e0b" };
+    case "appointment_reminder":   return { name: "clock",           color: "#6366f1" };
+    case "admin_message":          return { name: "message-square",  color: "#6366f1" };
+    case "admin_message_new":      return { name: "message-square",  color: "#6366f1" };
+    case "dorm_approved":          return { name: "home",            color: "#10b981" };
+    case "dorm_rejected":          return { name: "home",            color: "#ef4444" };
+    case "dorm_taken_down":        return { name: "home",            color: "#ef4444" };
+    case "dorm_submitted":         return { name: "home",            color: "#6366f1" };
+    case "verification_approved":  return { name: "shield",          color: "#10b981" };
+    case "verification_rejected":  return { name: "shield",          color: "#ef4444" };
+    case "verification_submitted": return { name: "shield",          color: "#6366f1" };
+    case "user_suspended":         return { name: "user-x",          color: "#ef4444" };
+    case "user_unsuspended":       return { name: "user-check",      color: "#10b981" };
+    case "user_warned":            return { name: "alert-triangle",  color: "#f59e0b" };
+    case "support_ticket_new":     return { name: "help-circle",     color: "#6366f1" };
+    case "support_ticket_resolved":return { name: "check-circle",    color: "#10b981" };
+    case "review_new_dorm":        return { name: "star",            color: "#f59e0b" };
+    case "review_new_user":        return { name: "star",            color: "#f59e0b" };
+    case "report_new":             return { name: "flag",            color: "#f59e0b" };
+    default:                       return { name: "bell",            color: "#6366f1" };
   }
 }
 
@@ -93,7 +94,8 @@ export default function NotificationsScreen() {
 
   const ADMIN_MSG_TYPES = ["admin_message", "admin_warning", "admin_message_new", "support_ticket_resolved"];
   const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
-    "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new"];
+    "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new",
+    "appointment_reminder"];
 
   const handleTap = async (notif: any) => {
     if (!notif.isRead && token) {
@@ -158,6 +160,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header — title only */}
       <View
         style={[
           styles.header,
@@ -171,14 +174,39 @@ export default function NotificationsScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>
           Notifications
         </Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllRead} activeOpacity={0.7}>
-            <Text style={[styles.markAll, { color: colors.primary }]}>
+      </View>
+
+      {/* "Mark all read" bar — shown below header when there are unread items */}
+      {unreadCount > 0 && !loading && (
+        <View
+          style={[
+            styles.markAllBar,
+            {
+              backgroundColor: colors.primary + "0d",
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.markAllLeft}>
+            <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+            </View>
+            <Text style={[styles.unreadLabel, { color: colors.mutedForeground }]}>
+              unread
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={markAllRead}
+            activeOpacity={0.7}
+            style={[styles.markAllBtn, { borderColor: colors.primary + "40" }]}
+          >
+            <Feather name="check-circle" size={13} color={colors.primary} />
+            <Text style={[styles.markAllBtnText, { color: colors.primary }]}>
               Mark all read
             </Text>
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.center}>
@@ -293,15 +321,53 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
   headerTitle: { fontSize: 24, fontWeight: "700" },
-  markAll: { fontSize: 14, fontWeight: "600" },
+  markAllBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  markAllLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  unreadBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  unreadLabel: {
+    fontSize: 13,
+  },
+  markAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  markAllBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   center: {
     flex: 1,
     alignItems: "center",

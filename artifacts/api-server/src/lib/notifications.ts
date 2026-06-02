@@ -26,7 +26,8 @@ export type NotificationType =
   | "dorm_review_received"
   | "user_review_received"
   | "report_new"
-  | "support_ticket_new";
+  | "support_ticket_new"
+  | "appointment_reminder";
 
 export interface NotificationPayload {
   type: string;

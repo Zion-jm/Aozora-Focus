@@ -32,9 +32,6 @@ import {
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
-// SQLite stores "YYYY-MM-DD HH:MM:SS" with no timezone marker (UTC).
-// Appending 'Z' makes JS parse it as UTC, then toLocaleTimeString()
-// automatically converts to the device's local timezone.
 function parseTs(ts: string): Date {
   if (!ts) return new Date();
   if (ts.includes("Z") || ts.includes("+") || (ts.includes("T") && ts.length > 19)) return new Date(ts);
@@ -58,6 +55,42 @@ function sameDay(a: string, b: string): boolean {
   return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
 }
 
+function isVideoUri(uri: string): boolean {
+  return uri.startsWith("data:video/") || /\.(mp4|mov|avi|mkv|webm)(\?|$)/i.test(uri);
+}
+
+// Renders an image or video inside a chat bubble
+function MediaBubble({ uri, radius }: { uri: string; radius: number }) {
+  if (isVideoUri(uri)) {
+    if (Platform.OS === "web") {
+      return (
+        // @ts-ignore – React Native Web supports <video> element
+        <video
+          src={uri}
+          controls
+          style={{ width: 220, height: 160, borderRadius: radius, display: "block", objectFit: "cover" }}
+        />
+      );
+    }
+    // Native fallback: play-icon thumbnail
+    return (
+      <View style={[styles.videoThumb, { borderRadius: radius }]}>
+        <View style={styles.playBtn}>
+          <Feather name="play" size={28} color="#fff" />
+        </View>
+        <Text style={styles.videoLabel}>Video</Text>
+      </View>
+    );
+  }
+  return (
+    <Image
+      source={{ uri }}
+      style={[styles.bubbleImage, { borderRadius: radius }]}
+      resizeMode="cover"
+    />
+  );
+}
+
 type ListItem =
   | { kind: "message"; data: any }
   | { kind: "divider"; label: string; id: string };
@@ -72,7 +105,7 @@ export default function ConversationScreen() {
   const { toast } = useToast();
   const { showConfirm } = useConfirm();
   const [text, setText] = useState("");
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const flatRef = useRef<FlatList>(null);
@@ -98,35 +131,59 @@ export default function ConversationScreen() {
     return () => clearInterval(interval);
   }, [refetch, convId]);
 
-  const pickImage = async () => {
+  const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      toast.warning("Permission Required", "Photo library access is needed to send images.");
+      toast.warning("Permission Required", "Photo and video library access is needed to send media.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ["images", "videos"],
       allowsEditing: false,
       quality: 0.6,
       base64: true,
+      videoMaxDuration: 60,
     });
-    if (!result.canceled && result.assets[0]?.base64) {
-      setImageUri(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset) return;
+
+    if (asset.type === "video") {
+      if (asset.duration && asset.duration > 61000) {
+        toast.warning("Too Long", "Videos must be 1 minute or shorter.");
+        return;
+      }
+      // Use the local URI for web (works as blob URL), base64 for native if available
+      if (Platform.OS === "web" && asset.uri) {
+        setMediaUri(asset.uri);
+      } else if (asset.base64) {
+        const mime = asset.mimeType ?? "video/mp4";
+        setMediaUri(`data:${mime};base64,${asset.base64}`);
+      } else if (asset.uri) {
+        setMediaUri(asset.uri);
+      }
+    } else {
+      // Image
+      if (asset.base64) {
+        setMediaUri(`data:image/jpeg;base64,${asset.base64}`);
+      } else if (asset.uri) {
+        setMediaUri(asset.uri);
+      }
     }
   };
 
   const handleSend = async () => {
-    if (!text.trim() && !imageUri) return;
+    if (!text.trim() && !mediaUri) return;
     setIsSending(true);
     try {
       const res = await fetch(`${BASE_URL}/api/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content: text.trim() || "", imageUrl: imageUri || undefined }),
+        body: JSON.stringify({ content: text.trim() || "", imageUrl: mediaUri || undefined }),
       });
       if (res.ok) {
         setText("");
-        setImageUri(null);
+        setMediaUri(null);
         qc.invalidateQueries({ queryKey: getListMessagesQueryKey(convId) });
         qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
         flatRef.current?.scrollToEnd({ animated: true });
@@ -165,7 +222,6 @@ export default function ConversationScreen() {
     return m?.sender ?? null;
   }, [messages, user?.id]);
 
-  // ID of the last message I sent that has been seen — used for the "Seen" receipt
   const lastReadSentId = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].senderId === user?.id && messages[i].isRead) return messages[i].id;
@@ -173,7 +229,6 @@ export default function ConversationScreen() {
     return -1;
   }, [messages, user?.id]);
 
-  // Build list with date dividers in chronological order (oldest first)
   const listItems = useMemo((): ListItem[] => {
     const items: ListItem[] = [];
     for (let i = 0; i < messages.length; i++) {
@@ -233,11 +288,7 @@ export default function ConversationScreen() {
             ]}
           >
             {msg.imageUrl && (
-              <Image
-                source={{ uri: msg.imageUrl }}
-                style={[styles.bubbleImage, { borderRadius: colors.radius - 4 }]}
-                resizeMode="cover"
-              />
+              <MediaBubble uri={msg.imageUrl} radius={colors.radius - 4} />
             )}
             {!!msg.content && (
               <Text style={[styles.bubbleText, { color: isMe ? "#fff" : colors.foreground }]}>{msg.content}</Text>
@@ -342,6 +393,27 @@ export default function ConversationScreen() {
         />
       )}
 
+      {/* Media preview strip above input bar */}
+      {mediaUri && (
+        <View style={[styles.previewBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+          {isVideoUri(mediaUri) ? (
+            <View style={[styles.videoPreviewChip, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "40" }]}>
+              <Feather name="film" size={18} color={colors.primary} />
+              <Text style={[styles.videoPreviewLabel, { color: colors.primary }]}>Video ready to send</Text>
+            </View>
+          ) : (
+            <Image source={{ uri: mediaUri }} style={styles.previewImage} resizeMode="cover" />
+          )}
+          <TouchableOpacity
+            onPress={() => setMediaUri(null)}
+            style={[styles.previewClose, { backgroundColor: colors.card }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="x" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View
         style={[
           styles.inputBar,
@@ -352,6 +424,15 @@ export default function ConversationScreen() {
           },
         ]}
       >
+        {/* Media picker button */}
+        <TouchableOpacity
+          style={[styles.mediaBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+          onPress={pickMedia}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Feather name="image" size={20} color={mediaUri ? colors.primary : colors.mutedForeground} />
+        </TouchableOpacity>
+
         <TextInput
           style={[
             styles.input,
@@ -373,10 +454,10 @@ export default function ConversationScreen() {
         <TouchableOpacity
           style={[
             styles.sendBtn,
-            { backgroundColor: text.trim() ? colors.primary : colors.muted, borderRadius: colors.radius },
+            { backgroundColor: (text.trim() || mediaUri) ? colors.primary : colors.muted, borderRadius: colors.radius },
           ]}
           onPress={handleSend}
-          disabled={!text.trim() || isSending}
+          disabled={(!text.trim() && !mediaUri) || isSending}
         >
           {isSending ? (
             <ActivityIndicator size="small" color="#fff" />
@@ -395,7 +476,6 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 12, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 16, fontWeight: "700", flex: 1 },
-  headerSub: { fontSize: 12 },
   listContent: { padding: 16, gap: 12 },
   dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 12, gap: 10 },
   dividerLine: { flex: 1, height: 1 },
@@ -408,11 +488,21 @@ const styles = StyleSheet.create({
   senderNameMe: { textAlign: "right", marginRight: 2, marginLeft: 0 },
   bubble: { padding: 12, paddingBottom: 8 },
   bubbleText: { fontSize: 15, lineHeight: 22 },
+  bubbleImage: { width: 220, height: 160, marginBottom: 6 },
+  videoThumb: { width: 220, height: 160, backgroundColor: "#1e1e2e", alignItems: "center", justifyContent: "center", marginBottom: 6, gap: 8 },
+  playBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  videoLabel: { fontSize: 12, color: "rgba(255,255,255,0.7)" },
   timeText: { fontSize: 11, marginTop: 4, textAlign: "right" },
   seenRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3, paddingRight: 2 },
   seenText: { fontSize: 10, fontWeight: "600" },
   empty: { paddingVertical: 60, alignItems: "center" },
-  inputBar: { flexDirection: "row", alignItems: "flex-end", gap: 10, padding: 12, paddingTop: 10, borderTopWidth: 1 },
+  previewBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, gap: 10 },
+  previewImage: { width: 60, height: 60, borderRadius: 8 },
+  videoPreviewChip: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, flex: 1 },
+  videoPreviewLabel: { fontSize: 13, fontWeight: "600" },
+  previewClose: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  inputBar: { flexDirection: "row", alignItems: "flex-end", gap: 8, padding: 12, paddingTop: 10, borderTopWidth: 1 },
+  mediaBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22, borderWidth: 1 },
   input: { flex: 1, borderWidth: 1, padding: 12, fontSize: 15, maxHeight: 120, minHeight: 44 },
   sendBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
 });
