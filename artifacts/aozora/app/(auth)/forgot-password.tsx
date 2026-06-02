@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,29 @@ export default function ForgotPasswordScreen() {
 
   const [step, setStep] = useState<Step>(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const startCooldown = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setResendCooldown(60);
+    timerRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -66,7 +89,23 @@ export default function ForgotPasswordScreen() {
     try {
       await apiPost("/auth/forgot-password/send-otp", { email: trimmed });
       setOtp("");
+      startCooldown();
       setStep(2);
+    } catch (e: any) {
+      toast.error("Error", e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setIsLoading(true);
+    try {
+      await apiPost("/auth/forgot-password/send-otp", { email: email.trim() });
+      setOtp("");
+      startCooldown();
+      toast.success("Sent!", "A new reset code has been sent.");
     } catch (e: any) {
       toast.error("Error", e.message);
     } finally {
@@ -345,25 +384,39 @@ export default function ForgotPasswordScreen() {
               <TouchableOpacity
                 style={[
                   styles.secondaryBtn,
-                  { borderColor: colors.border, borderRadius: colors.radius },
+                  {
+                    borderColor: resendCooldown > 0 ? colors.muted : colors.border,
+                    borderRadius: colors.radius,
+                    opacity: resendCooldown > 0 ? 0.6 : 1,
+                  },
                 ]}
-                onPress={() => {
-                  setStep(1);
-                  setOtp("");
-                }}
+                onPress={handleResendOtp}
+                disabled={resendCooldown > 0 || isLoading}
               >
                 <Ionicons
-                  name="arrow-back"
+                  name="refresh"
                   size={14}
-                  color={colors.mutedForeground}
+                  color={resendCooldown > 0 ? colors.muted : colors.mutedForeground}
                 />
                 <Text
                   style={[
                     styles.secondaryBtnText,
-                    { color: colors.mutedForeground },
+                    { color: resendCooldown > 0 ? colors.muted : colors.mutedForeground },
                   ]}
                 >
-                  Change email or resend
+                  {resendCooldown > 0
+                    ? `Resend in 0:${String(resendCooldown).padStart(2, "0")}`
+                    : "Resend Code"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.changeEmailBtn}
+                onPress={() => { setStep(1); setOtp(""); }}
+              >
+                <Text style={[styles.changeEmailText, { color: colors.mutedForeground }]}>
+                  Wrong email?{" "}
+                  <Text style={{ color: colors.primary, fontWeight: "600" }}>Change it</Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -638,6 +691,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryBtnText: { fontSize: 14, fontWeight: "500" },
+  changeEmailBtn: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  changeEmailText: { fontSize: 13 },
 
   passwordWrapper: { position: "relative" },
   passwordInput: { paddingRight: 52 },
