@@ -376,9 +376,9 @@ export default function ConversationScreen() {
             { backgroundColor: text.trim() ? colors.primary : colors.muted, borderRadius: colors.radius },
           ]}
           onPress={handleSend}
-          disabled={!text.trim() || send.isPending}
+          disabled={!text.trim() || isSending}
         >
-          {send.isPending ? (
+          {isSending ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <Feather name="send" size={18} color="#fff" />
