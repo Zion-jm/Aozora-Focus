@@ -341,7 +341,7 @@ function Field({
 export default function VerifyScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, updateUser } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const { toast } = useToast();
   const handleAppeal = () => {
     router.push("/help-center?type=appeal_rejection");
