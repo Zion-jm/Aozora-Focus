@@ -232,7 +232,9 @@ export default function ProfileScreen() {
 
       <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>ACCOUNT</Text>
-        <MenuItem icon="heart" label="Saved Favorites" onPress={() => router.push("/profile/favorites")} colors={colors} />
+        {user?.role === "boarder" && (
+          <MenuItem icon="heart" label="Saved Favorites" onPress={() => router.push("/profile/favorites")} colors={colors} />
+        )}
         {user?.role !== "admin" && (
           <MenuItem icon="star" label="My Reviews" onPress={() => router.push("/profile/reviews")} colors={colors} />
         )}

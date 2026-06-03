@@ -364,7 +364,7 @@ export default function DormDetailScreen() {
           </TouchableOpacity>
 
           {/* Report button */}
-          {user && user.id !== (d as any)?.owner?.id && (
+          {user && user.role !== "admin" && user.id !== (d as any)?.owner?.id && (
             <TouchableOpacity
               style={[styles.reportBtn, { backgroundColor: colors.card }]}
               onPress={() => requireVerified(() => setShowReport(true))}
@@ -427,6 +427,22 @@ export default function DormDetailScreen() {
               <Feather name="star" size={15} color="#eab308" />
               <Text style={[styles.ratingText, { color: colors.foreground }]}>
                 {Number(d.averageRating).toFixed(1)} ({d.totalReviews} reviews)
+              </Text>
+            </View>
+          ) : null}
+
+          {(d as any).genderPolicy && (d as any).genderPolicy !== "any" ? (
+            <View style={[styles.genderPolicyBadge, {
+              backgroundColor: (d as any).genderPolicy === "male" ? "#3b82f620" : "#ec489920",
+              borderRadius: 8,
+            }]}>
+              <Feather
+                name="users"
+                size={14}
+                color={(d as any).genderPolicy === "male" ? "#3b82f6" : "#ec4899"}
+              />
+              <Text style={[styles.genderPolicyText, { color: (d as any).genderPolicy === "male" ? "#3b82f6" : "#ec4899" }]}>
+                {(d as any).genderPolicy === "male" ? "Male Boarders Only" : "Female Boarders Only"}
               </Text>
             </View>
           ) : null}
@@ -715,6 +731,8 @@ const styles = StyleSheet.create({
   address: { fontSize: 15, flex: 1 },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   ratingText: { fontSize: 15 },
+  genderPolicyBadge: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12 },
+  genderPolicyText: { fontSize: 13, fontWeight: "600" },
   divider: { height: 1, marginVertical: 20 },
   sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 12 },
   description: { fontSize: 15, lineHeight: 24 },

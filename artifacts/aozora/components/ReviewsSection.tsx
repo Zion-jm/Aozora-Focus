@@ -332,7 +332,7 @@ export function ReviewsSection({ type, targetId, token, colors }: ReviewsSection
                       </TouchableOpacity>
                     </View>
                   ) : (
-                    token && (
+                    token && currentUser?.role !== "admin" && (
                       <TouchableOpacity
                         onPress={() => requireVerified(() => setReportingReviewId(review.id))}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

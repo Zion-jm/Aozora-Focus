@@ -78,6 +78,7 @@ export default function CreateDormScreen() {
   const [availableBeds, setAvailableBeds] = useState("1");
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [genderPolicy, setGenderPolicy] = useState<"any" | "male" | "female">("any");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +103,7 @@ export default function CreateDormScreen() {
     setBedsPerRoom(String(d.bedsPerRoom ?? "1"));
     setAvailableBeds(String(d.availableBeds ?? "1"));
     setSelectedAmenities(Array.isArray(d.amenities) ? d.amenities : []);
+    setGenderPolicy(d.genderPolicy ?? "any");
     if (Array.isArray(d.photos) && d.photos.length > 0) {
       setPhotos(
         d.photos.map((p: any) => ({
@@ -274,6 +276,7 @@ export default function CreateDormScreen() {
       availableBeds: Number(availableBeds),
       coverPhotoUrl,
       amenities: selectedAmenities,
+      genderPolicy,
     };
 
     setIsSubmitting(true);
@@ -405,6 +408,33 @@ export default function CreateDormScreen() {
             <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Available</Text>
             <TextInput style={[styles.input, { borderColor: colors.border, color: colors.foreground, backgroundColor: colors.card, borderRadius: colors.radius }]} value={availableBeds} onChangeText={setAvailableBeds} keyboardType="numeric" />
           </View>
+        </View>
+
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Accepted Gender</Text>
+        <View style={styles.row}>
+          {(["any", "male", "female"] as const).map((option) => {
+            const labels = { any: "Any Gender", male: "Male Only", female: "Female Only" };
+            const colors2 = { any: "#6366f1", male: "#3b82f6", female: "#ec4899" };
+            const isSelected = genderPolicy === option;
+            return (
+              <TouchableOpacity
+                key={option}
+                onPress={() => setGenderPolicy(option)}
+                style={[
+                  styles.genderBtn,
+                  {
+                    borderColor: isSelected ? colors2[option] : colors.border,
+                    backgroundColor: isSelected ? colors2[option] + "18" : colors.card,
+                    borderRadius: colors.radius,
+                  },
+                ]}
+              >
+                <Text style={[styles.genderBtnText, { color: isSelected ? colors2[option] : colors.mutedForeground }]}>
+                  {labels[option]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.sectionHeader}>
@@ -549,6 +579,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 12 },
   half: { flex: 1 },
   third: { flex: 1 },
+  genderBtn: { flex: 1, borderWidth: 1.5, paddingVertical: 10, alignItems: "center", justifyContent: "center" },
+  genderBtnText: { fontSize: 12, fontWeight: "600" },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   addPhotoBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1 },
   addPhotoBtnText: { fontSize: 13, fontWeight: "600" },

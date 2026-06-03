@@ -361,7 +361,7 @@ export default function ConversationScreen() {
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-          {otherUser && (
+          {otherUser && user?.role !== "admin" && (
             <TouchableOpacity
               onPress={() => setShowReport(true)}
               style={styles.backBtn}

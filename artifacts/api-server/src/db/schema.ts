@@ -61,6 +61,7 @@ export const dorms = sqliteTable("dorms", {
   averageRating: real("average_rating"),
   totalReviews: integer("total_reviews").notNull().default(0),
   adminNote: text("admin_note"),
+  genderPolicy: text("gender_policy", { enum: ["any", "male", "female"] }).notNull().default("any"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });

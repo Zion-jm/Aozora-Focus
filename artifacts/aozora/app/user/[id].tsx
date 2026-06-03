@@ -206,12 +206,7 @@ export default function PublicProfileScreen() {
           setShowDormPicker(true);
         }
       } else if (canMessageStudent) {
-        if (myDorms.length === 1) {
-          startConversationWithStudent(myDorms[0]);
-        } else {
-          setPickerMode("boarder");
-          setShowDormPicker(true);
-        }
+        startConversationWithStudent(myDorms[0]);
       }
     });
   };
@@ -231,7 +226,7 @@ export default function PublicProfileScreen() {
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>
           {profile?.fullName?.split(" ")[0] ?? "Profile"}
         </Text>
-        {!isOwnProfile && !!me && !!profile ? (
+        {!isOwnProfile && !!me && !!profile && me.role !== "admin" ? (
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => requireVerified(() => setShowReport(true))}

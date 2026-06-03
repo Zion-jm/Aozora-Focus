@@ -138,6 +138,23 @@ export default function ExploreScreen() {
             </View>
           ) : null}
 
+          {/* Gender policy badge */}
+          {item.genderPolicy && item.genderPolicy !== "any" ? (
+            <View style={[styles.genderBadge, {
+              backgroundColor: item.genderPolicy === "male" ? "#3b82f620" : "#ec489920",
+              borderRadius: 6,
+            }]}>
+              <Feather
+                name={item.genderPolicy === "male" ? "user" : "user"}
+                size={11}
+                color={item.genderPolicy === "male" ? "#3b82f6" : "#ec4899"}
+              />
+              <Text style={[styles.genderBadgeText, { color: item.genderPolicy === "male" ? "#3b82f6" : "#ec4899" }]}>
+                {item.genderPolicy === "male" ? "Male Only" : "Female Only"}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
@@ -479,6 +496,20 @@ const styles = StyleSheet.create({
   },
   landmarkText: {
     fontSize: 12,
+    fontWeight: "600",
+  },
+
+  genderBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    gap: 4,
+    marginTop: 4,
+  },
+  genderBadgeText: {
+    fontSize: 11,
     fontWeight: "600",
   },
 
