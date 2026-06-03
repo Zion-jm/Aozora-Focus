@@ -448,7 +448,7 @@ export default function UserViolationsScreen() {
               >
                 <Text style={[styles.howTitle, { color: colors.foreground }]}>How the score is calculated</Text>
                 <Text style={[styles.howBody, { color: colors.mutedForeground }]}>
-                  Each violation contributes severity points × recency weight. Low = 1 pt · Medium = 3 pts · High = 6 pts · Critical = 10 pts. Violations from the last 30 days weigh 1.5×, last 90 days 1×, last 180 days 0.75×, and older violations 0.5×.
+                  Only violations from the last 30 days count toward the score. Older violations are not factored in, giving users a clean slate every 30 days. Low = 1 pt · Medium = 3 pts · High = 6 pts · Critical = 10 pts.
                 </Text>
                 <View style={styles.thresholdRow}>
                   {[

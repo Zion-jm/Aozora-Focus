@@ -25,6 +25,7 @@ const TICKET_TYPES = [
   { value: "Appeal Rejection", label: "Appeal Rejection", icon: "shield-off" as const, color: "#ef4444" },
   { value: "Appeal Takedown", label: "Appeal Takedown", icon: "alert-triangle" as const, color: "#f97316" },
   { value: "Appeal Suspension", label: "Appeal Suspension", icon: "user-x" as const, color: "#dc2626" },
+  { value: "Appeal Violation", label: "Appeal Violation", icon: "alert-octagon" as const, color: "#7c3aed" },
   { value: "Report a Technical Bug", label: "Report a Technical Bug", icon: "tool" as const, color: "#f59e0b" },
   { value: "General Question", label: "General Question", icon: "help-circle" as const, color: "#0ea5e9" },
   { value: "Payment/Listing Help", label: "Payment / Listing Help", icon: "home" as const, color: "#10b981" },

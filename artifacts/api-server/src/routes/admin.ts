@@ -12,8 +12,9 @@ function computeScore(violRows: any[]): number {
   const now = Date.now();
   return violRows.reduce((sum, v) => {
     const ageDays = (now - new Date(v.created_at).getTime()) / 86400000;
-    const weight = ageDays <= 30 ? 1.5 : ageDays <= 90 ? 1.0 : ageDays <= 180 ? 0.75 : 0.5;
-    return sum + (SEVERITY_POINTS[v.severity as number] ?? 1) * weight;
+    // Only violations from the last 30 days count; older ones do not affect the score
+    if (ageDays > 30) return sum;
+    return sum + (SEVERITY_POINTS[v.severity as number] ?? 1);
   }, 0);
 }
 

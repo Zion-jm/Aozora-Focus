@@ -158,7 +158,7 @@ export default function MyViolationsScreen() {
               >
                 <Text style={[styles.guideTitle, { color: colors.foreground }]}>How your score is calculated</Text>
                 <Text style={[styles.guideBody, { color: colors.mutedForeground }]}>
-                  Each violation adds severity points weighted by how recent it is. Low = 1 pt · Medium = 3 pts · High = 6 pts · Critical = 10 pts. Violations from the last 30 days carry the most weight.
+                  Only violations from the last 30 days count toward your score — older violations are not factored in. Your score resets to 0 automatically once all violations are older than 30 days. Low = 1 pt · Medium = 3 pts · High = 6 pts · Critical = 10 pts.
                 </Text>
                 <View style={styles.thresholdRow}>
                   {[

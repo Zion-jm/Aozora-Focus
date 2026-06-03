@@ -154,7 +154,8 @@ export default function NotificationsScreen() {
     },
   });
 
-  const ADMIN_MSG_TYPES = ["admin_message", "admin_warning", "admin_message_new", "support_ticket_resolved"];
+  const ADMIN_MSG_TYPES = ["admin_message", "admin_message_new", "support_ticket_resolved"];
+  const ACCOUNT_TYPES = ["account_suspended", "account_unsuspended", "admin_warning"];
   const MSG_TYPES = ["message_new", "new_message"];
   const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
     "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new"];
@@ -183,10 +184,16 @@ export default function NotificationsScreen() {
         router.push("/(tabs)/messages" as any);
       } else if (ADMIN_MSG_TYPES.includes(type)) {
         router.push("/(tabs)/messages" as any);
+      } else if (ACCOUNT_TYPES.includes(type)) {
+        router.push("/profile/violations" as any);
       } else if (type === "dorm_approved" || type === "dorm_rejected" || type === "dorm_taken_down") {
         router.push("/profile/my-dorms" as any);
       } else if (type === "id_verified" || type === "id_rejected") {
         router.push("/profile/verify" as any);
+      } else if (type === "dorm_review_received") {
+        router.push("/profile/my-dorms" as any);
+      } else if (type === "user_review_received") {
+        router.push("/profile/reviews" as any);
       }
     },
     [markOneRead]
