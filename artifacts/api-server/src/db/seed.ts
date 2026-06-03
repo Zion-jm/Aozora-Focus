@@ -124,6 +124,108 @@ export function seedDatabase(db: Database.Database) {
   `).run(3, "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=800", "Bathroom", 1);
 }
 
+export function seedDummyAdminData(db: Database.Database) {
+  try {
+    const reportCount = (db.prepare("SELECT COUNT(*) as count FROM reports").get() as { count: number }).count;
+    if (reportCount > 0) return;
+
+    // ── Reports ──────────────────────────────────────────────────────────────
+    // Ana (4) reports Blue Sky (dorm 2) — pending
+    db.prepare(`INSERT INTO reports (reporter_id, target_type, target_id, reason, details, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "dorm", 2, "Misleading listing", "The photos don't match the actual room. The bathroom was shared with 8 people, not 4 as stated. Wifi barely worked.", "pending", "2026-05-20 09:12:00");
+
+    // Juan (5) reports Ana (user 4) — pending
+    db.prepare(`INSERT INTO reports (reporter_id, target_type, target_id, reason, details, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(5, "user", 4, "Harassment", "She kept knocking on my door late at night asking to borrow money. I've asked her to stop multiple times.", "pending", "2026-05-22 14:30:00");
+
+    // Ana (4) reports Green Hills (dorm 4) — reviewed, with admin note
+    db.prepare(`INSERT INTO reports (reporter_id, target_type, target_id, reason, details, status, admin_note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "dorm", 4, "Safety concerns", "There are no fire exits and the electrical wiring looks exposed in the hallway. This is a serious hazard.", "reviewed", "Owner has been notified and given 7 days to address the wiring issue. CCTV footage requested.", "2026-05-15 10:00:00", "2026-05-16 08:00:00");
+
+    // Juan (5) reports Maria (user 2) — dismissed
+    db.prepare(`INSERT INTO reports (reporter_id, target_type, target_id, reason, details, status, admin_note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(5, "user", 2, "Scam", "Asked me to pay a deposit outside the app directly to her GCash. I paid but didn't get the room.", "dismissed", "Reviewed conversation history. Payment was made outside the platform in violation of terms. Refund dispute referred to authorities. Report closed.", "2026-05-10 16:45:00", "2026-05-12 11:00:00");
+
+    // Ana (4) reports a dorm review — pending
+    db.prepare(`INSERT INTO reports (reporter_id, target_type, target_id, reason, details, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "review", 1, "Fake review", "This 5-star review looks fake — the reviewer never actually stayed here based on the dates.", "pending", "2026-06-01 07:55:00");
+
+    // ── Support Tickets ───────────────────────────────────────────────────────
+    // Bug report from Ana — pending
+    db.prepare(`INSERT INTO support_tickets (user_id, ticket_type, subject, message, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(4, "bug_report", "Cannot upload profile photo", "Every time I try to upload a profile picture it shows an error that says 'Upload failed'. I've tried on WiFi and mobile data. My phone is an Android 13.", "pending", "2026-05-28 08:20:00");
+
+    // Account help from Juan — pending
+    db.prepare(`INSERT INTO support_tickets (user_id, ticket_type, subject, message, status, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(5, "account_help", "Cannot change my email address", "I entered the wrong email when signing up. The OTP verification keeps timing out when I try to change it in settings.", "pending", "2026-06-01 13:05:00");
+
+    // Appeal from Maria — resolved
+    db.prepare(`INSERT INTO support_tickets (user_id, ticket_type, subject, message, status, admin_response, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(2, "appeal", "Appeal: My listing was taken down unfairly", "My Santos Dormitory listing was taken down citing a policy violation but I have not violated any rules. All photos are real and I have permits. Please review.", "resolved", "After reviewing your listing and the submitted permits, we have restored your listing. We apologize for the inconvenience. Please ensure all future listing updates comply with our photo guidelines.", "2026-05-18 09:30:00", "2026-05-19 15:00:00");
+
+    // General inquiry — guest (no user_id)
+    db.prepare(`INSERT INTO support_tickets (guest_name, guest_email, ticket_type, subject, message, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run("Mark Tolentino", "mark.tolentino@gmail.com", "general_inquiry", "How do I register as a dorm owner?", "I want to list my dormitory on Aozora. I have 3 rooms available near Lopez National High School. What are the requirements and fees?", "pending", "2026-06-02 10:40:00");
+
+    // Bug report from Carlos — resolved
+    db.prepare(`INSERT INTO support_tickets (user_id, ticket_type, subject, message, status, admin_response, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(3, "bug_report", "Appointment notifications not arriving", "I'm not receiving push notifications when a boarder books a visit to my dorms. I've checked my notification settings and they are enabled.", "resolved", "This has been fixed in the latest update. Ensure your app is updated to the latest version. Push notifications should now arrive within 30 seconds of a booking.", "2026-05-25 11:15:00", "2026-05-27 09:00:00");
+
+    // ── Violations ────────────────────────────────────────────────────────────
+    // Juan — minor violation (noise)
+    db.prepare(`INSERT INTO violations (user_id, admin_id, category, severity, description, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(5, 1, "misconduct", 1, "Noise complaint from fellow boarders at Reyes Premium Suites. Loud music past midnight on two occasions.", "First offense. User was warned via platform message. No further action taken at this time.", "2026-05-14 10:00:00");
+
+    // Ana — moderate violation (harassment)
+    db.prepare(`INSERT INTO violations (user_id, admin_id, category, severity, description, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, 1, "harassment", 2, "Verified harassment complaint from Juan Mendoza (user #5). Ana repeatedly contacted him outside of agreed hours requesting money.", "Second review. User was given a formal warning. Next offense will result in account suspension.", "2026-05-23 09:30:00");
+
+    // Maria — listing violation
+    db.prepare(`INSERT INTO violations (user_id, admin_id, category, severity, description, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(2, 1, "listing_violation", 1, "Listing photos for Blue Sky Boarding House were found to be stock images not representing the actual property.", "Owner updated photos within the 48-hour grace period. Violation logged but no further penalty applied.", "2026-05-16 14:00:00");
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    // For Ana (boarder, id=4)
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "appointment_approved", "Visit Approved!", "Your visit to Santos Dormitory on April 10 at 10:00 AM has been approved by Maria Santos.", 1, 1, "appointment", "2026-04-08 14:00:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "new_message", "New message from Maria Santos", "Hi Ana! Your visit is confirmed. Please bring a valid ID on the day.", 1, 1, "conversation", "2026-04-08 14:05:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "appointment_reminder", "Visit Tomorrow", "Reminder: your visit to Santos Dormitory is tomorrow at 10:00 AM. Don't be late!", 1, 1, "appointment", "2026-04-09 08:00:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "account_warning", "Account Warning", "Your account has received a formal warning due to a verified harassment complaint. Please review our community guidelines.", 0, null, null, "2026-05-23 09:35:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(4, "report_update", "Your Report Was Reviewed", "The safety concern you reported for Green Hills Dorm has been reviewed. The owner has been notified to take action.", 0, 3, "report", "2026-05-16 08:05:00");
+
+    // For Juan (boarder, id=5)
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(5, "appointment_approved", "Visit Approved!", "Your visit to Blue Sky Boarding House on April 15 at 2:00 PM has been approved.", 1, 2, "appointment", "2026-04-13 10:00:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(5, "account_warning", "Account Warning — Noise Complaint", "A noise complaint has been filed and verified against your account. This is your first warning. Repeated violations may result in suspension.", 0, null, null, "2026-05-14 10:05:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(5, "new_message", "New message from Carlos Reyes", "Hi Juan, please keep the noise down after 10 PM. Thank you.", 0, null, "conversation", "2026-05-13 23:45:00");
+
+    // For Maria (owner, id=2)
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(2, "new_appointment", "New Visit Request", "Ana Dela Cruz has requested a visit to Santos Dormitory on April 10 at 10:00 AM.", 1, 1, "appointment", "2026-04-07 09:00:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(2, "listing_warning", "Listing Photo Violation", "Your listing 'Blue Sky Boarding House' has been flagged for using photos that don't represent the actual property. Please update within 48 hours.", 1, 2, "dorm", "2026-05-16 14:05:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(2, "appeal_resolved", "Your Appeal Was Accepted", "Your appeal for Santos Dormitory has been reviewed. Your listing has been fully restored.", 0, 3, "support_ticket", "2026-05-19 15:05:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(2, "new_message", "New message from Ana Dela Cruz", "Hi! I visited today and I'm very interested. Can I move in next week?", 0, 1, "conversation", "2026-05-28 16:30:00");
+
+    // For Carlos (owner, id=3)
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(3, "new_appointment", "New Visit Request", "Ana Dela Cruz has requested a visit to Reyes Premium Suites on April 20 at 11:00 AM.", 1, 3, "appointment", "2026-04-18 11:00:00");
+    db.prepare(`INSERT INTO notifications (user_id, type, title, body, is_read, related_id, related_type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(3, "support_resolved", "Bug Report Resolved", "Your bug report about missing push notifications has been resolved. Please update your app.", 0, 5, "support_ticket", "2026-05-27 09:05:00");
+
+  } catch (e) {
+    console.warn("seedDummyAdminData skipped:", e);
+  }
+}
+
 export function seedReviewsIfEmpty(db: Database.Database) {
   try {
     const count = (db.prepare("SELECT COUNT(*) as count FROM dorm_reviews").get() as { count: number }).count;

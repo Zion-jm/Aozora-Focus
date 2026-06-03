@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import path from "path";
 import * as schema from "./schema";
-import { seedDatabase, seedReviewsIfEmpty } from "./seed";
+import { seedDatabase, seedReviewsIfEmpty, seedDummyAdminData } from "./seed";
 
 const DB_PATH = process.env["DB_PATH"] ?? path.join(process.cwd(), "aozora.db");
 
@@ -312,6 +312,7 @@ export function initializeDatabase() {
 
   seedDatabase(sqlite);
   seedReviewsIfEmpty(sqlite);
+  seedDummyAdminData(sqlite);
 }
 
 export { sqlite };

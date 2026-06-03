@@ -2,6 +2,11 @@
 
 WORKSPACE_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
+# Kill anything already holding ports we need (artifact sub-workflows may have grabbed them)
+fuser -k 20823/tcp 2>/dev/null || true
+fuser -k 8080/tcp 2>/dev/null || true
+sleep 1
+
 # Use current Replit dev domain dynamically
 export EXPO_PUBLIC_DOMAIN="${REPLIT_DEV_DOMAIN:-$EXPO_PUBLIC_DOMAIN}"
 export EXPO_PUBLIC_REPL_ID="${REPL_ID:-}"
