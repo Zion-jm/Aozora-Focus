@@ -447,7 +447,7 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
   const infraction = (infractionDescription as string | undefined)?.trim() || "a violation of our community guidelines";
 
   const formalWarningBody =
-    `Official Warning Notice\n\n` +
+    `Official Warning Notice ⚠️\n\n` +
     `This is a formal warning regarding recent activity on your account that violated our community guidelines. ` +
     `Specifically, your account was flagged for: ${infraction}.\n\n` +
     `What you need to do:\n` +
