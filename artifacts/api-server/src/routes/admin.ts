@@ -459,10 +459,39 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
     `or permanent termination of your account.\n\n` +
     `If you believe this warning was issued in error, please contact the support team through the help center.`;
 
+  const adminId = (req as any).user!.id;
+
+  if (level === "warning") {
+    let conv = sqlite
+      .prepare("SELECT * FROM admin_conversations WHERE admin_id = ? AND user_id = ?")
+      .get(adminId, userId) as any;
+
+    if (!conv) {
+      const result = sqlite
+        .prepare("INSERT INTO admin_conversations (admin_id, user_id) VALUES (?, ?)")
+        .run(adminId, userId);
+      conv = sqlite
+        .prepare("SELECT * FROM admin_conversations WHERE id = ?")
+        .get(result.lastInsertRowid) as any;
+    } else {
+      sqlite
+        .prepare("UPDATE admin_conversations SET admin_deleted_at = NULL WHERE id = ?")
+        .run(conv.id);
+    }
+
+    sqlite
+      .prepare("INSERT INTO admin_messages (conversation_id, sender_id, content, is_read) VALUES (?, ?, ?, 0)")
+      .run(conv.id, adminId, formalWarningBody);
+
+    sqlite
+      .prepare("UPDATE admin_conversations SET updated_at = ? WHERE id = ?")
+      .run(new Date().toISOString(), conv.id);
+  }
+
   const notifMap: Record<string, { title: string; body: string }> = {
     warning: {
       title: "Official Warning Notice",
-      body: formalWarningBody,
+      body: "You have received a formal warning from the Aozora admin team. Please check your messages for details.",
     },
     short_suspension: {
       title: "Account Suspended (7 Days)",
