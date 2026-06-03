@@ -17,6 +17,8 @@ export const users = sqliteTable("users", {
     enum: ["unverified", "pending", "verified", "rejected"],
   }).notNull().default("unverified"),
   isSuspended: integer("is_suspended", { mode: "boolean" }).notNull().default(false),
+  suspendedUntil: text("suspended_until"),
+  suspensionNotifiedAt: text("suspension_notified_at"),
   avatarUrl: text("avatar_url"),
   birthday: text("birthday"),
   universityOrWorkplace: text("university_or_workplace"),

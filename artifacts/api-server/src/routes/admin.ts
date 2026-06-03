@@ -3,7 +3,8 @@ import { db, sqlite } from "../db/index";
 import { users, verificationRecords, dorms, appointments } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
-import { notifyUser } from "../lib/notifications";
+import { notifyUser, notifyAllAdmins } from "../lib/notifications";
+import { sendSuspensionLiftedEmail } from "../lib/mailer";
 
 const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
@@ -122,6 +123,7 @@ router.get("/admin/users", requireAuth, requireRole("admin"), async (req, res) =
       role: u.role,
       verificationStatus: u.verificationStatus,
       isSuspended: u.isSuspended,
+      suspendedUntil: u.suspendedUntil ?? null,
       avatarUrl: u.avatarUrl,
       createdAt: u.createdAt,
     })),
@@ -137,6 +139,7 @@ router.put("/admin/users/:userId/status", requireAuth, requireRole("admin"), asy
 
   const result = await db.update(users).set({
     isSuspended: isSuspended,
+    suspendedUntil: isSuspended ? undefined : null,
     updatedAt: new Date().toISOString(),
   }).where(eq(users.id, userId)).returning();
 
@@ -351,9 +354,50 @@ router.get("/admin/users/:userId/violations", requireAuth, requireRole("admin"),
     ORDER BY v.created_at DESC
   `).all(userId) as any[];
 
+  const userRow = sqlite.prepare(
+    `SELECT is_suspended, suspended_until, full_name, email FROM users WHERE id = ?`
+  ).get(userId) as any;
+
   const score = computeScore(rows);
   const level = scoreToLevel(score);
-  res.json({ violations: rows, score, level });
+  res.json({
+    violations: rows,
+    score,
+    level,
+    isSuspended: !!userRow?.is_suspended,
+    suspendedUntil: userRow?.suspended_until ?? null,
+    userEmail: userRow?.email ?? null,
+    userName: userRow?.full_name ?? null,
+  });
+});
+
+router.post("/admin/users/:userId/notify-suspension-lifted", requireAuth, requireRole("admin"), async (req, res) => {
+  const userId = parseInt(req.params["userId"]!);
+  const userRow = sqlite.prepare(
+    `SELECT id, full_name, email FROM users WHERE id = ?`
+  ).get(userId) as any;
+
+  if (!userRow) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  notifyUser(sqlite, userId, {
+    type: "account_unsuspended",
+    title: "Account Access Restored",
+    body: "Your account suspension has been lifted and full access has been restored. Welcome back!",
+    data: { path: "/(tabs)/profile" },
+  });
+
+  if (userRow.email) {
+    try {
+      await sendSuspensionLiftedEmail({ to: userRow.email, name: userRow.full_name });
+    } catch (e) {
+      console.error("Failed to send suspension lifted email:", e);
+    }
+  }
+
+  res.json({ success: true });
 });
 
 router.post("/admin/violations", requireAuth, requireRole("admin"), async (req, res) => {
@@ -434,8 +478,14 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
     },
   };
 
-  if (level === "short_suspension" || level === "long_suspension" || level === "ban") {
-    await db.update(users).set({ isSuspended: true, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
+  if (level === "short_suspension") {
+    const until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await db.update(users).set({ isSuspended: true, suspendedUntil: until, suspensionNotifiedAt: null, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
+  } else if (level === "long_suspension") {
+    const until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    await db.update(users).set({ isSuspended: true, suspendedUntil: until, suspensionNotifiedAt: null, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
+  } else if (level === "ban") {
+    await db.update(users).set({ isSuspended: true, suspendedUntil: null, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
   }
 
   const notif = notifMap[level as string];
@@ -505,5 +555,47 @@ router.get("/admin/activity", requireAuth, requireRole("admin"), async (_req, re
 
   res.json({ activity: all });
 });
+
+export function startSuspensionChecker() {
+  function checkExpiredSuspensions() {
+    try {
+      const expired = sqlite.prepare(`
+        SELECT id, full_name, email
+        FROM users
+        WHERE is_suspended = 1
+          AND suspended_until IS NOT NULL
+          AND suspended_until <= datetime('now')
+          AND suspension_notified_at IS NULL
+      `).all() as any[];
+
+      for (const user of expired) {
+        sqlite.prepare(`
+          UPDATE users SET suspension_notified_at = datetime('now') WHERE id = ?
+        `).run(user.id);
+
+        notifyAllAdmins(sqlite, {
+          type: "suspension_expired",
+          title: "Suspension Period Ended",
+          body: `${user.full_name}'s suspension has expired. Review their account and notify them if appropriate.`,
+          data: {
+            path: `/admin/user-violations?userId=${user.id}&userName=${encodeURIComponent(user.full_name)}`,
+          },
+        });
+
+        notifyUser(sqlite, user.id, {
+          type: "account_unsuspended",
+          title: "Suspension Period Ended",
+          body: "Your suspension period has ended. An admin will review your account shortly.",
+          data: { path: "/(tabs)/profile" },
+        });
+      }
+    } catch (e) {
+      console.error("Suspension checker error:", e);
+    }
+  }
+
+  checkExpiredSuspensions();
+  setInterval(checkExpiredSuspensions, 60 * 60 * 1000);
+}
 
 export default router;

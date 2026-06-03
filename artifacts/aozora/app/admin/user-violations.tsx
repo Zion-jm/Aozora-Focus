@@ -160,8 +160,33 @@ export default function UserViolationsScreen() {
   const violations: any[] = data?.violations ?? [];
   const score: number = data?.score ?? 0;
   const level: string = data?.level ?? "clean";
+  const isSuspended: boolean = data?.isSuspended ?? false;
+  const suspendedUntil: string | null = data?.suspendedUntil ?? null;
+  const userEmail: string | null = data?.userEmail ?? null;
   const rec = RECOMMENDATIONS[level] ?? RECOMMENDATIONS["clean"]!;
   const roundedScore = Math.round(score * 10) / 10;
+
+  const daysLeft = suspendedUntil
+    ? Math.max(0, Math.ceil((new Date(suspendedUntil).getTime() - Date.now()) / 86400000))
+    : null;
+
+  const [notifyLoading, setNotifyLoading] = useState(false);
+
+  const handleNotifySuspensionLifted = async () => {
+    setNotifyLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/admin/users/${uid}/notify-suspension-lifted`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed");
+      toast.success("Notified", `Suspension-lifted email sent to ${userName ?? "user"}.`);
+    } catch {
+      toast.error("Error", "Could not send notification.");
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
 
   const handleLog = async () => {
     if (!description.trim()) {
@@ -309,6 +334,41 @@ export default function UserViolationsScreen() {
           contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 40 }]}
           ListHeaderComponent={
             <>
+              {/* Suspension banner */}
+              {isSuspended && (
+                <View style={[styles.suspensionBanner, { backgroundColor: "#ef444410", borderColor: "#ef444440", borderRadius: colors.radius }]}>
+                  <View style={styles.suspensionBannerLeft}>
+                    <Feather name="alert-circle" size={16} color="#ef4444" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.suspensionBannerTitle}>Account Suspended</Text>
+                      {suspendedUntil && daysLeft !== null ? (
+                        <Text style={[styles.suspensionBannerSub, { color: colors.mutedForeground }]}>
+                          {daysLeft > 0
+                            ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining · ends ${new Date(suspendedUntil).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}`
+                            : "Suspension period has ended — pending admin review"}
+                        </Text>
+                      ) : (
+                        <Text style={[styles.suspensionBannerSub, { color: colors.mutedForeground }]}>Indefinite suspension (permanent ban)</Text>
+                      )}
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleNotifySuspensionLifted}
+                    disabled={notifyLoading}
+                    style={[styles.notifyBtn, { backgroundColor: "#10b98115", borderColor: "#10b98140" }]}
+                  >
+                    {notifyLoading ? (
+                      <ActivityIndicator size="small" color="#10b981" />
+                    ) : (
+                      <>
+                        <Feather name="mail" size={13} color="#10b981" />
+                        <Text style={styles.notifyBtnText}>Notify User: Suspension Lifted</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
               {/* Score card */}
               <View
                 style={[
@@ -572,6 +632,31 @@ const styles = StyleSheet.create({
   },
   recBadgeText: { fontSize: 13, fontWeight: "700" },
   recDesc: { fontSize: 12, lineHeight: 18 },
+  suspensionBanner: {
+    borderWidth: 1,
+    padding: 12,
+    gap: 10,
+    marginBottom: 4,
+  },
+  suspensionBannerLeft: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    flex: 1,
+  },
+  suspensionBannerTitle: { fontSize: 13, fontWeight: "700", color: "#ef4444" },
+  suspensionBannerSub: { fontSize: 12, marginTop: 2, lineHeight: 16 },
+  notifyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  notifyBtnText: { fontSize: 12, fontWeight: "700", color: "#10b981" },
   applyBtn: {
     flexDirection: "row",
     alignItems: "center",

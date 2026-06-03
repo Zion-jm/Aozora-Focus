@@ -154,6 +154,18 @@ export default function SuspendedUsersScreen() {
                   <View style={[styles.suspendBadge, { backgroundColor: "#ef444420" }]}>
                     <Text style={{ color: "#ef4444", fontSize: 11, fontWeight: "600" }}>Suspended</Text>
                   </View>
+                  {item.suspendedUntil ? (
+                    (() => {
+                      const days = Math.max(0, Math.ceil((new Date(item.suspendedUntil).getTime() - Date.now()) / 86400000));
+                      return (
+                        <View style={[styles.suspendBadge, { backgroundColor: days === 0 ? "#10b98120" : "#f9731620" }]}>
+                          <Text style={{ color: days === 0 ? "#10b981" : "#f97316", fontSize: 11, fontWeight: "600" }}>
+                            {days === 0 ? "Period ended" : `${days}d left`}
+                          </Text>
+                        </View>
+                      );
+                    })()
+                  ) : null}
                 </View>
 
                 <TouchableOpacity

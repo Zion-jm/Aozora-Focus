@@ -242,6 +242,9 @@ export default function ProfileScreen() {
         {user?.role !== "admin" && (
           <MenuItem icon="shield" label="Identity Verification" onPress={() => router.push("/profile/verify")} colors={colors} />
         )}
+        {user?.role !== "admin" && (
+          <MenuItem icon="alert-octagon" label="My Violations & Standing" onPress={() => router.push("/profile/violations")} colors={colors} />
+        )}
         {user?.role === "owner" && (
           <MenuItem icon="home" label="My Listings" onPress={() => router.push("/profile/my-dorms")} colors={colors} />
         )}

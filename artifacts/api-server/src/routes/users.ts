@@ -27,6 +27,42 @@ function formatUser(user: typeof users.$inferSelect) {
   };
 }
 
+router.get("/violations/my", requireAuth, async (req, res) => {
+  const userId = (req as any).user!.id;
+  const rows = sqlite.prepare(`
+    SELECT v.id, v.category, v.severity, v.description, v.created_at
+    FROM violations v
+    WHERE v.user_id = ?
+    ORDER BY v.created_at DESC
+  `).all(userId) as any[];
+
+  const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
+  const now = Date.now();
+  const score = rows.reduce((sum: number, v: any) => {
+    const ageDays = (now - new Date(v.created_at).getTime()) / 86400000;
+    const weight = ageDays <= 30 ? 1.5 : ageDays <= 90 ? 1.0 : ageDays <= 180 ? 0.75 : 0.5;
+    return sum + (SEVERITY_POINTS[v.severity as number] ?? 1) * weight;
+  }, 0);
+
+  const level =
+    score <= 0 ? "clean" :
+    score < 5  ? "warning" :
+    score < 10 ? "short_suspension" :
+    score < 20 ? "long_suspension" : "ban";
+
+  const userRow = sqlite.prepare(
+    `SELECT is_suspended, suspended_until FROM users WHERE id = ?`
+  ).get(userId) as any;
+
+  res.json({
+    violations: rows,
+    score,
+    level,
+    isSuspended: !!userRow?.is_suspended,
+    suspendedUntil: userRow?.suspended_until ?? null,
+  });
+});
+
 router.put("/users/me", requireAuth, async (req, res) => {
   const {
     fullName, phone, avatarUrl,

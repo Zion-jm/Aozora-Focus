@@ -95,6 +95,76 @@ const RESPONSE_CONFIGS: Record<string, { subject: string; headline: string; body
   },
 };
 
+export async function sendSuspensionLiftedEmail(opts: {
+  to: string;
+  name: string;
+}): Promise<void> {
+  const subject = "Your Account Access Has Been Fully Restored";
+  const text =
+    `Dear ${opts.name},\n\n` +
+    `We are writing to inform you that your temporary account suspension period has concluded, ` +
+    `and full access to your account has been successfully restored.\n\n` +
+    `You may now log back into the platform and resume normal activity effective immediately.\n\n` +
+    `Important Reminder: Please take a moment to review our official Community Guidelines and Terms of Service. ` +
+    `To ensure a safe and respectful environment for everyone, future compliance with these policies is required. ` +
+    `Additional infractions may result in permanent account termination.\n\n` +
+    `If you experience any technical difficulties logging back in or resetting your credentials, ` +
+    `please reach out to our team by replying to this message or visiting the support center.\n\n` +
+    `Welcome back,\n\nAozora Admin\naozora.dormfinder.admin@gmail.com`;
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+      <h2 style="color:#2563eb;margin:0 0 4px;font-size:22px;">Aozora</h2>
+      <p style="color:#9ca3af;margin:0 0 28px;font-size:13px;">Home, but smarter.</p>
+
+      <div style="border-left:4px solid #10b981;padding:14px 18px;background:#10b98112;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px;">Your Account Access Has Been Fully Restored</p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">Suspension period concluded</p>
+      </div>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 6px;">Dear <strong>${opts.name}</strong>,</p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 16px;">
+        We are writing to inform you that your temporary account suspension period has concluded,
+        and full access to your account has been successfully restored.
+      </p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 16px;">
+        You may now log back into the platform and resume normal activity effective immediately.
+      </p>
+
+      <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 4px;">⚠ Important Reminder</p>
+        <p style="font-size:13px;color:#78350f;line-height:1.55;margin:0;">
+          Please take a moment to review our official Community Guidelines and Terms of Service.
+          To ensure a safe and respectful environment for everyone, future compliance with these policies is required.
+          <strong>Additional infractions may result in permanent account termination.</strong>
+        </p>
+      </div>
+
+      <p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 24px;">
+        If you experience any technical difficulties logging back in or resetting your credentials,
+        please reach out to our team by replying to this message or visiting the support center.
+      </p>
+
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Welcome back,</p>
+      <p style="font-size:14px;color:#111827;font-weight:700;margin:0 0 2px;">Aozora Admin</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">aozora.dormfinder.admin@gmail.com</p>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+        This is a system-generated message from Aozora. If you need further assistance, visit our Help Center.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}
+
 export async function sendSupportResponseEmail(opts: {
   to: string;
   name: string;

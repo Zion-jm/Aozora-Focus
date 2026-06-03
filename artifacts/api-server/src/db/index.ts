@@ -266,6 +266,8 @@ export function initializeDatabase() {
     "ALTER TABLE support_tickets ADD COLUMN email_sent_at TEXT",
     "ALTER TABLE violations ADD COLUMN report_id INTEGER REFERENCES reports(id)",
     "ALTER TABLE reports ADD COLUMN violation_logged_at TEXT",
+    "ALTER TABLE users ADD COLUMN suspended_until TEXT",
+    "ALTER TABLE users ADD COLUMN suspension_notified_at TEXT",
   ];
   for (const sql of migrations) {
     try { sqlite.exec(sql); } catch { /* column already exists */ }
