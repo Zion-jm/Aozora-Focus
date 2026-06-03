@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { ActionSheet } from "@/components/ActionSheet";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { useQuery } from "@tanstack/react-query";
 
@@ -370,11 +370,28 @@ export default function VerifyScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
 
-  const verificationStatus = user?.verificationStatus;
+  const [verificationStatus, setVerificationStatus] = useState(user?.verificationStatus);
   const isVerified = verificationStatus === "verified";
   const isPending = verificationStatus === "pending";
   const isRejected = verificationStatus === "rejected";
   const [canResubmit, setCanResubmit] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      fetch(`${BASE_URL}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.id) {
+            updateUser(data);
+            setVerificationStatus(data.verificationStatus);
+          }
+        })
+        .catch(() => {});
+    }, [token])
+  );
 
   const { data: latestRecord } = useQuery<VerificationRecord | null>({
     queryKey: ["my-verification", user?.id],
