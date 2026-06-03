@@ -32,6 +32,24 @@ type RiskUser = {
   violationCount: number;
 };
 
+type SuspendedUserPreview = {
+  id: number;
+  fullName: string;
+  email: string;
+  role: string;
+  suspendedUntil: string | null;
+  isPermanent: boolean;
+  daysLeft: number | null;
+};
+
+function suspendedCountdown(user: SuspendedUserPreview): { label: string; color: string } {
+  if (user.isPermanent) return { label: "Permanent ban", color: "#7c3aed" };
+  if (user.daysLeft === null) return { label: "Unknown", color: "#64748b" };
+  if (user.daysLeft === 0) return { label: "Expiring today", color: "#10b981" };
+  if (user.daysLeft === 1) return { label: "1 day left", color: "#f97316" };
+  return { label: `${user.daysLeft} days left`, color: user.daysLeft <= 3 ? "#f97316" : "#ef4444" };
+}
+
 const RISK_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   warning:          { label: "Warning",      color: "#f59e0b", bg: "#f59e0b18" },
   short_suspension: { label: "7-Day Susp.",  color: "#f97316", bg: "#f9731618" },
@@ -194,6 +212,19 @@ export default function AdminDashboard() {
   });
   const topRiskUsers: RiskUser[] = riskData?.users ?? [];
 
+  const { data: suspendedData } = useQuery({
+    queryKey: ["adminSuspendedPreview"],
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/api/admin/suspended-users-preview`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+    enabled: !!token,
+    refetchInterval: 15_000,
+  });
+  const suspendedUsers: SuspendedUserPreview[] = suspendedData?.users ?? [];
+
   const dormData = [
     { value: s?.approvedDorms ?? 0, color: DORM_COLORS[0], label: DORM_LABELS[0] },
     { value: s?.pendingDorms ?? 0, color: DORM_COLORS[1], label: DORM_LABELS[1] },
@@ -298,6 +329,57 @@ export default function AdminDashboard() {
               </View>
             )}
 
+            {suspendedUsers.length > 0 && (
+              <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={[styles.riskCardIcon, { backgroundColor: "#ef444418" }]}>
+                      <Feather name="user-x" size={15} color="#ef4444" />
+                    </View>
+                    <Text style={[styles.cardTitle, { color: colors.foreground }]}>Suspended Users</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => router.push("/admin/suspended-users")} activeOpacity={0.7}>
+                    <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={[styles.cardSub, { color: colors.mutedForeground, marginBottom: 12 }]}>
+                  {suspendedUsers.length} active suspension{suspendedUsers.length !== 1 ? "s" : ""}
+                </Text>
+                <View style={{ gap: 8 }}>
+                  {suspendedUsers.slice(0, 4).map((user) => {
+                    const countdown = suspendedCountdown(user);
+                    const initials = user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+                    const roleColor = user.role === "owner" ? "#8b5cf6" : user.role === "admin" ? "#ef4444" : "#0ea5e9";
+                    return (
+                      <TouchableOpacity
+                        key={user.id}
+                        style={[styles.suspRow, { backgroundColor: colors.secondary, borderColor: colors.border, borderRadius: colors.radius }]}
+                        onPress={() => router.push({ pathname: "/admin/user-violations", params: { userId: user.id } })}
+                        activeOpacity={0.75}
+                      >
+                        <View style={[styles.riskAvatar, { backgroundColor: "#ef444422" }]}>
+                          <Text style={[styles.riskAvatarText, { color: "#ef4444" }]}>{initials}</Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={[styles.riskName, { color: colors.foreground }]} numberOfLines={1}>{user.fullName}</Text>
+                          <Text style={[styles.riskMeta, { color: colors.mutedForeground }]} numberOfLines={1}>{user.email}</Text>
+                        </View>
+                        <View style={{ alignItems: "flex-end", gap: 3 }}>
+                          <View style={[styles.levelPill, { backgroundColor: countdown.color + "18" }]}>
+                            <Text style={[styles.levelText, { color: countdown.color }]}>{countdown.label}</Text>
+                          </View>
+                          <View style={[styles.levelPill, { backgroundColor: roleColor + "15" }]}>
+                            <Text style={[styles.levelText, { color: roleColor }]}>{user.role}</Text>
+                          </View>
+                        </View>
+                        <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ marginLeft: 2 }} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
               <Text style={[styles.cardTitle, { color: colors.foreground }]}>Dorm Listings</Text>
               <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>Status breakdown</Text>
@@ -389,6 +471,7 @@ export default function AdminDashboard() {
                 <NavTile icon="shield" label="Verifications" badge={s?.pendingVerifications} color="#ef4444" onPress={() => router.push("/admin/verifications")} colors={colors} />
                 <NavTile icon="flag" label="Reports" badge={s?.pendingReports} color="#f97316" onPress={() => router.push("/admin/reports")} colors={colors} />
                 <NavTile icon="message-square" label="Support" badge={s?.pendingSupportTickets} color="#8b5cf6" onPress={() => router.push("/admin/support-tickets")} colors={colors} />
+                <NavTile icon="user-x" label="Suspended" badge={s?.suspendedUsers} color="#ef4444" onPress={() => router.push("/admin/suspended-users")} colors={colors} />
                 <NavTile icon="x-circle" label="Rejected Listings" badge={0} color="#64748b" onPress={() => router.push("/admin/rejected-listings")} colors={colors} />
               </View>
             </View>
@@ -446,6 +529,7 @@ const styles = StyleSheet.create({
   riskAvatarText: { fontSize: 13, fontWeight: "800" },
   riskName: { fontSize: 14, fontWeight: "600", flex: 1 },
   riskMeta: { fontSize: 12, marginTop: 2 },
+  suspRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderWidth: 1 },
   suspendedPill: { backgroundColor: "#ef444418", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   suspendedText: { fontSize: 10, fontWeight: "700", color: "#ef4444" },
   levelPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

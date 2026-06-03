@@ -281,6 +281,30 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
   res.json({ ...dorm, amenities: JSON.parse(dorm.amenities || "[]") });
 });
 
+router.get("/admin/suspended-users-preview", requireAuth, requireRole("admin"), async (_req, res) => {
+  const rows = sqlite.prepare(`
+    SELECT id, full_name, email, role, avatar_url, suspended_until
+    FROM users
+    WHERE is_suspended = 1
+    ORDER BY suspended_until ASC NULLS LAST
+  `).all() as any[];
+
+  const result = rows.map((u) => ({
+    id: u.id,
+    fullName: u.full_name,
+    email: u.email,
+    role: u.role,
+    avatarUrl: u.avatar_url ?? null,
+    suspendedUntil: u.suspended_until ?? null,
+    isPermanent: !u.suspended_until,
+    daysLeft: u.suspended_until
+      ? Math.max(0, Math.ceil((new Date(u.suspended_until).getTime() - Date.now()) / 86400000))
+      : null,
+  }));
+
+  res.json({ users: result, total: result.length });
+});
+
 router.get("/admin/top-risk-users", requireAuth, requireRole("admin"), async (_req, res) => {
   const rows = sqlite.prepare(`
     SELECT v.*, u.full_name as user_name, u.avatar_url as user_avatar, u.is_suspended as user_suspended
