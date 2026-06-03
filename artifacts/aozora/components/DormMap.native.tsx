@@ -8,7 +8,7 @@ import {
   ScrollView,
   Image,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import MapView, { Marker, Polygon } from "react-native-maps";
 import { router } from "expo-router";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useGetDorms, getGetDormsQueryKey } from "@workspace/api-client-react";
@@ -20,6 +20,32 @@ const LOPEZ_COORDS = {
   latitudeDelta: 0.05,
   longitudeDelta: 0.05,
 };
+
+// Approximate municipal boundary of Lopez, Quezon (the cutout "hole")
+const LOPEZ_BOUNDARY = [
+  { latitude: 13.9480, longitude: 122.1720 },
+  { latitude: 13.9600, longitude: 122.2100 },
+  { latitude: 13.9550, longitude: 122.2550 },
+  { latitude: 13.9400, longitude: 122.2950 },
+  { latitude: 13.9150, longitude: 122.3300 },
+  { latitude: 13.8800, longitude: 122.3550 },
+  { latitude: 13.8400, longitude: 122.3480 },
+  { latitude: 13.8050, longitude: 122.3200 },
+  { latitude: 13.7900, longitude: 122.2800 },
+  { latitude: 13.7950, longitude: 122.2350 },
+  { latitude: 13.8200, longitude: 122.1950 },
+  { latitude: 13.8600, longitude: 122.1750 },
+  { latitude: 13.9050, longitude: 122.1650 },
+  { latitude: 13.9480, longitude: 122.1720 },
+];
+
+// World-covering outer ring — everything outside LOPEZ_BOUNDARY gets the overlay
+const WORLD_OUTER = [
+  { latitude: 90, longitude: -180 },
+  { latitude: 90, longitude: 180 },
+  { latitude: -90, longitude: 180 },
+  { latitude: -90, longitude: -180 },
+];
 
 // Hard bounds — the map cannot be scrolled outside Lopez, Quezon
 const LOPEZ_BOUNDS = {
@@ -135,6 +161,21 @@ export default function DormMap() {
         showsUserLocation
         onPress={handleDismiss}
       >
+        {/* Dark overlay outside Lopez — the "cutout" effect */}
+        <Polygon
+          coordinates={WORLD_OUTER}
+          holes={[LOPEZ_BOUNDARY]}
+          fillColor="rgba(0,0,0,0.52)"
+          strokeWidth={0}
+        />
+        {/* Glowing border around the Lopez boundary */}
+        <Polygon
+          coordinates={LOPEZ_BOUNDARY}
+          fillColor="transparent"
+          strokeColor="rgba(99,102,241,0.85)"
+          strokeWidth={2.5}
+        />
+
         {filteredDorms.map((dorm: any) => {
           const isSelected = selected?.id === dorm.id;
           const color = pinColor(dorm, isSelected, colors.primary);
