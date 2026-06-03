@@ -4,7 +4,7 @@ import { users, verificationRecords, dorms, appointments } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
-import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail } from "../lib/mailer";
+import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail, sendVerificationApprovedEmail, sendVerificationRejectedEmail } from "../lib/mailer";
 
 const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
@@ -235,6 +235,22 @@ router.put("/admin/verifications/:verificationId", requireAuth, requireRole("adm
   }
 
   const u = await db.select().from(users).where(eq(users.id, verif.userId)).get();
+
+  if (u?.email) {
+    const reviewDate = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+    const userName = u.fullName || u.email;
+    if (status === "approved") {
+      sendVerificationApprovedEmail({ to: u.email, name: userName, approvalDate: reviewDate }).catch(console.error);
+    } else if (status === "rejected") {
+      sendVerificationRejectedEmail({
+        to: u.email,
+        name: userName,
+        rejectionReasons: reviewNote || "Application did not meet verification requirements.",
+        reviewDate,
+      }).catch(console.error);
+    }
+  }
+
   res.json({
     ...verif,
     user: u ? { id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, avatarUrl: u.avatarUrl } : null,

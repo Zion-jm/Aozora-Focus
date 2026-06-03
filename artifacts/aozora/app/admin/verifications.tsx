@@ -38,6 +38,15 @@ const APPROVAL_CHECKLIST = [
   { id: "age_confirmed", label: "Birthday on ID confirms user is 18 or older" },
 ];
 
+const REJECTION_REASONS = [
+  { id: "photo_unclear",  label: "Document unclear or unreadable" },
+  { id: "name_mismatch",  label: "Name on ID does not match account profile" },
+  { id: "expired_id",     label: "ID document is expired" },
+  { id: "face_mismatch",  label: "Face on ID does not match the account holder" },
+  { id: "wrong_type",     label: "ID type does not match what was declared" },
+  { id: "incomplete",     label: "Document is incomplete or partially visible" },
+];
+
 const STATUS_COLOR: Record<string, string> = {
   pending: "#f59e0b",
   approved: "#10b981",
@@ -67,6 +76,8 @@ export default function AdminVerificationsScreen() {
   } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [rejectionChecked, setRejectionChecked] = useState<Set<string>>(new Set());
+  const [rejectionNote, setRejectionNote] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetVerifications({
     query: { queryKey: getAdminGetVerificationsQueryKey(), refetchInterval: 8_000 },
@@ -96,6 +107,8 @@ export default function AdminVerificationsScreen() {
   const openReviewModal = (item: any, status: "approved" | "rejected") => {
     setReviewNote("");
     setCheckedItems(new Set());
+    setRejectionChecked(new Set());
+    setRejectionNote("");
     setReviewModal({ item, status });
   };
 
@@ -108,24 +121,39 @@ export default function AdminVerificationsScreen() {
     });
   };
 
+  const toggleRejectionReason = (id: string) => {
+    setRejectionChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const allChecked = checkedItems.size === APPROVAL_CHECKLIST.length;
 
   const submitReview = () => {
     if (!reviewModal) return;
     const { item, status } = reviewModal;
-    if (status === "rejected" && !reviewNote.trim()) {
-      toast.warning("Note required", "Please provide a reason for rejection.");
+    if (status === "rejected" && rejectionChecked.size === 0) {
+      toast.warning("Select a reason", "Please select at least one reason for rejection.");
       return;
     }
     if (status === "approved" && !allChecked) {
       toast.warning("Checklist incomplete", "Please complete all verification checks before approving.");
       return;
     }
+    let builtNote = reviewNote.trim();
+    if (status === "rejected") {
+      const reasons = REJECTION_REASONS
+        .filter((r) => rejectionChecked.has(r.id))
+        .map((r) => r.label)
+        .join("\n");
+      builtNote = reasons + (rejectionNote.trim() ? "\n" + rejectionNote.trim() : "");
+    }
     review.mutate(
-      { verificationId: item.id, data: { status, reviewNote: reviewNote.trim() || undefined } },
-      {
-        onSuccess: () => setReviewModal(null),
-      }
+      { verificationId: item.id, data: { status, reviewNote: builtNote || undefined } },
+      { onSuccess: () => setReviewModal(null) }
     );
   };
 
@@ -462,13 +490,78 @@ export default function AdminVerificationsScreen() {
                 </View>
               )}
 
-              {/* Note input */}
+              {/* Rejection reasons checklist */}
+              {reviewModal?.status === "rejected" && (
+                <View style={styles.checklistSection}>
+                  <View style={styles.checklistHeader}>
+                    <Feather name="x-circle" size={15} color="#ef4444" />
+                    <Text style={[styles.checklistTitle, { color: colors.foreground }]}>
+                      Reason(s) for Rejection
+                    </Text>
+                    <View style={[
+                      styles.checklistBadge,
+                      { backgroundColor: rejectionChecked.size > 0 ? "#ef444422" : colors.muted },
+                    ]}>
+                      <Text style={[
+                        styles.checklistBadgeText,
+                        { color: rejectionChecked.size > 0 ? "#ef4444" : colors.mutedForeground },
+                      ]}>
+                        {rejectionChecked.size} selected
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.checklistSub, { color: colors.mutedForeground }]}>
+                    Select all that apply — these will be included in the email to the applicant.
+                  </Text>
+                  {REJECTION_REASONS.map((reason) => {
+                    const checked = rejectionChecked.has(reason.id);
+                    return (
+                      <TouchableOpacity
+                        key={reason.id}
+                        style={[
+                          styles.checklistRow,
+                          {
+                            borderColor: checked ? "#ef4444" : colors.border,
+                            backgroundColor: checked ? "#ef444410" : colors.background,
+                            borderRadius: colors.radius,
+                          },
+                        ]}
+                        onPress={() => toggleRejectionReason(reason.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[
+                          styles.checkbox,
+                          {
+                            borderColor: checked ? "#ef4444" : colors.border,
+                            backgroundColor: checked ? "#ef4444" : "transparent",
+                          },
+                        ]}>
+                          {checked && <Feather name="check" size={11} color="#fff" />}
+                        </View>
+                        <Text style={[
+                          styles.checklistLabel,
+                          { color: checked ? colors.foreground : colors.mutedForeground },
+                        ]}>
+                          {reason.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {rejectionChecked.size === 0 && (
+                    <View style={styles.checklistWarning}>
+                      <Feather name="alert-circle" size={13} color="#f59e0b" />
+                      <Text style={styles.checklistWarningText}>
+                        Select at least one reason before rejecting.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Additional notes / approval note */}
               <View style={styles.reviewModalBody}>
                 <Text style={[styles.reviewNoteLabel, { color: colors.foreground }]}>
-                  {reviewModal?.status === "rejected" ? "Reason for rejection" : "Note for user"}
-                  {reviewModal?.status === "rejected" && (
-                    <Text style={{ color: "#ef4444" }}> *</Text>
-                  )}
+                  {reviewModal?.status === "rejected" ? "Additional notes" : "Note for user"}
                 </Text>
                 <TextInput
                   style={[
@@ -482,19 +575,14 @@ export default function AdminVerificationsScreen() {
                   ]}
                   placeholder={
                     reviewModal?.status === "rejected"
-                      ? "e.g. Image is too blurry, please resubmit with a clearer photo."
+                      ? "Optional — any extra detail for the applicant."
                       : "Optional — any notes for this user."
                   }
                   placeholderTextColor={colors.mutedForeground}
-                  value={reviewNote}
-                  onChangeText={setReviewNote}
+                  value={reviewModal?.status === "rejected" ? rejectionNote : reviewNote}
+                  onChangeText={reviewModal?.status === "rejected" ? setRejectionNote : setReviewNote}
                   multiline
                 />
-                {reviewModal?.status === "rejected" && (
-                  <Text style={[styles.reviewNoteHint, { color: colors.mutedForeground }]}>
-                    The user will see this reason so they can resubmit correctly.
-                  </Text>
-                )}
               </View>
             </ScrollView>
 
@@ -512,11 +600,11 @@ export default function AdminVerificationsScreen() {
                   {
                     backgroundColor: reviewModal?.status === "approved" ? "#10b981" : "#ef4444",
                     borderRadius: colors.radius,
-                    opacity: (review.isPending || (reviewModal?.status === "approved" && !allChecked)) ? 0.4 : 1,
+                    opacity: (review.isPending || (reviewModal?.status === "approved" && !allChecked) || (reviewModal?.status === "rejected" && rejectionChecked.size === 0)) ? 0.4 : 1,
                   },
                 ]}
                 onPress={submitReview}
-                disabled={review.isPending || (reviewModal?.status === "approved" && !allChecked)}
+                disabled={review.isPending || (reviewModal?.status === "approved" && !allChecked) || (reviewModal?.status === "rejected" && rejectionChecked.size === 0)}
               >
                 {review.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
