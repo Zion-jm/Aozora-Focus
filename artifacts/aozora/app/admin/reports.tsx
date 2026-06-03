@@ -290,6 +290,11 @@ export default function AdminReportsScreen() {
           }),
         }
       );
+      if (res.status === 409) {
+        setRecApplied(true);
+        toast.info("Already Applied", "A recommendation has already been applied for this user.");
+        return;
+      }
       if (!res.ok) throw new Error("Failed to apply recommendation");
       const rec = RECOMMENDATIONS[recResult.level] ?? RECOMMENDATIONS["warning"]!;
       setRecApplied(true);

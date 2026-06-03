@@ -4,7 +4,7 @@ import { users, verificationRecords, dorms, appointments } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
-import { sendSuspensionLiftedEmail } from "../lib/mailer";
+import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail } from "../lib/mailer";
 
 const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
@@ -380,7 +380,7 @@ router.get("/admin/users/:userId/violations", requireAuth, requireRole("admin"),
   `).all(userId) as any[];
 
   const userRow = sqlite.prepare(
-    `SELECT is_suspended, suspended_until, full_name, email FROM users WHERE id = ?`
+    `SELECT is_suspended, suspended_until, full_name, email, recommendation_applied_at FROM users WHERE id = ?`
   ).get(userId) as any;
 
   const score = computeScore(rows);
@@ -393,6 +393,7 @@ router.get("/admin/users/:userId/violations", requireAuth, requireRole("admin"),
     suspendedUntil: userRow?.suspended_until ?? null,
     userEmail: userRow?.email ?? null,
     userName: userRow?.full_name ?? null,
+    recommendationAppliedAt: userRow?.recommendation_applied_at ?? null,
   });
 });
 
@@ -469,6 +470,15 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
     return;
   }
 
+  const existingUser = sqlite.prepare(
+    `SELECT recommendation_applied_at FROM users WHERE id = ?`
+  ).get(userId) as any;
+
+  if (existingUser?.recommendation_applied_at) {
+    res.status(409).json({ error: "Already applied", message: "A recommendation has already been applied for this user." });
+    return;
+  }
+
   const infraction = (infractionDescription as string | undefined)?.trim() || "a violation of our community guidelines";
 
   const formalWarningBody =
@@ -532,14 +542,46 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
     },
   };
 
+  const appliedAt = new Date().toISOString();
+
   if (level === "short_suspension") {
     const until = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    await db.update(users).set({ isSuspended: true, suspendedUntil: until, suspensionNotifiedAt: null, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
+    await db.update(users).set({ isSuspended: true, suspendedUntil: until, suspensionNotifiedAt: null, recommendationAppliedAt: appliedAt, updatedAt: appliedAt }).where(eq(users.id, userId));
+
+    const targetUser = sqlite.prepare(`SELECT full_name, email FROM users WHERE id = ?`).get(userId) as any;
+    const mostRecentViolation = sqlite.prepare(`SELECT category FROM violations WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`).get(userId) as any;
+    if (targetUser?.email) {
+      const categoryLabel = CATEGORY_LABELS[mostRecentViolation?.category as string] ?? "Community Guideline Violation";
+      const restorationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+      sendSuspensionNoticeEmail({
+        to: targetUser.email,
+        name: targetUser.full_name,
+        violationCategory: categoryLabel,
+        suspensionPeriod: "7 Days",
+        restorationDate,
+      }).catch((e) => console.error("Failed to send suspension notice email:", e));
+    }
   } else if (level === "long_suspension") {
     const until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    await db.update(users).set({ isSuspended: true, suspendedUntil: until, suspensionNotifiedAt: null, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
+    await db.update(users).set({ isSuspended: true, suspendedUntil: until, suspensionNotifiedAt: null, recommendationAppliedAt: appliedAt, updatedAt: appliedAt }).where(eq(users.id, userId));
+
+    const targetUser = sqlite.prepare(`SELECT full_name, email FROM users WHERE id = ?`).get(userId) as any;
+    const mostRecentViolation = sqlite.prepare(`SELECT category FROM violations WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`).get(userId) as any;
+    if (targetUser?.email) {
+      const categoryLabel = CATEGORY_LABELS[mostRecentViolation?.category as string] ?? "Community Guideline Violation";
+      const restorationDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+      sendSuspensionNoticeEmail({
+        to: targetUser.email,
+        name: targetUser.full_name,
+        violationCategory: categoryLabel,
+        suspensionPeriod: "30 Days",
+        restorationDate,
+      }).catch((e) => console.error("Failed to send suspension notice email:", e));
+    }
   } else if (level === "ban") {
-    await db.update(users).set({ isSuspended: true, suspendedUntil: null, updatedAt: new Date().toISOString() }).where(eq(users.id, userId));
+    await db.update(users).set({ isSuspended: true, suspendedUntil: null, recommendationAppliedAt: appliedAt, updatedAt: appliedAt }).where(eq(users.id, userId));
+  } else if (level === "warning") {
+    await db.update(users).set({ recommendationAppliedAt: appliedAt, updatedAt: appliedAt }).where(eq(users.id, userId));
   }
 
   const notif = notifMap[level as string];

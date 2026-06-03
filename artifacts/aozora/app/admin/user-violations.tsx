@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -170,6 +170,12 @@ export default function UserViolationsScreen() {
     ? Math.max(0, Math.ceil((new Date(suspendedUntil).getTime() - Date.now()) / 86400000))
     : null;
 
+  useEffect(() => {
+    if (data?.recommendationAppliedAt) {
+      setApplied(true);
+    }
+  }, [data?.recommendationAppliedAt]);
+
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [notified, setNotified] = useState(false);
 
@@ -276,6 +282,11 @@ export default function UserViolationsScreen() {
               infractionDescription: mostRecentDescription || undefined,
             }),
           });
+          if (res.status === 409) {
+            setApplied(true);
+            toast.info("Already Applied", "A recommendation has already been applied for this user.");
+            return;
+          }
           if (!res.ok) throw new Error("Failed");
           setApplied(true);
           toast.success("Action Applied", `${rec.label} has been applied to the user.`);

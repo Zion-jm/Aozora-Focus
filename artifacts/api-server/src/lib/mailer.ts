@@ -205,3 +205,100 @@ export async function sendSupportResponseEmail(opts: {
     `,
   });
 }
+
+export async function sendSuspensionNoticeEmail(opts: {
+  to: string;
+  name: string;
+  violationCategory: string;
+  suspensionPeriod: string;
+  restorationDate: string;
+}): Promise<void> {
+  const subject = "Notice of Account Suspension";
+
+  const text =
+    `Dear ${opts.name},\n\n` +
+    `We are writing to notify you that your account has been temporarily suspended due to a violation of our community policies.\n\n` +
+    `Violation Category: ${opts.violationCategory}\n\n` +
+    `Suspension Period: ${opts.suspensionPeriod}\n\n` +
+    `Restoration Date: ${opts.restorationDate}\n\n` +
+    `Policy Reminder:\n\n` +
+    `Aozora Admin Team is committed to maintaining a safe, fair, and respectful platform for all users. ` +
+    `Activities that disrupt this environment or bypass our guidelines are strictly prohibited.\n\n` +
+    `What Happens Next?\n` +
+    `During this suspension period, you will be unable to log in, access your profile, or interact on the platform. ` +
+    `Your access will be automatically restored on the Restoration Date noted above, provided there are no further complications.\n\n` +
+    `Please use this time to review our guidelines so you can safely resume your activities once the suspension is lifted. ` +
+    `Please note that subsequent violations following this suspension may result in a permanent ban.\n\n` +
+    `If you believe this action was taken in error and wish to submit an appeal, please reach out via our support portal.\n\n` +
+    `Sincerely,\n\nAozora Admin Team\naozora.dormfinder.admin@gmail.com`;
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+      <h2 style="color:#2563eb;margin:0 0 4px;font-size:22px;">Aozora</h2>
+      <p style="color:#9ca3af;margin:0 0 28px;font-size:13px;">Home, but smarter.</p>
+
+      <div style="border-left:4px solid #ef4444;padding:14px 18px;background:#ef444412;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px;">Notice of Account Suspension</p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">Your account has been temporarily suspended</p>
+      </div>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 6px;">Dear <strong>${opts.name}</strong>,</p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 20px;">
+        We are writing to notify you that your account has been temporarily suspended due to a violation of our community policies.
+      </p>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#374151;border:1px solid #e5e7eb;border-radius:4px 0 0 4px;width:40%;">Violation Category</td>
+          <td style="padding:10px 14px;font-size:13px;color:#111827;border:1px solid #e5e7eb;">${opts.violationCategory}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#374151;border:1px solid #e5e7eb;border-top:none;">Suspension Period</td>
+          <td style="padding:10px 14px;font-size:13px;color:#111827;border:1px solid #e5e7eb;border-top:none;">${opts.suspensionPeriod}</td>
+        </tr>
+        <tr style="background:#fef2f2;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#374151;border:1px solid #e5e7eb;border-top:none;">Restoration Date</td>
+          <td style="padding:10px 14px;font-size:13px;color:#ef4444;font-weight:600;border:1px solid #e5e7eb;border-top:none;">${opts.restorationDate}</td>
+        </tr>
+      </table>
+
+      <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 6px;">Policy Reminder</p>
+        <p style="font-size:13px;color:#78350f;line-height:1.6;margin:0;">
+          Aozora Admin Team is committed to maintaining a safe, fair, and respectful platform for all users.
+          Activities that disrupt this environment or bypass our guidelines are strictly prohibited.
+        </p>
+      </div>
+
+      <p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 6px;">What Happens Next?</p>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 16px;">
+        During this suspension period, you will be unable to log in, access your profile, or interact on the platform.
+        Your access will be automatically restored on the Restoration Date noted above, provided there are no further complications.
+      </p>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 16px;">
+        Please use this time to review our guidelines so you can safely resume your activities once the suspension is lifted.
+        Please note that subsequent violations following this suspension may result in a permanent ban.
+      </p>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 24px;">
+        If you believe this action was taken in error and wish to submit an appeal, please reach out via our support portal.
+      </p>
+
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Sincerely,</p>
+      <p style="font-size:14px;color:#111827;font-weight:700;margin:0 0 2px;">Aozora Admin Team</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">aozora.dormfinder.admin@gmail.com</p>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+        This is a system-generated message from Aozora. If you need further assistance, please reach out via our support portal.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}
