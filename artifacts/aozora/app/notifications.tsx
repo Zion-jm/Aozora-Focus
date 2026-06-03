@@ -14,6 +14,9 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
+import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
+import { resolveNotifRoute } from "@/utils/notifRouting";
 import {
   useGetNotifications,
   useMarkAllNotificationsRead,
@@ -131,6 +134,8 @@ export default function NotificationsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const { data, isLoading, refetch } = useGetNotifications({ query: { refetchInterval: 8_000 } });
   const notifications: Notification[] = (data?.notifications ?? []) as Notification[];
@@ -154,49 +159,24 @@ export default function NotificationsScreen() {
     },
   });
 
-  const ADMIN_MSG_TYPES = ["admin_message", "admin_message_new", "support_ticket_resolved"];
-  const ACCOUNT_TYPES = ["account_suspended", "account_unsuspended", "admin_warning", "violation_logged"];
-  const MSG_TYPES = ["message_new", "new_message"];
-  const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
-    "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new"];
-
   const handlePress = useCallback(
     (n: Notification) => {
       if (!n.isRead) {
         markOneRead({ id: n.id });
       }
-      const type = n.type as string;
-      // ── Navigate using relatedId/relatedType when available ──────────────────
-      if ((n as any).relatedType === "appointment" && (n as any).relatedId) {
-        router.push(`/appointment/${(n as any).relatedId}` as any);
-      } else if ((n as any).relatedType === "dorm" && (n as any).relatedId) {
-        router.push(`/dorm/${(n as any).relatedId}` as any);
-      } else if ((n as any).relatedType === "conversation" && (n as any).relatedId) {
-        if (ADMIN_MSG_TYPES.includes(type)) {
-          router.push(`/admin-conversation/${(n as any).relatedId}` as any);
-        } else {
-          router.push(`/conversation/${(n as any).relatedId}` as any);
-        }
-      // ── Fallback: no relatedId stored (older notifications) ──────────────────
-      } else if (APPT_TYPES.includes(type)) {
-        router.push("/(tabs)/appointments" as any);
-      } else if (MSG_TYPES.includes(type)) {
-        router.push("/(tabs)/messages" as any);
-      } else if (ADMIN_MSG_TYPES.includes(type)) {
-        router.push("/(tabs)/messages" as any);
-      } else if (ACCOUNT_TYPES.includes(type) || type.startsWith("violation_action_")) {
-        router.push("/profile/violations" as any);
-      } else if (type === "dorm_approved" || type === "dorm_rejected" || type === "dorm_taken_down") {
-        router.push("/profile/my-dorms" as any);
-      } else if (type === "id_verified" || type === "id_rejected") {
-        router.push("/profile/verify" as any);
-      } else if (type === "dorm_review_received") {
-        router.push("/profile/my-dorms" as any);
-      } else if (type === "user_review_received") {
-        router.push("/profile/reviews" as any);
+
+      const result = resolveNotifRoute(
+        { type: n.type as string, relatedType: (n as any).relatedType, relatedId: (n as any).relatedId },
+        user?.role ?? "student"
+      );
+
+      if (result.kind === "push") {
+        router.push(result.path as any);
+      } else if (result.kind === "toast") {
+        toast.info(n.title, n.body ?? undefined);
       }
     },
-    [markOneRead]
+    [markOneRead, toast, user?.role]
   );
 
   const handleDelete = useCallback(

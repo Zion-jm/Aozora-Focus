@@ -14,6 +14,8 @@ import { router, useFocusEffect } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 import { useNotifications } from "@/context/NotificationContext";
+import { useToast } from "@/context/ToastContext";
+import { resolveNotifRoute } from "@/utils/notifRouting";
 import { timeAgo } from "../../utils/time";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
@@ -55,6 +57,7 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
   const { refreshUnreadCount } = useNotifications();
+  const { toast } = useToast();
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,14 +95,6 @@ export default function NotificationsScreen() {
     }
   };
 
-  const isAdmin = user?.role === "admin";
-
-  const ADMIN_MSG_TYPES = ["admin_message", "admin_message_new", "support_ticket_resolved"];
-  const ACCOUNT_TYPES = ["account_suspended", "account_unsuspended", "admin_warning", "violation_logged"];
-  const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
-    "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new",
-    "appointment_reminder"];
-
   const handleTap = async (notif: any) => {
     if (!notif.isRead && token) {
       try {
@@ -116,54 +111,15 @@ export default function NotificationsScreen() {
       }
     }
 
-    const type: string = notif.type ?? "";
+    const result = resolveNotifRoute(
+      { type: notif.type, relatedType: notif.relatedType, relatedId: notif.relatedId },
+      user?.role ?? "student"
+    );
 
-    // ── Support ticket routing ────────────────────────────────────────────────
-    if (type === "support_ticket_new") {
-      // Admin gets notified of a new ticket → open admin support queue
-      router.push("/admin/support-tickets" as any);
-      return;
-    }
-    if (type === "support_ticket_resolved") {
-      // User gets notified their ticket was resolved
-      if (notif.relatedType === "conversation" && notif.relatedId) {
-        // Has a linked admin conversation → go directly to the thread
-        router.push(`/admin-conversation/${notif.relatedId}` as any);
-      } else {
-        // No conversation (e.g. guest/email-only ticket) → go to My Tickets
-        router.push("/my-tickets" as any);
-      }
-      return;
-    }
-
-    // ── All other notification types ─────────────────────────────────────────
-    if (notif.relatedType === "support_ticket") {
-      // Fallback: any other support_ticket relatedType → support queue for admin, my-tickets for users
-      router.push(isAdmin ? "/admin/support-tickets" as any : "/my-tickets" as any);
-    } else if (notif.relatedType === "appointment" && notif.relatedId) {
-      router.push(`/appointment/${notif.relatedId}` as any);
-    } else if (notif.relatedType === "dorm" && notif.relatedId) {
-      router.push(`/dorm/${notif.relatedId}` as any);
-    } else if (notif.relatedType === "conversation" && notif.relatedId) {
-      if (ADMIN_MSG_TYPES.includes(type)) {
-        router.push(`/admin-conversation/${notif.relatedId}` as any);
-      } else {
-        router.push(`/conversation/${notif.relatedId}` as any);
-      }
-    } else if (APPT_TYPES.includes(type)) {
-      router.push("/(tabs)/appointments" as any);
-    } else if (ADMIN_MSG_TYPES.includes(type)) {
-      router.push("/(tabs)/messages" as any);
-    } else if (ACCOUNT_TYPES.includes(type) || type.startsWith("violation_action_")) {
-      router.push("/profile/violations" as any);
-    } else if (type === "dorm_approved" || type === "dorm_rejected" || type === "dorm_taken_down") {
-      router.push("/profile/my-dorms" as any);
-    } else if (type === "id_verified" || type === "id_rejected") {
-      router.push("/profile/verify" as any);
-    } else if (type === "dorm_review_received") {
-      router.push("/profile/my-dorms" as any);
-    } else if (type === "user_review_received") {
-      router.push("/profile/reviews" as any);
+    if (result.kind === "push") {
+      router.push(result.path as any);
+    } else if (result.kind === "toast") {
+      toast.info(notif.title, notif.body);
     }
   };
 
