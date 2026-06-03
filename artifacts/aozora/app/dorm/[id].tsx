@@ -193,7 +193,7 @@ export default function DormDetailScreen() {
   const [showReport, setShowReport] = useState(false);
 
   const { data: dorm, isLoading } = useGetDormById(id!, {
-    query: { enabled: !!id, queryKey: getGetDormByIdQueryKey(id!) },
+    query: { enabled: !!id, queryKey: getGetDormByIdQueryKey(id!), refetchInterval: 15_000, refetchOnWindowFocus: true },
   });
 
   const dormIdNum = Number(id);

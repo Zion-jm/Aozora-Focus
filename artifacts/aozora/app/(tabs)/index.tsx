@@ -28,6 +28,8 @@ export default function ExploreScreen() {
   const { data, isLoading, isError, refetch, isRefetching } = useGetDorms({
     query: {
       queryKey: getGetDormsQueryKey(),
+      refetchInterval: 10_000,
+      refetchOnWindowFocus: true,
     },
   });
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, sqlite } from "../db/index";
-import { users, verificationRecords, dorms, appointments } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { users, verificationRecords, dorms, dormPhotos, appointments } from "../db/schema";
+import { eq, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
 import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail, sendVerificationApprovedEmail, sendVerificationRejectedEmail } from "../lib/mailer";
@@ -263,9 +263,29 @@ router.get("/admin/dorms", requireAuth, requireRole("admin"), async (req, res) =
 
   if (status) allDorms = allDorms.filter((d) => d.status === status);
 
+  const enriched = await Promise.all(
+    allDorms.map(async (d) => {
+      const owner = await db.select().from(users).where(eq(users.id, d.ownerId)).get();
+      let coverPhotoUrl = d.coverPhotoUrl;
+      if (!coverPhotoUrl) {
+        const firstPhoto = await db.select().from(dormPhotos)
+          .where(eq(dormPhotos.dormId, d.id))
+          .orderBy(asc(dormPhotos.order))
+          .get();
+        if (firstPhoto) coverPhotoUrl = firstPhoto.url;
+      }
+      return {
+        ...d,
+        amenities: JSON.parse(d.amenities || "[]"),
+        coverPhotoUrl,
+        owner: owner ? { id: owner.id, fullName: owner.fullName, email: owner.email } : null,
+      };
+    })
+  );
+
   res.json({
-    dorms: allDorms.map((d) => ({ ...d, amenities: JSON.parse(d.amenities || "[]") })),
-    total: allDorms.length,
+    dorms: enriched,
+    total: enriched.length,
     page: 1,
     totalPages: 1,
   });

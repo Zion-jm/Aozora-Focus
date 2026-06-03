@@ -135,10 +135,19 @@ export default function AdminDormsScreen() {
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 40 }]}
           renderItem={({ item }: { item: any }) => (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
-              <Image
-                source={{ uri: item.coverPhotoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400" }}
-                style={styles.cardImage}
-              />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => router.push(`/dorm/${item.id}`)}
+              >
+                <Image
+                  source={{ uri: item.coverPhotoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400" }}
+                  style={styles.cardImage}
+                />
+                <View style={[styles.viewBanner, { backgroundColor: colors.primary + "18" }]}>
+                  <Feather name="eye" size={13} color={colors.primary} />
+                  <Text style={[styles.viewBannerText, { color: colors.primary }]}>Tap to view full listing</Text>
+                </View>
+              </TouchableOpacity>
               <View style={styles.cardContent}>
                 <View style={styles.cardTop}>
                   <Text style={[styles.dormName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
@@ -218,6 +227,8 @@ const styles = StyleSheet.create({
   listContent: { padding: 16, gap: 16 },
   card: { borderWidth: 1, overflow: "hidden" },
   cardImage: { width: "100%", height: 140 },
+  viewBanner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 7 },
+  viewBannerText: { fontSize: 12, fontWeight: "600" },
   cardContent: { padding: 14, gap: 6 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   dormName: { fontSize: 17, fontWeight: "600", flex: 1, marginRight: 10 },

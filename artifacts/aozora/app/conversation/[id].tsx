@@ -113,7 +113,7 @@ export default function ConversationScreen() {
   const lastTypingSentRef = useRef(0);
 
   const { data, isLoading, refetch } = useListMessages(convId, {
-    query: { enabled: !!convId, queryKey: getListMessagesQueryKey(convId) },
+    query: { enabled: !!convId, queryKey: getListMessagesQueryKey(convId), refetchInterval: 3_000, refetchOnWindowFocus: true },
   });
 
   const messages: any[] = (data as any)?.messages || [];

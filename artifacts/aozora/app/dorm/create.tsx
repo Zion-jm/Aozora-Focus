@@ -260,7 +260,9 @@ export default function CreateDormScreen() {
     const coverPhotoUrl = firstPhoto
       ? firstPhoto.isExisting
         ? (firstPhoto as ExistingPhoto).url
-        : undefined
+        : (firstPhoto as NewPhoto).base64
+          ? `data:image/jpeg;base64,${(firstPhoto as NewPhoto).base64}`
+          : (firstPhoto as NewPhoto).uri
       : undefined;
 
     const payload = {
