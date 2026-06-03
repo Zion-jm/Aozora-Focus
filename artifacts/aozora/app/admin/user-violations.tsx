@@ -171,8 +171,10 @@ export default function UserViolationsScreen() {
     : null;
 
   const [notifyLoading, setNotifyLoading] = useState(false);
+  const [notified, setNotified] = useState(false);
 
   const handleNotifySuspensionLifted = async () => {
+    if (notified) return;
     setNotifyLoading(true);
     try {
       const res = await fetch(`${BASE_URL}/api/admin/users/${uid}/notify-suspension-lifted`, {
@@ -180,7 +182,8 @@ export default function UserViolationsScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed");
-      toast.success("Notified", `Suspension-lifted email sent to ${userName ?? "user"}.`);
+      setNotified(true);
+      toast.success("Notified", `Suspension-lifted notification sent to ${userName ?? "user"}.`);
     } catch {
       toast.error("Error", "Could not send notification.");
     } finally {
@@ -352,20 +355,44 @@ export default function UserViolationsScreen() {
                       )}
                     </View>
                   </View>
-                  <TouchableOpacity
-                    onPress={handleNotifySuspensionLifted}
-                    disabled={notifyLoading}
-                    style={[styles.notifyBtn, { backgroundColor: "#10b98115", borderColor: "#10b98140" }]}
-                  >
-                    {notifyLoading ? (
-                      <ActivityIndicator size="small" color="#10b981" />
-                    ) : (
-                      <>
-                        <Feather name="mail" size={13} color="#10b981" />
-                        <Text style={styles.notifyBtnText}>Notify User: Suspension Lifted</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                  {(() => {
+                    const suspensionStillActive = daysLeft !== null && daysLeft > 0;
+                    const btnDisabled = notifyLoading || notified || suspensionStillActive;
+                    const btnColor = btnDisabled ? "#9ca3af" : "#10b981";
+                    return (
+                      <TouchableOpacity
+                        onPress={handleNotifySuspensionLifted}
+                        disabled={btnDisabled}
+                        style={[
+                          styles.notifyBtn,
+                          {
+                            backgroundColor: btnDisabled ? "#9ca3af15" : "#10b98115",
+                            borderColor: btnDisabled ? "#9ca3af40" : "#10b98140",
+                            opacity: btnDisabled ? 0.6 : 1,
+                          },
+                        ]}
+                      >
+                        {notifyLoading ? (
+                          <ActivityIndicator size="small" color={btnColor} />
+                        ) : notified ? (
+                          <>
+                            <Feather name="check" size={13} color={btnColor} />
+                            <Text style={[styles.notifyBtnText, { color: btnColor }]}>Notified</Text>
+                          </>
+                        ) : suspensionStillActive ? (
+                          <>
+                            <Feather name="clock" size={13} color={btnColor} />
+                            <Text style={[styles.notifyBtnText, { color: btnColor }]}>Suspension Ongoing</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Feather name="mail" size={13} color={btnColor} />
+                            <Text style={[styles.notifyBtnText, { color: btnColor }]}>Notify: Suspension Lifted</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })()}
                 </View>
               )}
 

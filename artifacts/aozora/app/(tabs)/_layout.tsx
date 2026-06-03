@@ -133,8 +133,7 @@ function ClassicTabLayout() {
         name="notifications"
         options={{
           title: "Alerts",
-          href: isAdmin ? undefined : null,
-          tabBarBadge: isAdmin && unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : undefined,
+          tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : undefined,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="bell" tintColor={color} size={24} />
@@ -147,7 +146,6 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : undefined,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person" tintColor={color} size={24} />
