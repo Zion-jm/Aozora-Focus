@@ -309,6 +309,38 @@ export default function AboutScreen() {
           <FAQItem key={i} q={item.q} a={item.a} colors={colors} />
         ))}
 
+        {/* Development Team */}
+        <Text style={[styles.sectionHeading, { color: colors.foreground }]}>Development Team</Text>
+        <View
+          style={[
+            styles.detailsCard,
+            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius },
+          ]}
+        >
+          {[
+            { name: "Krizzia Mariel Yabut", role: "Developer" },
+            { name: "Joshua Marcaida", role: "Developer" },
+            { name: "Leigh Torres", role: "Developer" },
+            { name: "Hiram Paul Sigue", role: "Developer" },
+          ].map((dev, i, arr) => (
+            <View
+              key={dev.name}
+              style={[
+                styles.detailRow,
+                i < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={[styles.devAvatar, { backgroundColor: colors.primary + "18" }]}>
+                  <Feather name="user" size={14} color={colors.primary} />
+                </View>
+                <Text style={[styles.detailValue, { color: colors.foreground }]}>{dev.name}</Text>
+              </View>
+              <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{dev.role}</Text>
+            </View>
+          ))}
+        </View>
+
         {/* Platform info */}
         <Text style={[styles.sectionHeading, { color: colors.foreground }]}>Platform Details</Text>
         <View
@@ -411,4 +443,5 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 14, fontWeight: "600" },
 
   footer: { fontSize: 12, textAlign: "center", marginTop: 8, lineHeight: 20 },
+  devAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
 });

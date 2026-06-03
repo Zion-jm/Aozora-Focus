@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -555,6 +555,19 @@ export default function EditProfileScreen() {
     }
   };
 
+  const hasChanges = useMemo(() => {
+    if (avatarBase64 !== null) return true;
+    if (fullName !== (user?.fullName ?? "")) return true;
+    if (buildPhone(phoneCountry, phoneNational) !== (user?.phone ?? "")) return true;
+    if (birthday !== (user?.birthday ?? "")) return true;
+    if (universityOrWorkplace !== (user?.universityOrWorkplace ?? "")) return true;
+    if (emergencyContactName !== (user?.emergencyContactName ?? "")) return true;
+    if (buildPhone(emergencyCountry, emergencyNational) !== (user?.emergencyContactPhone ?? "")) return true;
+    if (bio !== (user?.bio ?? "")) return true;
+    if (phonePublic !== !!(user as any)?.phonePublic) return true;
+    return false;
+  }, [fullName, phoneCountry, phoneNational, birthday, universityOrWorkplace, emergencyContactName, emergencyCountry, emergencyNational, bio, phonePublic, avatarBase64, user]);
+
   const avatarLetter = (fullName || user?.fullName || "U")[0]?.toUpperCase() ?? "U";
 
   return (
@@ -574,9 +587,9 @@ export default function EditProfileScreen() {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Edit Profile</Text>
         <TouchableOpacity
-          style={styles.saveBtn}
+          style={[styles.saveBtn, (!hasChanges || updateProfile.isPending) && { opacity: 0.4 }]}
           onPress={handleSave}
-          disabled={updateProfile.isPending}
+          disabled={!hasChanges || updateProfile.isPending}
         >
           {updateProfile.isPending ? (
             <ActivityIndicator size="small" color={colors.primary} />
@@ -1122,9 +1135,9 @@ export default function EditProfileScreen() {
           style={[
             styles.saveFooterBtn,
             { backgroundColor: colors.primary, borderRadius: colors.radius },
-            updateProfile.isPending && { opacity: 0.5 },
+            (!hasChanges || updateProfile.isPending) && { opacity: 0.5 },
           ]}
-          disabled={updateProfile.isPending}
+          disabled={!hasChanges || updateProfile.isPending}
           onPress={handleSave}
         >
           {updateProfile.isPending ? (

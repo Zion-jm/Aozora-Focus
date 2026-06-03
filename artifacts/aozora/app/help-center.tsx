@@ -64,7 +64,51 @@ export default function HelpCenterScreen() {
 
   const isGuest = !user || !token;
   const isAdmin = user?.role === "admin";
-  const visibleTicketTypes = isGuest ? GUEST_TICKET_TYPES : TICKET_TYPES;
+
+  const APPEAL_TYPE_VALUES = new Set(["Appeal Rejection", "Appeal Takedown", "Appeal Suspension", "Appeal Violation"]);
+  const [appealEligibility, setAppealEligibility] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    if (user?.verificationStatus === "rejected") initial.add("Appeal Rejection");
+    if ((user as any)?.isSuspended) initial.add("Appeal Suspension");
+    return initial;
+  });
+
+  useEffect(() => {
+    if (!token || isAdmin || isGuest) return;
+    const eligible = new Set<string>();
+    if (user?.verificationStatus === "rejected") eligible.add("Appeal Rejection");
+    if ((user as any)?.isSuspended) eligible.add("Appeal Suspension");
+
+    const fetchChecks = async () => {
+      try {
+        const [violRes, dormRes] = await Promise.allSettled([
+          fetch(`${BASE_URL}/api/violations/my`, { headers: { Authorization: `Bearer ${token}` } }),
+          user?.role === "owner"
+            ? fetch(`${BASE_URL}/api/dorms?ownerId=${(user as any).id}&limit=50`, { headers: { Authorization: `Bearer ${token}` } })
+            : Promise.resolve(null),
+        ]);
+
+        if (violRes.status === "fulfilled" && violRes.value?.ok) {
+          const data = await violRes.value.json();
+          if ((data.violations ?? []).length > 0) eligible.add("Appeal Violation");
+        }
+
+        if (dormRes.status === "fulfilled" && dormRes.value && (dormRes.value as Response).ok) {
+          const data = await (dormRes.value as Response).json();
+          const dorms: any[] = data.dorms ?? data ?? [];
+          if (dorms.some((d: any) => d.status === "rejected" || d.status === "hidden" || d.status === "taken_down")) {
+            eligible.add("Appeal Takedown");
+          }
+        }
+      } catch {}
+      setAppealEligibility(eligible);
+    };
+    fetchChecks();
+  }, [token, isAdmin, isGuest, user]);
+
+  const visibleTicketTypes = isGuest
+    ? GUEST_TICKET_TYPES
+    : TICKET_TYPES.filter((t) => !APPEAL_TYPE_VALUES.has(t.value) || appealEligibility.has(t.value));
   const selectedType = TICKET_TYPES.find((t) => t.value === ticketType);
 
   // Check for existing pending ticket (authenticated non-admin users only)
