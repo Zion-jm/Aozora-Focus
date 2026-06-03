@@ -183,7 +183,16 @@ router.get("/admin/verifications", requireAuth, requireRole("admin"), async (_re
       return {
         ...v,
         user: u
-          ? { id: u.id, fullName: u.fullName, email: u.email, phone: u.phone, avatarUrl: u.avatarUrl }
+          ? {
+              id: u.id,
+              fullName: u.fullName,
+              email: u.email,
+              phone: u.phone,
+              avatarUrl: u.avatarUrl,
+              birthday: u.birthday ?? null,
+              universityOrWorkplace: u.universityOrWorkplace ?? null,
+              role: u.role,
+            }
           : null,
       };
     }),

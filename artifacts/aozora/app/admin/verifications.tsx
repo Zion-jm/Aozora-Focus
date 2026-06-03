@@ -316,7 +316,84 @@ export default function AdminVerificationsScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 480 }} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">
+              {/* Applicant Info Panel */}
+              {reviewModal?.item?.user && (
+                <View style={[styles.applicantPanel, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+                  <View style={styles.reviewSectionLabel}>
+                    <Feather name="user" size={13} color={colors.mutedForeground} />
+                    <Text style={[styles.reviewImageLabel, { color: colors.mutedForeground }]}>Applicant Information</Text>
+                  </View>
+                  <View style={styles.applicantRows}>
+                    <View style={styles.applicantRow}>
+                      <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Full Name</Text>
+                      <Text style={[styles.applicantVal, { color: colors.foreground }]}>{reviewModal.item.user.fullName || "—"}</Text>
+                    </View>
+                    {(reviewModal.item.user.email || reviewModal.item.user.phone) && (
+                      <View style={styles.applicantRow}>
+                        <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Contact</Text>
+                        <Text style={[styles.applicantVal, { color: colors.foreground }]}>
+                          {reviewModal.item.user.email || reviewModal.item.user.phone}
+                        </Text>
+                      </View>
+                    )}
+                    {reviewModal.item.user.birthday && (
+                      <View style={styles.applicantRow}>
+                        <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Birthday</Text>
+                        <Text style={[styles.applicantVal, { color: colors.foreground }]}>
+                          {new Date(reviewModal.item.user.birthday).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+                        </Text>
+                      </View>
+                    )}
+                    {reviewModal.item.user.universityOrWorkplace && (
+                      <View style={styles.applicantRow}>
+                        <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>School / Work</Text>
+                        <Text style={[styles.applicantVal, { color: colors.foreground }]}>{reviewModal.item.user.universityOrWorkplace}</Text>
+                      </View>
+                    )}
+                    <View style={styles.applicantRow}>
+                      <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>ID Type</Text>
+                      <Text style={[styles.applicantVal, { color: colors.foreground }]}>{reviewModal.item.idType}</Text>
+                    </View>
+                    <View style={[styles.applicantRow, { borderBottomWidth: 0 }]}>
+                      <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Submitted</Text>
+                      <Text style={[styles.applicantVal, { color: colors.foreground }]}>
+                        {reviewModal.item.submittedAt
+                          ? new Date(reviewModal.item.submittedAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+                          : "—"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ID Image */}
+              {reviewModal?.item?.idImageUrl && (
+                <View style={styles.reviewImageSection}>
+                  <View style={styles.reviewSectionLabel}>
+                    <Feather name="image" size={13} color={colors.mutedForeground} />
+                    <Text style={[styles.reviewImageLabel, { color: colors.mutedForeground }]}>
+                      Submitted ID Document
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setPreviewImage(reviewModal.item.idImageUrl)}
+                    activeOpacity={0.88}
+                    style={styles.reviewImageWrap}
+                  >
+                    <Image
+                      source={{ uri: reviewModal.item.idImageUrl }}
+                      style={[styles.reviewImage, { borderColor: colors.border }]}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.reviewImageOverlay}>
+                      <Feather name="zoom-in" size={16} color="#fff" />
+                      <Text style={styles.reviewImageOverlayText}>Tap to enlarge</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               {/* Approval checklist */}
               {reviewModal?.status === "approved" && (
                 <View style={styles.checklistSection}>
@@ -535,6 +612,24 @@ const styles = StyleSheet.create({
   noteBox: { padding: 10, gap: 2 },
   noteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
   noteText: { fontSize: 13 },
+  applicantPanel: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1 },
+  applicantRows: { gap: 0 },
+  applicantRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: 7, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(150,150,150,0.15)" },
+  applicantKey: { fontSize: 12, fontWeight: "600", width: 100, paddingTop: 1 },
+  applicantVal: { fontSize: 13, flex: 1, textAlign: "right" },
+  reviewSectionLabel: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
+  reviewImageSection: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, gap: 8 },
+  reviewImageLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  reviewImageLabel: { fontSize: 12, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
+  reviewImageWrap: { position: "relative", borderRadius: 10, overflow: "hidden" },
+  reviewImage: { width: "100%", height: 200, borderWidth: 1, borderRadius: 10 },
+  reviewImageOverlay: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 8,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  reviewImageOverlayText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   reviewModalBackdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
