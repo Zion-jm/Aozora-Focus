@@ -146,12 +146,14 @@ const LOPEZ_BOUNDARY = [
   { latitude: 13.77645,  longitude: 122.237923 },
 ];
 
-// World-covering outer ring — everything outside LOPEZ_BOUNDARY gets the overlay
+// Large regional bounding box in CCW order (SW→NW→NE→SE).
+// CCW outer ring + CW hole = non-zero winding fills only the ring area (outside Lopez).
+// Regional box avoids antimeridian glitches from ±180° world coords.
 const WORLD_OUTER = [
-  { latitude: 90, longitude: -180 },
-  { latitude: 90, longitude: 180 },
-  { latitude: -90, longitude: 180 },
-  { latitude: -90, longitude: -180 },
+  { latitude: 11.0, longitude: 119.5 },  // SW
+  { latitude: 16.0, longitude: 119.5 },  // NW
+  { latitude: 16.0, longitude: 125.0 },  // NE
+  { latitude: 11.0, longitude: 125.0 },  // SE
 ];
 
 // Hard bounds matching the real OSM boundary extents
@@ -332,11 +334,11 @@ export default function DormMap() {
         showsUserLocation
         onPress={handleDismiss}
       >
-        {/* Dark overlay outside Lopez — hole must be CW while outer ring is CCW */}
+        {/* Dark overlay outside Lopez: CCW outer ring + CW hole (reversed boundary) */}
         <Polygon
           coordinates={WORLD_OUTER}
           holes={[[...LOPEZ_BOUNDARY].reverse()]}
-          fillColor="rgba(0,0,0,0.52)"
+          fillColor="rgba(0,0,0,0.55)"
           strokeWidth={0}
         />
         {/* Glowing border around the Lopez boundary */}

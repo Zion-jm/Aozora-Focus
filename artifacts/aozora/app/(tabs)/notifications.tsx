@@ -95,7 +95,7 @@ export default function NotificationsScreen() {
   const isAdmin = user?.role === "admin";
 
   const ADMIN_MSG_TYPES = ["admin_message", "admin_message_new", "support_ticket_resolved"];
-  const ACCOUNT_TYPES = ["account_suspended", "account_unsuspended", "admin_warning"];
+  const ACCOUNT_TYPES = ["account_suspended", "account_unsuspended", "admin_warning", "violation_logged"];
   const APPT_TYPES = ["appointment_request", "appointment_approved", "appointment_rejected",
     "appointment_cancelled", "appointment_completed", "appointment_no_show", "appointment_new",
     "appointment_reminder"];
@@ -154,7 +154,7 @@ export default function NotificationsScreen() {
       router.push("/(tabs)/appointments" as any);
     } else if (ADMIN_MSG_TYPES.includes(type)) {
       router.push("/(tabs)/messages" as any);
-    } else if (ACCOUNT_TYPES.includes(type)) {
+    } else if (ACCOUNT_TYPES.includes(type) || type.startsWith("violation_action_")) {
       router.push("/profile/violations" as any);
     } else if (type === "dorm_approved" || type === "dorm_rejected" || type === "dorm_taken_down") {
       router.push("/profile/my-dorms" as any);

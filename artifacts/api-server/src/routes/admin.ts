@@ -419,7 +419,7 @@ router.post("/admin/violations", requireAuth, requireRole("admin"), async (req, 
     type: "violation_logged",
     title: "Community Guideline Violation",
     body: `A violation has been recorded on your account: ${categoryLabel}. Repeated violations may result in suspension.`,
-    data: { path: "/(tabs)/profile" },
+    data: { path: "/profile/violations" },
   });
 
   const allViolations = sqlite.prepare(
@@ -524,7 +524,7 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
       type: `violation_action_${level}`,
       title: notif.title,
       body: notif.body,
-      data: { path: "/(tabs)/profile" },
+      data: { path: "/profile/violations" },
     });
   }
 
