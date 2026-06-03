@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   Switch,
+  TextInput,
 } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 import { router } from "expo-router";
@@ -260,6 +261,7 @@ export default function DormMap() {
   const [selected, setSelected] = useState<any>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [search, setSearch] = useState("");
   const [region, setRegion] = useState(LOPEZ_COORDS);
 
   const handleRegionChangeComplete = (r: typeof LOPEZ_COORDS) => {
@@ -280,7 +282,9 @@ export default function DormMap() {
   );
 
   const filteredDorms = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return allDorms.filter((d: any) => {
+      if (q && !d.name?.toLowerCase().includes(q) && !d.address?.toLowerCase().includes(q) && !d.nearbyLandmark?.toLowerCase().includes(q)) return false;
       if (filters.availableOnly && d.availableBeds <= 0) return false;
       if (filters.priceRange === "under3k" && d.monthlyRent > 3000) return false;
       if (filters.priceRange === "3k-6k" && (d.monthlyRent < 3000 || d.monthlyRent > 6000)) return false;
@@ -289,7 +293,7 @@ export default function DormMap() {
       if (filters.ratingOnly && (!d.averageRating || Number(d.averageRating) < 4)) return false;
       return true;
     });
-  }, [allDorms, filters]);
+  }, [allDorms, filters, search]);
 
   const filterCount = countActiveFilters(filters);
 
@@ -328,10 +332,10 @@ export default function DormMap() {
         showsUserLocation
         onPress={handleDismiss}
       >
-        {/* Dark overlay outside Lopez — the "cutout" effect */}
+        {/* Dark overlay outside Lopez — hole must be CW while outer ring is CCW */}
         <Polygon
           coordinates={WORLD_OUTER}
-          holes={[LOPEZ_BOUNDARY]}
+          holes={[[...LOPEZ_BOUNDARY].reverse()]}
           fillColor="rgba(0,0,0,0.52)"
           strokeWidth={0}
         />
@@ -448,6 +452,28 @@ export default function DormMap() {
             )}
           </TouchableOpacity>
         </ScrollView>
+      </View>
+
+      {/* Search bar — below the filter chips */}
+      <View style={styles.searchBarWrap} pointerEvents="box-none">
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: search ? colors.primary : colors.border }]}>
+          <Feather name="search" size={15} color={search ? colors.primary : colors.mutedForeground} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.foreground }]}
+            placeholder="Search dorm name or barangay…"
+            placeholderTextColor={colors.mutedForeground}
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            clearButtonMode="never"
+            autoCorrect={false}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x-circle" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Full filter bottom sheet */}
@@ -784,6 +810,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   filterBadgeText: { fontSize: 10, fontWeight: "800", color: "#fff" },
+
+  // Search bar
+  searchBarWrap: {
+    position: "absolute",
+    top: 52,
+    left: 12,
+    right: 12,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
 
   // Filter bottom sheet modal
   modalBackdrop: {
