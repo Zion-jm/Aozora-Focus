@@ -172,7 +172,7 @@ export default function PublicProfileScreen() {
     }
   };
 
-  // Owner → Student: start a conversation about one of the owner's own dorms
+  // Owner → Student: open (or create) a conversation about one of the owner's own dorms — no auto-message
   const startConversationWithStudent = async (dorm: any) => {
     if (!token) return;
     setIsMessaging(true);
@@ -184,14 +184,13 @@ export default function PublicProfileScreen() {
         body: JSON.stringify({
           dormId: dorm.id,
           targetStudentId: userId,
-          initialMessage: `Hi ${profile?.fullName?.split(" ")[0] ?? "there"}! I'm reaching out about ${dorm.name}.`,
         }),
       });
       if (!res.ok) throw new Error("Failed to start conversation");
       const data = await res.json();
       router.push(`/conversation/${data.id}`);
     } catch {
-      toast.error("Error", "Could not start conversation. Please try again.");
+      toast.error("Error", "Could not open conversation. Please try again.");
     } finally {
       setIsMessaging(false);
     }
@@ -207,7 +206,12 @@ export default function PublicProfileScreen() {
           setShowDormPicker(true);
         }
       } else if (canMessageStudent) {
-        startConversationWithStudent(myDorms[0]);
+        if (myDorms.length === 1) {
+          startConversationWithStudent(myDorms[0]);
+        } else {
+          setPickerMode("boarder");
+          setShowDormPicker(true);
+        }
       }
     });
   };

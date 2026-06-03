@@ -376,6 +376,26 @@ export default function VerifyScreen() {
   const isRejected = verificationStatus === "rejected";
   const [canResubmit, setCanResubmit] = useState(false);
 
+  // Compute cooldown remaining from the latest rejected record
+  const cooldownUntil = React.useMemo(() => {
+    if (!latestRecord || latestRecord.status !== "rejected") return null;
+    const base = latestRecord.reviewedAt ?? latestRecord.submittedAt;
+    if (!base) return null;
+    return new Date(new Date(base).getTime() + 24 * 60 * 60 * 1000);
+  }, [latestRecord]);
+
+  const [now, setNow] = useState(() => new Date());
+  React.useEffect(() => {
+    if (!cooldownUntil) return;
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, [cooldownUntil]);
+
+  const inCooldown = !!cooldownUntil && now < cooldownUntil;
+  const cooldownRemainingMs = inCooldown ? cooldownUntil!.getTime() - now.getTime() : 0;
+  const cooldownHours = Math.floor(cooldownRemainingMs / (1000 * 60 * 60));
+  const cooldownMinutes = Math.floor((cooldownRemainingMs % (1000 * 60 * 60)) / (1000 * 60));
+
   useFocusEffect(
     useCallback(() => {
       if (!token) return;
@@ -683,19 +703,41 @@ export default function VerifyScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={[
-                styles.resubmitBtn,
-                { backgroundColor: colors.primary, borderRadius: colors.radius },
-              ]}
-              onPress={() => {
-                setStep("personal");
-                setCanResubmit(true);
-              }}
-            >
-              <Feather name="refresh-cw" size={18} color="#fff" />
-              <Text style={styles.resubmitBtnText}>Resubmit Verification</Text>
-            </TouchableOpacity>
+            {inCooldown ? (
+              <View
+                style={[
+                  styles.cooldownBanner,
+                  { backgroundColor: colors.card, borderColor: "#f59e0b40", borderRadius: colors.radius },
+                ]}
+              >
+                <Feather name="clock" size={18} color="#f59e0b" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cooldownTitle, { color: colors.foreground }]}>
+                    Resubmission cooldown
+                  </Text>
+                  <Text style={[styles.cooldownSub, { color: colors.mutedForeground }]}>
+                    You can resubmit in{" "}
+                    {cooldownHours > 0
+                      ? `${cooldownHours}h ${cooldownMinutes}m`
+                      : `${cooldownMinutes}m`}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.resubmitBtn,
+                  { backgroundColor: colors.primary, borderRadius: colors.radius },
+                ]}
+                onPress={() => {
+                  setStep("personal");
+                  setCanResubmit(true);
+                }}
+              >
+                <Feather name="refresh-cw" size={18} color="#fff" />
+                <Text style={styles.resubmitBtnText}>Resubmit Verification</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={[
@@ -1118,6 +1160,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
+  cooldownBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 16,
+    borderWidth: 1.5,
+    marginTop: 4,
+  },
+  cooldownTitle: { fontSize: 14, fontWeight: "700" },
+  cooldownSub: { fontSize: 13, marginTop: 2 },
   resubmitBtn: {
     flexDirection: "row",
     alignItems: "center",

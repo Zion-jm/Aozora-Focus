@@ -96,6 +96,31 @@ router.post("/users/me/submit-verification", requireAuth, async (req, res) => {
     return;
   }
 
+  // 24-hour cooldown: block resubmission if last record was rejected within the past 24 hours
+  const allRecords = await db
+    .select()
+    .from(verificationRecords)
+    .where(eq(verificationRecords.userId, userId))
+    .all();
+
+  if (allRecords.length > 0) {
+    const latest = allRecords.sort(
+      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    )[0]!;
+    if (latest.status === "rejected") {
+      const baseTime = latest.reviewedAt ? new Date(latest.reviewedAt) : new Date(latest.submittedAt);
+      const nextAllowedAt = new Date(baseTime.getTime() + 24 * 60 * 60 * 1000);
+      if (new Date() < nextAllowedAt) {
+        res.status(429).json({
+          error: "Cooldown",
+          message: "Please wait before resubmitting.",
+          nextAllowedAt: nextAllowedAt.toISOString(),
+        });
+        return;
+      }
+    }
+  }
+
   const result = await db.insert(verificationRecords).values({
     userId,
     idImageUrl,
