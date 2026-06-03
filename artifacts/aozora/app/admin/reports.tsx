@@ -135,6 +135,7 @@ export default function AdminReportsScreen() {
   const [logNotes, setLogNotes] = useState("");
   const [logLoading, setLogLoading] = useState(false);
   const [applyLoading, setApplyLoading] = useState(false);
+  const [recApplied, setRecApplied] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["adminReports", filter],
@@ -221,6 +222,7 @@ export default function AdminReportsScreen() {
     setLogNotes("");
     setModalPhase("form");
     setRecResult(null);
+    setRecApplied(false);
     setLogModal(report);
   };
 
@@ -259,6 +261,7 @@ export default function AdminReportsScreen() {
         score: result.score,
         level: result.level,
       });
+      toast.success("Violation Logged", `Violation recorded for ${result.userName}.`);
       setModalPhase("recommendation");
       qc.invalidateQueries({ queryKey: ["adminReports"] });
     } catch (e: any) {
@@ -269,7 +272,7 @@ export default function AdminReportsScreen() {
   };
 
   const handleApplyRecommendation = async () => {
-    if (!recResult) return;
+    if (!recResult || recApplied) return;
     setApplyLoading(true);
     try {
       const res = await fetch(
@@ -280,13 +283,17 @@ export default function AdminReportsScreen() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ userId: recResult.userId, level: recResult.level }),
+          body: JSON.stringify({
+            userId: recResult.userId,
+            level: recResult.level,
+            infractionDescription: logDescription.trim() || undefined,
+          }),
         }
       );
       if (!res.ok) throw new Error("Failed to apply recommendation");
       const rec = RECOMMENDATIONS[recResult.level] ?? RECOMMENDATIONS["warning"]!;
+      setRecApplied(true);
       toast.success("Action Applied", `${rec.label} applied to ${recResult.userName}.`);
-      setLogModal(null);
       qc.invalidateQueries({ queryKey: ["adminReports"] });
     } catch (e: any) {
       toast.error("Error", e.message ?? "Could not apply recommendation.");
@@ -818,16 +825,21 @@ export default function AdminReportsScreen() {
                       style={[
                         styles.submitBtn,
                         {
-                          backgroundColor: rec?.color ?? colors.primary,
+                          backgroundColor: recApplied ? "#10b981" : (rec?.color ?? colors.primary),
                           opacity: applyLoading ? 0.6 : 1,
                           marginTop: 8,
                         },
                       ]}
                       onPress={handleApplyRecommendation}
-                      disabled={applyLoading}
+                      disabled={applyLoading || recApplied}
                     >
                       {applyLoading ? (
                         <ActivityIndicator color="#fff" size="small" />
+                      ) : recApplied ? (
+                        <>
+                          <Feather name="check-circle" size={16} color="#fff" />
+                          <Text style={styles.submitBtnText}>Applied ✓</Text>
+                        </>
                       ) : (
                         <>
                           <Feather name={rec?.icon ?? "shield"} size={16} color="#fff" />
@@ -840,7 +852,7 @@ export default function AdminReportsScreen() {
                       onPress={() => setLogModal(null)}
                     >
                       <Text style={[styles.skipBtnText, { color: colors.mutedForeground }]}>
-                        Skip for now
+                        {recApplied ? "Close" : "Skip for now"}
                       </Text>
                     </TouchableOpacity>
                   </>

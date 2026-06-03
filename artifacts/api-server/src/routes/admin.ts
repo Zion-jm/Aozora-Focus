@@ -393,17 +393,32 @@ router.delete("/admin/violations/:id", requireAuth, requireRole("admin"), async 
 });
 
 router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("admin"), async (req, res) => {
-  const { userId, level } = req.body;
+  const { userId, level, infractionDescription } = req.body;
 
   if (level === "clean") {
     res.json({ success: true, action: "none" });
     return;
   }
 
+  const infraction = (infractionDescription as string | undefined)?.trim() || "a violation of our community guidelines";
+
+  const formalWarningBody =
+    `Official Warning Notice\n\n` +
+    `This is a formal warning regarding recent activity on your account that violated our community guidelines. ` +
+    `Specifically, your account was flagged for: ${infraction}.\n\n` +
+    `What you need to do:\n` +
+    `Please review our community rules and ensure your behavior complies with them moving forward. ` +
+    `This disruptive activity must cease immediately.\n\n` +
+    `Consequences of future violations:\n` +
+    `Please note that this is an official warning. Failure to comply with platform policies or any further infractions ` +
+    `will result in escalating disciplinary actions, up to and including temporary account restriction, suspension, ` +
+    `or permanent termination of your account.\n\n` +
+    `If you believe this warning was issued in error, please contact the support team through the help center.`;
+
   const notifMap: Record<string, { title: string; body: string }> = {
     warning: {
-      title: "Official Warning",
-      body: "You have received an official warning from Aozora administration due to community guideline violations.",
+      title: "Official Warning Notice",
+      body: formalWarningBody,
     },
     short_suspension: {
       title: "Account Suspended (7 Days)",

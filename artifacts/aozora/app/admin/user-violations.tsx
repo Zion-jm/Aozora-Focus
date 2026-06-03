@@ -143,6 +143,7 @@ export default function UserViolationsScreen() {
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [applied, setApplied] = useState(false);
 
   const queryKey = ["adminUserViolations", uid];
   const { data, isLoading, refetch } = useQuery({
@@ -219,13 +220,14 @@ export default function UserViolationsScreen() {
   };
 
   const handleApply = () => {
-    if (level === "clean") return;
+    if (level === "clean" || applied) return;
     const actionMap: Record<string, string> = {
       warning: "Send a formal warning notification",
       short_suspension: "Suspend user for 7 days",
       long_suspension: "Suspend user for 30 days",
       ban: "Permanently ban this user",
     };
+    const mostRecentDescription = violations[0]?.description as string | undefined;
     showConfirm({
       title: `Apply: ${rec.label}?`,
       message: actionMap[level] ?? "Apply recommended action?",
@@ -240,9 +242,14 @@ export default function UserViolationsScreen() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ userId: uid, level }),
+            body: JSON.stringify({
+              userId: uid,
+              level,
+              infractionDescription: mostRecentDescription || undefined,
+            }),
           });
           if (!res.ok) throw new Error("Failed");
+          setApplied(true);
           toast.success("Action Applied", `${rec.label} has been applied to the user.`);
           qc.invalidateQueries({ queryKey });
           qc.invalidateQueries({ queryKey: ["adminAllViolations"] });
@@ -325,12 +332,21 @@ export default function UserViolationsScreen() {
                   {level !== "clean" && (
                     <TouchableOpacity
                       onPress={handleApply}
+                      disabled={applied}
                       style={[
                         styles.applyBtn,
-                        { backgroundColor: rec.color, borderRadius: 8 },
+                        { backgroundColor: applied ? "#10b981" : rec.color, borderRadius: 8 },
                       ]}
                     >
-                      <Text style={styles.applyBtnText}>Apply Recommendation</Text>
+                      <Feather
+                        name={applied ? "check-circle" : rec.icon}
+                        size={14}
+                        color="#fff"
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={styles.applyBtnText}>
+                        {applied ? "Applied ✓" : "Apply Recommendation"}
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
