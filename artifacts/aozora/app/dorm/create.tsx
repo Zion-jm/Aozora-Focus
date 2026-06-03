@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -79,6 +79,9 @@ export default function CreateDormScreen() {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastGeocodedAddress = useRef("");
 
   const { data: existingDorm, isLoading: loadingDorm } = useGetDormById(
     editId!,
@@ -119,6 +122,42 @@ export default function CreateDormScreen() {
       }]);
     }
   }, [existingDorm]);
+
+  useEffect(() => {
+    const trimmed = address.trim();
+    if (trimmed.length < 5 || trimmed === lastGeocodedAddress.current) return;
+
+    if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+
+    geocodeTimer.current = setTimeout(async () => {
+      setIsGeocoding(true);
+      try {
+        const query = encodeURIComponent(`${trimmed}, Lopez, Quezon, Philippines`);
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ph&q=${query}`,
+          { headers: { "User-Agent": "Aozora/1.0 (dorm-finder-app)" } }
+        );
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lng = parseFloat(data[0].lon);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            lastGeocodedAddress.current = trimmed;
+            setLatitude(lat);
+            setLongitude(lng);
+          }
+        }
+      } catch {
+        // silent — map stays at previous pin
+      } finally {
+        setIsGeocoding(false);
+      }
+    }, 900);
+
+    return () => {
+      if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+    };
+  }, [address]);
 
   const toggleAmenity = (a: string) => {
     setSelectedAmenities((prev) =>
@@ -345,7 +384,12 @@ export default function CreateDormScreen() {
         <LocationPickerMap
           latitude={latitude}
           longitude={longitude}
-          onLocationChange={(lat, lng) => { setLatitude(lat); setLongitude(lng); }}
+          onLocationChange={(lat, lng) => {
+            lastGeocodedAddress.current = address.trim();
+            setLatitude(lat);
+            setLongitude(lng);
+          }}
+          isGeocoding={isGeocoding}
         />
 
         <View style={styles.row}>

@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Platform,
+  ActivityIndicator,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Feather } from "@expo/vector-icons";
@@ -16,14 +16,17 @@ interface Props {
   latitude: number;
   longitude: number;
   onLocationChange: (lat: number, lng: number) => void;
+  isGeocoding?: boolean;
 }
 
-export default function LocationPickerMap({ latitude, longitude, onLocationChange }: Props) {
+export default function LocationPickerMap({ latitude, longitude, onLocationChange, isGeocoding }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [tempLat, setTempLat] = useState(latitude);
   const [tempLng, setTempLng] = useState(longitude);
+  const modalMapRef = useRef<MapView>(null);
+  const prevPropsRef = useRef({ latitude, longitude });
 
   const handleOpen = () => {
     setTempLat(latitude);
@@ -46,16 +49,34 @@ export default function LocationPickerMap({ latitude, longitude, onLocationChang
     setOpen(false);
   };
 
+  useEffect(() => {
+    const prev = prevPropsRef.current;
+    const moved =
+      Math.abs(prev.latitude - latitude) > 0.0001 ||
+      Math.abs(prev.longitude - longitude) > 0.0001;
+    if (moved) {
+      prevPropsRef.current = { latitude, longitude };
+      if (open) {
+        setTempLat(latitude);
+        setTempLng(longitude);
+        modalMapRef.current?.animateToRegion(
+          { latitude, longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 },
+          600
+        );
+      }
+    }
+  }, [latitude, longitude, open]);
+
   return (
     <>
       <TouchableOpacity
-        style={[styles.trigger, { borderColor: colors.border, borderRadius: colors.radius }]}
+        style={[styles.trigger, { borderColor: isGeocoding ? colors.primary : colors.border, borderRadius: colors.radius }]}
         onPress={handleOpen}
         activeOpacity={0.85}
       >
         <MapView
           style={StyleSheet.absoluteFillObject}
-          initialRegion={{
+          region={{
             latitude,
             longitude,
             latitudeDelta: 0.012,
@@ -69,13 +90,21 @@ export default function LocationPickerMap({ latitude, longitude, onLocationChang
         >
           <Marker coordinate={{ latitude, longitude }} />
         </MapView>
-        <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.32)" }]}>
-          <Feather name="map-pin" size={20} color="#fff" />
-          <Text style={styles.overlayLabel}>Tap to pick location</Text>
-          <Text style={styles.overlayCoords}>
-            {latitude.toFixed(5)}, {longitude.toFixed(5)}
-          </Text>
-        </View>
+
+        {isGeocoding ? (
+          <View style={[styles.overlay, { backgroundColor: "rgba(79,70,229,0.55)" }]}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.overlayLabel}>Finding location…</Text>
+          </View>
+        ) : (
+          <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.28)" }]}>
+            <Feather name="map-pin" size={20} color="#fff" />
+            <Text style={styles.overlayLabel}>Tap to adjust pin</Text>
+            <Text style={styles.overlayCoords}>
+              {latitude.toFixed(5)}, {longitude.toFixed(5)}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
@@ -89,7 +118,7 @@ export default function LocationPickerMap({ latitude, longitude, onLocationChang
             <TouchableOpacity onPress={() => setOpen(false)} style={styles.iconBtn}>
               <Feather name="x" size={22} color={colors.foreground} />
             </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Pick Location</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Adjust Pin</Text>
             <TouchableOpacity
               onPress={handleConfirm}
               style={[styles.doneBtn, { backgroundColor: colors.primary, borderRadius: 8 }]}
@@ -99,13 +128,14 @@ export default function LocationPickerMap({ latitude, longitude, onLocationChang
           </View>
 
           <View style={[styles.hintBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-            <Feather name="info" size={13} color={colors.mutedForeground} />
+            <Feather name="move" size={13} color={colors.mutedForeground} />
             <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
-              Tap the map or drag the pin to set the exact location
+              Drag the pin or tap the map to set the exact location
             </Text>
           </View>
 
           <MapView
+            ref={modalMapRef}
             style={styles.fullMap}
             initialRegion={{
               latitude: tempLat,
@@ -142,8 +172,8 @@ export default function LocationPickerMap({ latitude, longitude, onLocationChang
 
 const styles = StyleSheet.create({
   trigger: {
-    height: 150,
-    borderWidth: 1,
+    height: 160,
+    borderWidth: 1.5,
     overflow: "hidden",
   },
   overlay: {

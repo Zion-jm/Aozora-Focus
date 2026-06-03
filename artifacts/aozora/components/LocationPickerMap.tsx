@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
@@ -14,9 +15,10 @@ interface Props {
   latitude: number;
   longitude: number;
   onLocationChange: (lat: number, lng: number) => void;
+  isGeocoding?: boolean;
 }
 
-export default function LocationPickerMap({ latitude, longitude, onLocationChange }: Props) {
+export default function LocationPickerMap({ latitude, longitude, onLocationChange, isGeocoding }: Props) {
   const colors = useColors();
 
   const openPreview = () => {
@@ -83,6 +85,15 @@ export default function LocationPickerMap({ latitude, longitude, onLocationChang
         </View>
       </View>
 
+      {isGeocoding && (
+        <View style={styles.geocodingRow}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.geocodingText, { color: colors.mutedForeground }]}>
+            Finding location…
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
         onPress={openPreview}
         style={[styles.previewBtn, { borderTopColor: colors.border }]}
@@ -103,6 +114,8 @@ const styles = StyleSheet.create({
   half: { flex: 1, gap: 4 },
   label: { fontSize: 12, fontWeight: "600", marginBottom: 2 },
   input: { borderWidth: 1, padding: 10, fontSize: 14 },
+  geocodingRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 2 },
+  geocodingText: { fontSize: 12 },
   previewBtn: {
     flexDirection: "row",
     alignItems: "center",
