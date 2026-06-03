@@ -7,6 +7,8 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   Image,
+  Modal,
+  Switch,
 } from "react-native";
 import MapView, { Marker, Polygon } from "react-native-maps";
 import { router } from "expo-router";
@@ -175,20 +177,68 @@ function clampRegion(region: typeof LOPEZ_COORDS): typeof LOPEZ_COORDS {
   return { latitude, longitude, latitudeDelta: latDelta, longitudeDelta: lngDelta };
 }
 
-type MapFilter = "all" | "available" | "under4k" | "wifi" | "ac";
+type PriceRange = "any" | "under3k" | "3k-6k" | "over6k";
 
-const MAP_FILTERS: { key: MapFilter; label: string }[] = [
-  { key: "all",       label: "All" },
-  { key: "available", label: "Available" },
-  { key: "under4k",   label: "≤ ₱4k" },
-  { key: "wifi",      label: "WiFi" },
-  { key: "ac",        label: "AC" },
+interface Filters {
+  availableOnly: boolean;
+  priceRange: PriceRange;
+  amenities: string[];
+  ratingOnly: boolean;
+}
+
+const DEFAULT_FILTERS: Filters = {
+  availableOnly: false,
+  priceRange: "any",
+  amenities: [],
+  ratingOnly: false,
+};
+
+const PRICE_OPTIONS: { key: PriceRange; label: string }[] = [
+  { key: "any",     label: "Any" },
+  { key: "under3k", label: "≤ ₱3k" },
+  { key: "3k-6k",   label: "₱3k–6k" },
+  { key: "over6k",  label: "₱6k+" },
+];
+
+const AMENITY_OPTIONS = [
+  { key: "wifi",    label: "WiFi",       icon: "wifi" as const },
+  { key: "ac",      label: "AC",         icon: "wind" as const },
+  { key: "kitchen", label: "Kitchen",    icon: "coffee" as const },
+  { key: "parking", label: "Parking",    icon: "truck" as const },
+  { key: "laundry", label: "Laundry",    icon: "loader" as const },
+  { key: "cctv",    label: "CCTV",       icon: "camera" as const },
+  { key: "cr",      label: "Private CR", icon: "droplet" as const },
+  { key: "study",   label: "Study Area", icon: "book" as const },
 ];
 
 function getAmenities(item: any): string[] {
   try {
     return typeof item.amenities === "string" ? JSON.parse(item.amenities) : item.amenities || [];
   } catch { return []; }
+}
+
+function hasAmenity(dorm: any, key: string): boolean {
+  const list = getAmenities(dorm).map((a: string) => a.toLowerCase());
+  switch (key) {
+    case "wifi":    return list.some(a => a.includes("wifi") || a.includes("wi-fi"));
+    case "ac":      return list.some(a => a.includes("air") || a === "ac" || a.includes("aircon"));
+    case "kitchen": return list.some(a => a.includes("kitchen"));
+    case "parking": return list.some(a => a.includes("parking"));
+    case "laundry": return list.some(a => a.includes("laundry"));
+    case "cctv":    return list.some(a => a.includes("cctv") || a.includes("camera") || a.includes("security"));
+    case "cr":      return list.some(a => a.includes("comfort") || a.includes("bathroom") || a.includes("cr") || a.includes("toilet") || a.includes("private"));
+    case "study":   return list.some(a => a.includes("study") || a.includes("desk"));
+    default:        return false;
+  }
+}
+
+function countActiveFilters(f: Filters): number {
+  let n = 0;
+  if (f.availableOnly) n++;
+  if (f.priceRange !== "any") n++;
+  if (f.amenities.length > 0) n++;
+  if (f.ratingOnly) n++;
+  return n;
 }
 
 function shortPrice(n: number): string {
@@ -208,7 +258,8 @@ export default function DormMap() {
   const mapRef = useRef<MapView>(null);
   const { data } = useGetDorms({ query: { queryKey: getGetDormsQueryKey() } });
   const [selected, setSelected] = useState<any>(null);
-  const [activeFilter, setActiveFilter] = useState<MapFilter>("all");
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [region, setRegion] = useState(LOPEZ_COORDS);
 
   const handleRegionChangeComplete = (r: typeof LOPEZ_COORDS) => {
@@ -230,13 +281,26 @@ export default function DormMap() {
 
   const filteredDorms = useMemo(() => {
     return allDorms.filter((d: any) => {
-      if (activeFilter === "available") return d.availableBeds > 0;
-      if (activeFilter === "under4k") return d.monthlyRent <= 4000;
-      if (activeFilter === "wifi") return getAmenities(d).some(a => a.toLowerCase() === "wifi");
-      if (activeFilter === "ac") return getAmenities(d).some(a => a.toLowerCase().includes("air") || a.toLowerCase() === "ac");
+      if (filters.availableOnly && d.availableBeds <= 0) return false;
+      if (filters.priceRange === "under3k" && d.monthlyRent > 3000) return false;
+      if (filters.priceRange === "3k-6k" && (d.monthlyRent < 3000 || d.monthlyRent > 6000)) return false;
+      if (filters.priceRange === "over6k" && d.monthlyRent <= 6000) return false;
+      if (filters.amenities.length > 0 && !filters.amenities.every(a => hasAmenity(d, a))) return false;
+      if (filters.ratingOnly && (!d.averageRating || Number(d.averageRating) < 4)) return false;
       return true;
     });
-  }, [allDorms, activeFilter]);
+  }, [allDorms, filters]);
+
+  const filterCount = countActiveFilters(filters);
+
+  const toggleAmenity = (key: string) => {
+    setFilters(f => ({
+      ...f,
+      amenities: f.amenities.includes(key)
+        ? f.amenities.filter(a => a !== key)
+        : [...f.amenities, key],
+    }));
+  };
 
   const recenter = () => {
     setRegion(LOPEZ_COORDS);
@@ -252,7 +316,6 @@ export default function DormMap() {
     }
   };
 
-  // Availability counts for filter chip badges
   const availableCount = allDorms.filter((d: any) => d.availableBeds > 0).length;
 
   return (
@@ -317,39 +380,198 @@ export default function DormMap() {
         })}
       </MapView>
 
-      {/* Filter chips floating over map */}
-      <View style={styles.filterStrip} pointerEvents="box-none">
+      {/* Filter bar floating over map */}
+      <View style={styles.filterBar} pointerEvents="box-none">
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterChips}
           style={styles.filterScroll}
         >
-          {MAP_FILTERS.map(f => {
-            const active = activeFilter === f.key;
-            return (
-              <TouchableOpacity
-                key={f.key}
-                style={[
-                  styles.filterChip,
-                  { backgroundColor: active ? colors.primary : colors.card, borderColor: active ? colors.primary : colors.border },
-                ]}
-                onPress={() => setActiveFilter(f.key)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.filterChipText, { color: active ? "#fff" : colors.foreground }]}>
-                  {f.label}
-                </Text>
-                {f.key === "available" && availableCount > 0 && !active && (
-                  <View style={[styles.filterBadge, { backgroundColor: "#10b981" }]}>
-                    <Text style={styles.filterBadgeText}>{availableCount}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          {/* Available quick chip */}
+          <TouchableOpacity
+            style={[styles.filterChip, { backgroundColor: filters.availableOnly ? colors.primary : colors.card, borderColor: filters.availableOnly ? colors.primary : colors.border }]}
+            onPress={() => setFilters(f => ({ ...f, availableOnly: !f.availableOnly }))}
+            activeOpacity={0.8}
+          >
+            <Feather name="check-circle" size={13} color={filters.availableOnly ? "#fff" : colors.mutedForeground} />
+            <Text style={[styles.filterChipText, { color: filters.availableOnly ? "#fff" : colors.foreground }]}>Available</Text>
+            {availableCount > 0 && !filters.availableOnly && (
+              <View style={[styles.filterBadge, { backgroundColor: "#10b981" }]}>
+                <Text style={styles.filterBadgeText}>{availableCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* WiFi quick chip */}
+          <TouchableOpacity
+            style={[styles.filterChip, { backgroundColor: filters.amenities.includes("wifi") ? colors.primary : colors.card, borderColor: filters.amenities.includes("wifi") ? colors.primary : colors.border }]}
+            onPress={() => toggleAmenity("wifi")}
+            activeOpacity={0.8}
+          >
+            <Feather name="wifi" size={13} color={filters.amenities.includes("wifi") ? "#fff" : colors.mutedForeground} />
+            <Text style={[styles.filterChipText, { color: filters.amenities.includes("wifi") ? "#fff" : colors.foreground }]}>WiFi</Text>
+          </TouchableOpacity>
+
+          {/* AC quick chip */}
+          <TouchableOpacity
+            style={[styles.filterChip, { backgroundColor: filters.amenities.includes("ac") ? colors.primary : colors.card, borderColor: filters.amenities.includes("ac") ? colors.primary : colors.border }]}
+            onPress={() => toggleAmenity("ac")}
+            activeOpacity={0.8}
+          >
+            <Feather name="wind" size={13} color={filters.amenities.includes("ac") ? "#fff" : colors.mutedForeground} />
+            <Text style={[styles.filterChipText, { color: filters.amenities.includes("ac") ? "#fff" : colors.foreground }]}>AC</Text>
+          </TouchableOpacity>
+
+          {/* Rating quick chip */}
+          <TouchableOpacity
+            style={[styles.filterChip, { backgroundColor: filters.ratingOnly ? colors.primary : colors.card, borderColor: filters.ratingOnly ? colors.primary : colors.border }]}
+            onPress={() => setFilters(f => ({ ...f, ratingOnly: !f.ratingOnly }))}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="star" size={13} color={filters.ratingOnly ? "#fff" : "#f59e0b"} />
+            <Text style={[styles.filterChipText, { color: filters.ratingOnly ? "#fff" : colors.foreground }]}>4★+</Text>
+          </TouchableOpacity>
+
+          {/* All Filters button */}
+          <TouchableOpacity
+            style={[styles.filterChip, styles.filterChipAll, { backgroundColor: filterCount > 0 ? colors.primary + "18" : colors.card, borderColor: filterCount > 0 ? colors.primary : colors.border }]}
+            onPress={() => setShowFilterSheet(true)}
+            activeOpacity={0.8}
+          >
+            <Feather name="sliders" size={13} color={filterCount > 0 ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.filterChipText, { color: filterCount > 0 ? colors.primary : colors.foreground }]}>Filters</Text>
+            {filterCount > 0 && (
+              <View style={[styles.filterBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.filterBadgeText}>{filterCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* Full filter bottom sheet */}
+      <Modal
+        visible={showFilterSheet}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFilterSheet(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowFilterSheet(false)}>
+          <View style={styles.modalBackdrop} />
+        </TouchableWithoutFeedback>
+
+        <View style={[styles.filterSheet, { backgroundColor: colors.card }]}>
+          {/* Handle */}
+          <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.filterSheetContent}>
+            {/* Header */}
+            <View style={styles.filterSheetHeader}>
+              <Text style={[styles.filterSheetTitle, { color: colors.foreground }]}>Filters</Text>
+              {filterCount > 0 && (
+                <TouchableOpacity onPress={() => setFilters(DEFAULT_FILTERS)}>
+                  <Text style={[styles.clearAllText, { color: colors.primary }]}>Clear all</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Availability */}
+            <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterSectionTitle, { color: colors.mutedForeground }]}>AVAILABILITY</Text>
+              <View style={styles.filterRow}>
+                <View style={styles.filterRowLeft}>
+                  <Feather name="check-circle" size={18} color={filters.availableOnly ? colors.primary : colors.mutedForeground} />
+                  <View>
+                    <Text style={[styles.filterRowLabel, { color: colors.foreground }]}>Available beds only</Text>
+                    {availableCount > 0 && (
+                      <Text style={[styles.filterRowSub, { color: colors.mutedForeground }]}>{availableCount} dorm{availableCount !== 1 ? "s" : ""} currently available</Text>
+                    )}
+                  </View>
+                </View>
+                <Switch
+                  value={filters.availableOnly}
+                  onValueChange={v => setFilters(f => ({ ...f, availableOnly: v }))}
+                  trackColor={{ false: colors.border, true: colors.primary + "60" }}
+                  thumbColor={filters.availableOnly ? colors.primary : "#f4f3f4"}
+                />
+              </View>
+            </View>
+
+            {/* Price Range */}
+            <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterSectionTitle, { color: colors.mutedForeground }]}>PRICE RANGE</Text>
+              <View style={styles.filterOptionRow}>
+                {PRICE_OPTIONS.map(opt => {
+                  const active = filters.priceRange === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.optionChip, { backgroundColor: active ? colors.primary : colors.background, borderColor: active ? colors.primary : colors.border }]}
+                      onPress={() => setFilters(f => ({ ...f, priceRange: opt.key }))}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.optionChipText, { color: active ? "#fff" : colors.foreground }]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Amenities */}
+            <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterSectionTitle, { color: colors.mutedForeground }]}>AMENITIES</Text>
+              <View style={styles.amenityGrid}>
+                {AMENITY_OPTIONS.map(opt => {
+                  const active = filters.amenities.includes(opt.key);
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[styles.amenityChip, { backgroundColor: active ? colors.primary + "18" : colors.background, borderColor: active ? colors.primary : colors.border }]}
+                      onPress={() => toggleAmenity(opt.key)}
+                      activeOpacity={0.8}
+                    >
+                      <Feather name={opt.icon} size={15} color={active ? colors.primary : colors.mutedForeground} />
+                      <Text style={[styles.amenityChipText, { color: active ? colors.primary : colors.foreground }]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Rating */}
+            <View style={styles.filterSection}>
+              <Text style={[styles.filterSectionTitle, { color: colors.mutedForeground }]}>RATING</Text>
+              <View style={styles.filterRow}>
+                <View style={styles.filterRowLeft}>
+                  <Ionicons name="star" size={18} color={filters.ratingOnly ? "#f59e0b" : colors.mutedForeground} />
+                  <Text style={[styles.filterRowLabel, { color: colors.foreground }]}>4★ and above only</Text>
+                </View>
+                <Switch
+                  value={filters.ratingOnly}
+                  onValueChange={v => setFilters(f => ({ ...f, ratingOnly: v }))}
+                  trackColor={{ false: colors.border, true: colors.primary + "60" }}
+                  thumbColor={filters.ratingOnly ? colors.primary : "#f4f3f4"}
+                />
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Show results button */}
+          <View style={[styles.filterSheetFooter, { borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              style={[styles.showResultsBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setShowFilterSheet(false)}
+              activeOpacity={0.85}
+            >
+              <Feather name="map-pin" size={16} color="#fff" />
+              <Text style={styles.showResultsBtnText}>
+                Show {filteredDorms.length} dorm{filteredDorms.length !== 1 ? "s" : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Re-center button */}
       <TouchableOpacity
@@ -528,8 +750,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { width: "100%", height: "100%" },
 
-  // Floating filter strip at top
-  filterStrip: {
+  // Floating filter bar at top
+  filterBar: {
     position: "absolute",
     top: 10,
     left: 0,
@@ -541,7 +763,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 14,
+    paddingHorizontal: 13,
     paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
@@ -551,6 +773,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  filterChipAll: { paddingHorizontal: 14 },
   filterChipText: { fontSize: 13, fontWeight: "600" },
   filterBadge: {
     minWidth: 18,
@@ -561,6 +784,84 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   filterBadgeText: { fontSize: 10, fontWeight: "800", color: "#fff" },
+
+  // Filter bottom sheet modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  filterSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "80%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  filterSheetContent: { paddingBottom: 8 },
+  filterSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  filterSheetTitle: { fontSize: 20, fontWeight: "800" },
+  clearAllText: { fontSize: 14, fontWeight: "600" },
+  filterSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    gap: 14,
+  },
+  filterSectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 0.8 },
+  filterRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  filterRowLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  filterRowLabel: { fontSize: 15, fontWeight: "600" },
+  filterRowSub: { fontSize: 12, marginTop: 1 },
+  filterOptionRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  optionChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  optionChipText: { fontSize: 14, fontWeight: "600" },
+  amenityGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  amenityChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  amenityChipText: { fontSize: 13, fontWeight: "600" },
+  filterSheetFooter: {
+    borderTopWidth: 1,
+    padding: 16,
+    paddingBottom: 28,
+  },
+  showResultsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 15,
+    borderRadius: 16,
+  },
+  showResultsBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 
   // Re-center button
   recenterBtn: {
