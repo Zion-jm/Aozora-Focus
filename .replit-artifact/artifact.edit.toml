@@ -1,0 +1,4 @@
+kind = "webview"
+title = "Aozora Admin Website"
+version = "1.0.0"
+previewPath = "/"
