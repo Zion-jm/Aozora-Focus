@@ -1,13 +1,26 @@
+import { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { Redirect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const ONBOARDING_KEY = "aozora_onboarding_done";
 
 export default function Index() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [onboardingDone, setOnboardingDone] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((val) => {
+      setOnboardingDone(val === "1");
+      setOnboardingChecked(true);
+    });
+  }, []);
+
+  if (isLoading || !onboardingChecked) {
     return (
       <View style={styles.root}>
         <LinearGradient
@@ -32,6 +45,10 @@ export default function Index() {
 
   if (isAuthenticated) {
     return <Redirect href="/(tabs)" />;
+  }
+
+  if (!onboardingDone) {
+    return <Redirect href="/onboarding" />;
   }
 
   return <Redirect href="/(auth)/login" />;
