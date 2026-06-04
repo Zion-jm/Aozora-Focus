@@ -1,7 +1,7 @@
 const http = require("http");
 
 const API_PORT = 8080;
-const EXPO_PORTS = [3001]; // Expo dev server port
+const EXPO_PORTS = [20823, 20824]; // Expo dev server ports
 
 function tryProxy(req, res, ports, idx) {
   if (idx >= ports.length) {

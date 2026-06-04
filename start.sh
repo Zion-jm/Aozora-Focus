@@ -23,16 +23,16 @@ for i in $(seq 1 60); do
   sleep 2
 done
 
-# ── Wait for Expo dev server (started by Expo Dev Server workflow) ─────────────
-echo "[start] Waiting for Expo dev server on port 3001..."
+# ── Wait for Expo dev server (started by artifacts/aozora artifact workflow) ───
+echo "[start] Waiting for Expo dev server on port 20823..."
 for i in $(seq 1 60); do
-  if curl -sf http://localhost:3001 > /dev/null 2>&1; then
+  if curl -sf http://localhost:20823 > /dev/null 2>&1; then
     echo "[start] Expo dev server ready."
     break
   fi
   sleep 2
 done
 
-# ── Dev proxy on port 5000 → routes /api → 8080, everything else → 3001
-echo "[start] Starting dev proxy on port 5000 → Expo on 3001, API on 8080..."
+# ── Dev proxy on port 5000 → routes /api → 8080, everything else → 20823/20824
+echo "[start] Starting dev proxy on port 5000 → Expo on 20823/20824, API on 8080..."
 node "$WORKSPACE_ROOT/dev-proxy.js"
