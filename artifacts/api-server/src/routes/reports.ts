@@ -289,7 +289,7 @@ router.patch("/admin/reports/:id", requireAuth, requireRole("admin"), (req, res)
 router.get("/admin/users/:userId/warnings", requireAuth, requireRole("admin"), (req, res) => {
   const userId = parseInt(req.params["userId"]!);
 
-  const allWarned = sqlite.prepare(`
+  const directWarnings = sqlite.prepare(`
     SELECT
       r.id, r.target_type, r.target_id, r.reason, r.details,
       r.status, r.warned_at, r.created_at,
@@ -297,13 +297,28 @@ router.get("/admin/users/:userId/warnings", requireAuth, requireRole("admin"), (
     FROM reports r
     LEFT JOIN users u ON r.reporter_id = u.id
     WHERE r.warned_at IS NOT NULL
+      AND r.target_type = 'user'
+      AND r.target_id = ?
+    ORDER BY r.warned_at DESC
+  `).all(userId) as any[];
+
+  const indirectRows = sqlite.prepare(`
+    SELECT
+      r.id, r.target_type, r.target_id, r.reason, r.details,
+      r.status, r.warned_at, r.created_at,
+      u.full_name AS reporter_name
+    FROM reports r
+    LEFT JOIN users u ON r.reporter_id = u.id
+    WHERE r.warned_at IS NOT NULL
+      AND r.target_type IN ('dorm', 'review')
     ORDER BY r.warned_at DESC
   `).all() as any[];
 
-  const warnings = allWarned.filter((row) => {
-    const resolved = resolveTargetUserId(row.target_type, row.target_id);
-    return resolved === userId;
-  });
+  const indirectWarnings = indirectRows.filter((row) => resolveTargetUserId(row.target_type, row.target_id) === userId);
+
+  const warnings = [...directWarnings, ...indirectWarnings].sort(
+    (a, b) => new Date(b.warned_at).getTime() - new Date(a.warned_at).getTime()
+  );
 
   res.json({ warnings, total: warnings.length });
 });
@@ -485,20 +500,26 @@ router.post("/admin/reports/:id/suspend", requireAuth, requireRole("admin"), (re
     return;
   }
 
+  const { durationDays = 7, suspensionNote } = req.body;
+  const suspendedUntil = new Date(Date.now() + Math.max(1, Number(durationDays)) * 24 * 60 * 60 * 1000).toISOString();
+  const now = new Date().toISOString();
+
   sqlite
-    .prepare("UPDATE users SET is_suspended = 1, updated_at = ? WHERE id = ?")
-    .run(new Date().toISOString(), targetUserId);
+    .prepare("UPDATE users SET is_suspended = 1, suspended_until = ?, updated_at = ? WHERE id = ?")
+    .run(suspendedUntil, now, targetUserId);
 
   sqlite
     .prepare(
-      "UPDATE reports SET status = 'reviewed', updated_at = datetime('now') WHERE id = ?"
+      "UPDATE reports SET status = 'reviewed', admin_note = COALESCE(?, admin_note), updated_at = datetime('now') WHERE id = ?"
     )
-    .run(reportId);
+    .run(suspensionNote ?? null, reportId);
+
+  const restorationDate = new Date(suspendedUntil).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
 
   notifyUser(sqlite, targetUserId, {
     type: "user_suspended",
     title: "Account Suspended",
-    body: "Your Aozora account has been suspended due to a reported violation. Contact support to appeal.",
+    body: `Your Aozora account has been suspended until ${restorationDate}. You may appeal via the Support option on the login screen.`,
     data: { path: "/(tabs)/profile" },
   });
 

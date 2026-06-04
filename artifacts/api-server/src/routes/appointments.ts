@@ -70,8 +70,10 @@ router.get("/appointments", requireAuth, async (req, res) => {
     }
     allAppointments = await db.select().from(appointments).all();
     allAppointments = allAppointments.filter((a) => dormIds.includes(a.dormId));
+  } else if (user.role === "admin") {
+    allAppointments = await db.select().from(appointments).all();
   } else {
-    res.status(403).json({ error: "Forbidden", message: "Admins cannot access appointment records" });
+    res.status(403).json({ error: "Forbidden", message: "Unauthorized role" });
     return;
   }
 

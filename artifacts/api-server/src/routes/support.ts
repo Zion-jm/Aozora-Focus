@@ -44,14 +44,14 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
     return;
   }
 
-  // One active ticket at a time per user
+  // One active ticket per type per user (different ticket types can coexist)
   const existing = sqlite.prepare(
-    "SELECT id FROM support_tickets WHERE user_id = ? AND status = 'pending' LIMIT 1"
-  ).get(userId) as any;
+    "SELECT id FROM support_tickets WHERE user_id = ? AND ticket_type = ? AND status = 'pending' LIMIT 1"
+  ).get(userId, ticketType) as any;
   if (existing) {
     res.status(409).json({
       error: "Active ticket exists",
-      message: "You already have an open support ticket. Please wait for it to be resolved before submitting a new one.",
+      message: `You already have an open "${ticketType}" ticket. Please wait for it to be resolved before submitting another one of the same type.`,
     });
     return;
   }
@@ -151,10 +151,31 @@ router.post("/support-tickets/public", async (req, res) => {
   }
 
   const now = new Date().toISOString();
+
+  // For suspension appeals where we found the registered user, create a chat thread
+  let convId: number | null = null;
+  if (isAppealSuspension) {
+    const suspendedUserRow = sqlite.prepare(
+      "SELECT id FROM users WHERE email = ? AND is_suspended = 1 LIMIT 1"
+    ).get(guestEmail) as any;
+    if (suspendedUserRow) {
+      const admin = sqlite.prepare("SELECT id FROM users WHERE role = 'admin' LIMIT 1").get() as any;
+      if (admin) {
+        const convResult = sqlite.prepare(
+          "INSERT INTO admin_conversations (admin_id, user_id, conversation_type, created_at, updated_at) VALUES (?, ?, 'support', ?, ?)"
+        ).run(admin.id, suspendedUserRow.id, now, now);
+        convId = convResult.lastInsertRowid as number;
+        sqlite.prepare(
+          "INSERT INTO admin_messages (conversation_id, sender_id, content, is_read) VALUES (?, ?, ?, 0)"
+        ).run(convId, suspendedUserRow.id, `[${ticketType}] ${subject}\n\n${message}`);
+      }
+    }
+  }
+
   const ticketResult = sqlite.prepare(
-    `INSERT INTO support_tickets (guest_name, guest_email, ticket_type, subject, message, attachment_url, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
-  ).run(guestName, guestEmail, ticketType, subject, message, attachmentUrl ?? null, now, now);
+    `INSERT INTO support_tickets (conversation_id, guest_name, guest_email, ticket_type, subject, message, attachment_url, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+  ).run(convId, guestName, guestEmail, ticketType, subject, message, attachmentUrl ?? null, now, now);
 
   const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketResult.lastInsertRowid) as any;
 
@@ -324,7 +345,7 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
     }
   } catch (err: any) {
     console.error("Failed to send support response email:", err?.message);
-    res.status(500).json({ error: "Failed to send email", message: err?.message });
+    res.status(500).json({ error: "Failed to send email", message: "Could not send the response email. Please check the server email configuration and try again." });
     return;
   }
 

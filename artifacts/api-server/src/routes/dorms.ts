@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db, sqlite } from "../db/index";
 import { dorms, dormPhotos, favorites, users } from "../db/schema";
 import { eq, and, gte, lte, like, desc, asc, sql, or } from "drizzle-orm";
-import { requireAuth, requireRole } from "../middlewares/auth";
+import { requireAuth, requireRole, optionalAuth } from "../middlewares/auth";
 import { notifyAllAdmins } from "../lib/notifications";
 
 const router = Router();
@@ -45,7 +45,7 @@ router.get("/dorms/my-listings", requireAuth, requireRole("owner", "admin"), asy
 router.get("/dorms", async (req, res) => {
   const {
     search, minRent, maxRent, hasAvailableBeds,
-    sortBy, page = "1", limit = "20", ownerId,
+    sortBy, page = "1", limit = "20", ownerId, genderPolicy,
   } = req.query as Record<string, string>;
 
   let query = db.select().from(dorms).where(eq(dorms.status, "approved")).$dynamic();
@@ -66,6 +66,7 @@ router.get("/dorms", async (req, res) => {
   if (minRent) conditions.push(gte(dorms.monthlyRent, parseFloat(minRent)));
   if (maxRent) conditions.push(lte(dorms.monthlyRent, parseFloat(maxRent)));
   if (hasAvailableBeds === "true") conditions.push(gte(dorms.availableBeds, 1));
+  if (genderPolicy && genderPolicy !== "any") conditions.push(eq(dorms.genderPolicy, genderPolicy));
 
   const allApproved = await db.select().from(dorms).where(
     conditions.length > 1 ? and(...conditions) : conditions[0]
@@ -131,7 +132,7 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
   res.status(201).json(parseDorm(result[0]!));
 });
 
-router.get("/dorms/:dormId", async (req, res) => {
+router.get("/dorms/:dormId", optionalAuth, async (req, res) => {
   const dormId = parseInt(req.params["dormId"]!);
   const dorm = await db.select().from(dorms).where(eq(dorms.id, dormId)).get();
 
@@ -144,6 +145,12 @@ router.get("/dorms/:dormId", async (req, res) => {
   const owner = await db.select().from(users).where(eq(users.id, dorm.ownerId)).get();
 
   let isFavorited = false;
+  if (req.user) {
+    const fav = await db.select().from(favorites)
+      .where(and(eq(favorites.userId, req.user.id), eq(favorites.dormId, dormId)))
+      .get();
+    isFavorited = !!fav;
+  }
 
   res.json({
     ...parseDorm(dorm),

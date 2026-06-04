@@ -88,3 +88,35 @@ export function requireRole(...roles: string[]) {
     next();
   };
 }
+
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) { next(); return; }
+
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { userId: number };
+    const user = await db.select().from(users).where(eq(users.id, payload.userId)).get();
+    if (user && !user.isSuspended) {
+      req.user = {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role as AuthUser["role"],
+        verificationStatus: user.verificationStatus as AuthUser["verificationStatus"],
+        isSuspended: user.isSuspended,
+        avatarUrl: user.avatarUrl,
+        birthday: user.birthday ?? null,
+        universityOrWorkplace: user.universityOrWorkplace ?? null,
+        emergencyContactName: user.emergencyContactName ?? null,
+        emergencyContactPhone: user.emergencyContactPhone ?? null,
+        bio: user.bio ?? null,
+        createdAt: user.createdAt,
+      };
+    }
+  } catch {
+    // Invalid token — proceed without user
+  }
+  next();
+}

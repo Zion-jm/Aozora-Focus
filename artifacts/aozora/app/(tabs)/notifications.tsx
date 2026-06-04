@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -24,32 +24,63 @@ type FeatherName = React.ComponentProps<typeof Feather>["name"];
 
 function getNotifIcon(type: string): { name: FeatherName; color: string } {
   switch (type) {
-    case "appointment_new":        return { name: "calendar",        color: "#6366f1" };
-    case "appointment_approved":   return { name: "check-circle",    color: "#10b981" };
-    case "appointment_rejected":   return { name: "x-circle",        color: "#ef4444" };
-    case "appointment_completed":  return { name: "check-square",    color: "#10b981" };
-    case "appointment_no_show":    return { name: "user-x",          color: "#f59e0b" };
-    case "appointment_cancelled":  return { name: "x-circle",        color: "#f59e0b" };
-    case "appointment_reminder":   return { name: "clock",           color: "#6366f1" };
-    case "admin_message":          return { name: "message-square",  color: "#6366f1" };
-    case "admin_message_new":      return { name: "message-square",  color: "#6366f1" };
-    case "dorm_approved":          return { name: "home",            color: "#10b981" };
-    case "dorm_rejected":          return { name: "home",            color: "#ef4444" };
-    case "dorm_taken_down":        return { name: "home",            color: "#ef4444" };
-    case "dorm_submitted":         return { name: "home",            color: "#6366f1" };
-    case "verification_approved":  return { name: "shield",          color: "#10b981" };
-    case "verification_rejected":  return { name: "shield",          color: "#ef4444" };
-    case "verification_submitted": return { name: "shield",          color: "#6366f1" };
-    case "user_suspended":         return { name: "user-x",          color: "#ef4444" };
-    case "user_unsuspended":       return { name: "user-check",      color: "#10b981" };
-    case "user_warned":            return { name: "alert-triangle",  color: "#f59e0b" };
-    case "support_ticket_new":     return { name: "help-circle",     color: "#6366f1" };
-    case "support_ticket_resolved":return { name: "check-circle",    color: "#10b981" };
-    case "review_new_dorm":        return { name: "star",            color: "#f59e0b" };
-    case "review_new_user":        return { name: "star",            color: "#f59e0b" };
-    case "report_new":             return { name: "flag",            color: "#f59e0b" };
-    default:                       return { name: "bell",            color: "#6366f1" };
+    case "appointment_new":         return { name: "calendar",       color: "#6366f1" };
+    case "appointment_approved":    return { name: "check-circle",   color: "#10b981" };
+    case "appointment_rejected":    return { name: "x-circle",       color: "#ef4444" };
+    case "appointment_completed":   return { name: "check-square",   color: "#10b981" };
+    case "appointment_no_show":     return { name: "user-x",         color: "#f59e0b" };
+    case "appointment_cancelled":   return { name: "x-circle",       color: "#f59e0b" };
+    case "appointment_reminder":    return { name: "clock",          color: "#6366f1" };
+    case "admin_message":           return { name: "message-square", color: "#6366f1" };
+    case "admin_message_new":       return { name: "message-square", color: "#6366f1" };
+    case "dorm_approved":           return { name: "home",           color: "#10b981" };
+    case "dorm_rejected":           return { name: "home",           color: "#ef4444" };
+    case "dorm_taken_down":         return { name: "home",           color: "#ef4444" };
+    case "dorm_submitted":          return { name: "home",           color: "#6366f1" };
+    case "verification_approved":   return { name: "shield",         color: "#10b981" };
+    case "verification_rejected":   return { name: "shield",         color: "#ef4444" };
+    case "verification_submitted":  return { name: "shield",         color: "#6366f1" };
+    case "user_suspended":          return { name: "user-x",         color: "#ef4444" };
+    case "user_unsuspended":        return { name: "user-check",     color: "#10b981" };
+    case "user_warned":             return { name: "alert-triangle", color: "#f59e0b" };
+    case "suspension_lifted":       return { name: "user-check",     color: "#10b981" };
+    case "admin_warning":           return { name: "alert-triangle", color: "#f59e0b" };
+    case "violation_logged":        return { name: "alert-circle",   color: "#ef4444" };
+    case "support_ticket_new":      return { name: "help-circle",    color: "#6366f1" };
+    case "support_ticket_resolved": return { name: "check-circle",   color: "#10b981" };
+    case "review_new_dorm":         return { name: "star",           color: "#f59e0b" };
+    case "review_new_user":         return { name: "star",           color: "#f59e0b" };
+    case "report_new":              return { name: "flag",           color: "#f59e0b" };
+    default:                        return { name: "bell",           color: "#6366f1" };
   }
+}
+
+type Section = { title: string; data: any[] };
+
+function groupByDate(notifications: any[]): Section[] {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - 86400000;
+  const startOfWeek = startOfToday - 6 * 86400000;
+
+  const buckets: Record<string, any[]> = {
+    Today: [],
+    Yesterday: [],
+    "This week": [],
+    Older: [],
+  };
+
+  for (const n of notifications) {
+    const ts = new Date(n.createdAt).getTime();
+    if (ts >= startOfToday)       buckets["Today"].push(n);
+    else if (ts >= startOfYesterday) buckets["Yesterday"].push(n);
+    else if (ts >= startOfWeek)   buckets["This week"].push(n);
+    else                          buckets["Older"].push(n);
+  }
+
+  return (["Today", "Yesterday", "This week", "Older"] as const)
+    .filter((key) => buckets[key].length > 0)
+    .map((key) => ({ title: key, data: buckets[key] }));
 }
 
 export default function NotificationsScreen() {
@@ -147,10 +178,10 @@ export default function NotificationsScreen() {
   );
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const sections = groupByDate(notifications);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header — title only */}
       <View
         style={[
           styles.header,
@@ -161,30 +192,16 @@ export default function NotificationsScreen() {
           },
         ]}
       >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-          Notifications
-        </Text>
-      </View>
-
-      {/* "Mark all read" bar — shown below header when there are unread items */}
-      {unreadCount > 0 && !loading && (
-        <View
-          style={[
-            styles.markAllBar,
-            {
-              backgroundColor: colors.primary + "0d",
-              borderBottomColor: colors.border,
-            },
-          ]}
-        >
-          <View style={styles.markAllLeft}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Notifications</Text>
+          {unreadCount > 0 && !loading && (
             <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
               <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
             </View>
-            <Text style={[styles.unreadLabel, { color: colors.mutedForeground }]}>
-              unread
-            </Text>
-          </View>
+          )}
+        </View>
+
+        {unreadCount > 0 && !loading && (
           <TouchableOpacity
             onPress={markAllRead}
             activeOpacity={0.7}
@@ -192,11 +209,11 @@ export default function NotificationsScreen() {
           >
             <Feather name="check-circle" size={13} color={colors.primary} />
             <Text style={[styles.markAllBtnText, { color: colors.primary }]}>
-              Mark all read
+              Mark all as read
             </Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
 
       {loading ? (
         <View style={styles.center}>
@@ -215,9 +232,10 @@ export default function NotificationsScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={notifications}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => String(item.id)}
+          stickySectionHeadersEnabled={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
           refreshControl={
             <RefreshControl
@@ -229,6 +247,13 @@ export default function NotificationsScreen() {
               tintColor={colors.primary}
             />
           }
+          renderSectionHeader={({ section }) => (
+            <View style={[styles.sectionHeader, { backgroundColor: colors.background }]}>
+              <Text style={[styles.sectionHeaderText, { color: colors.mutedForeground }]}>
+                {section.title}
+              </Text>
+            </View>
+          )}
           renderItem={({ item }) => {
             const { name: iconName, color: iconColor } = getNotifIcon(item.type);
             return (
@@ -236,21 +261,14 @@ export default function NotificationsScreen() {
                 style={[
                   styles.item,
                   {
-                    backgroundColor: item.isRead
-                      ? colors.background
-                      : colors.primary + "0d",
+                    backgroundColor: item.isRead ? colors.background : colors.primary + "0d",
                     borderBottomColor: colors.border,
                   },
                 ]}
                 onPress={() => handleTap(item)}
                 activeOpacity={0.7}
               >
-                <View
-                  style={[
-                    styles.iconBox,
-                    { backgroundColor: iconColor + "20" },
-                  ]}
-                >
+                <View style={[styles.iconBox, { backgroundColor: iconColor + "20" }]}>
                   <Feather name={iconName} size={20} color={iconColor} />
                 </View>
 
@@ -269,9 +287,7 @@ export default function NotificationsScreen() {
                     >
                       {item.title}
                     </Text>
-                    <Text
-                      style={[styles.timeAgo, { color: colors.mutedForeground }]}
-                    >
+                    <Text style={[styles.timeAgo, { color: colors.mutedForeground }]}>
                       {timeAgo(item.createdAt)}
                     </Text>
                   </View>
@@ -284,12 +300,7 @@ export default function NotificationsScreen() {
                 </View>
 
                 {!item.isRead && (
-                  <View
-                    style={[
-                      styles.unreadDot,
-                      { backgroundColor: colors.primary },
-                    ]}
-                  />
+                  <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
                 )}
 
                 <TouchableOpacity
@@ -312,23 +323,16 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
+    gap: 10,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   headerTitle: { fontSize: 28, fontWeight: "800" },
-  markAllBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  markAllLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
   unreadBadge: {
     minWidth: 22,
     height: 22,
@@ -337,26 +341,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 6,
   },
-  unreadBadgeText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  unreadLabel: {
-    fontSize: 13,
-  },
+  unreadBadgeText: { fontSize: 12, fontWeight: "700", color: "#fff" },
   markAllBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    alignSelf: "flex-start",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
   },
-  markAllBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
+  markAllBtnText: { fontSize: 13, fontWeight: "600" },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  sectionHeaderText: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
   center: {
     flex: 1,
@@ -396,11 +402,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   content: { flex: 1, gap: 3 },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   itemTitle: { fontSize: 14 },
   timeAgo: { fontSize: 12, flexShrink: 0 },
   itemBody: { fontSize: 13, lineHeight: 18 },

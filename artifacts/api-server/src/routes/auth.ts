@@ -60,10 +60,13 @@ router.post("/auth/send-otp", async (req, res) => {
   try {
     await sendOtpEmail(normalized, code);
   } catch (err) {
-    console.warn("[send-otp] Email delivery failed — falling back to console log.");
-    console.log(`\n====================================`);
-    console.log(`  OTP for ${normalized}: ${code}`);
-    console.log(`====================================\n`);
+    if (process.env.NODE_ENV === "production") {
+      sqlite.prepare("DELETE FROM otp_verifications WHERE contact = ? AND is_verified = 0").run(normalized);
+      res.status(500).json({ error: "Email delivery failed", message: "We couldn't send the verification code to your email. Please check the address and try again." });
+      return;
+    }
+    console.warn("[send-otp] Email delivery failed — OTP logged for development:");
+    console.log(`\n====================================\n  OTP for ${normalized}: ${code}\n====================================\n`);
   }
 
   res.json({ message: "Verification code sent" });
@@ -223,26 +226,48 @@ router.post("/auth/login", async (req, res) => {
   });
 });
 
-// POST /auth/forgot-password/send-otp — send reset OTP to a registered email
+// POST /auth/forgot-password/send-otp — send reset OTP (accepts email or phone number)
 router.post("/auth/forgot-password/send-otp", async (req, res) => {
-  const { email } = req.body;
-  if (!email || !email.trim()) {
-    res.status(400).json({ error: "Validation error", message: "Email is required." });
+  const { email, identifier } = req.body;
+  const raw = (identifier || email || "").trim();
+
+  if (!raw) {
+    res.status(400).json({ error: "Validation error", message: "Email or phone number is required." });
     return;
   }
 
-  const normalized = email.trim().toLowerCase();
+  const PHONE_RE = /^(\+63|0)[0-9]{9,10}$/;
+  const isPhone = PHONE_RE.test(raw.replace(/\s/g, ""));
 
-  if (!EMAIL_RE.test(normalized)) {
-    res.status(400).json({ error: "Validation error", message: "Please enter a valid email address." });
-    return;
+  let targetEmail: string | null = null;
+
+  if (isPhone) {
+    const normalized = raw.replace(/\s/g, "");
+    const userRow = await db.select().from(users).where(eq(users.phone, normalized)).get();
+    if (!userRow) {
+      res.status(400).json({ error: "Not found", message: "No account found with that phone number." });
+      return;
+    }
+    if (!userRow.email) {
+      res.status(400).json({ error: "No email linked", message: "This account has no email address linked. Please contact support to reset your password." });
+      return;
+    }
+    targetEmail = userRow.email;
+  } else {
+    const normalized = raw.toLowerCase();
+    if (!EMAIL_RE.test(normalized)) {
+      res.status(400).json({ error: "Validation error", message: "Please enter a valid email address or phone number." });
+      return;
+    }
+    const userRow = await db.select().from(users).where(eq(users.email, normalized)).get();
+    if (!userRow) {
+      res.status(400).json({ error: "Not found", message: "No account found with that email address." });
+      return;
+    }
+    targetEmail = normalized;
   }
 
-  const user = await db.select().from(users).where(eq(users.email, normalized)).get();
-  if (!user) {
-    res.status(400).json({ error: "Not found", message: "No account found with that email address." });
-    return;
-  }
+  const normalized = targetEmail!
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -255,10 +280,13 @@ router.post("/auth/forgot-password/send-otp", async (req, res) => {
   try {
     await sendOtpEmail(normalized, code);
   } catch (err) {
-    console.warn("[forgot-password/send-otp] Email delivery failed — falling back to console log.");
-    console.log(`\n====================================`);
-    console.log(`  Password reset OTP for ${normalized}: ${code}`);
-    console.log(`====================================\n`);
+    if (process.env.NODE_ENV === "production") {
+      sqlite.prepare("DELETE FROM otp_verifications WHERE contact = ? AND is_verified = 0").run(normalized);
+      res.status(500).json({ error: "Email delivery failed", message: "We couldn't send the reset code to your email. Please try again later." });
+      return;
+    }
+    console.warn("[forgot-password/send-otp] Email delivery failed — OTP logged for development:");
+    console.log(`\n====================================\n  Password reset OTP for ${normalized}: ${code}\n====================================\n`);
   }
 
   res.json({ message: "Reset code sent" });
