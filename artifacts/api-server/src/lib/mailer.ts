@@ -165,6 +165,176 @@ export async function sendSuspensionLiftedEmail(opts: {
   });
 }
 
+export async function sendAppealApprovedEmail(opts: {
+  to: string;
+  name: string;
+}): Promise<void> {
+  const subject = "Account Suspension Lifted (Appeal Approved)";
+
+  const text =
+    `Dear ${opts.name},\n\n` +
+    `We have successfully reviewed the appeal you submitted regarding your recent account suspension. ` +
+    `After a careful re-evaluation of your case and the context provided, we are pleased to inform you that your appeal has been approved.\n\n` +
+    `As a result, your suspension has been lifted early, and full access to your Aozora account has been successfully restored effective immediately.\n\n` +
+    `Important Reminder:\n\n` +
+    `While your access has been restored, we kindly ask you to review our official Community Guidelines and Terms of Service. ` +
+    `Maintaining a safe, reliable, and respectful environment is essential for everyone in our community. ` +
+    `Please ensure all future activity complies with these policies, as subsequent infractions may lead to permanent account restriction.\n\n` +
+    `You can now log back into the platform and resume your normal activities. ` +
+    `If you encounter any technical issues or have trouble accessing your profile, please let us know.\n\n` +
+    `Welcome back,\n\nAozora Admin Team\naozora.dormfinder.admin@gmail.com`;
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+      <h2 style="color:#2563eb;margin:0 0 4px;font-size:22px;">Aozora</h2>
+      <p style="color:#9ca3af;margin:0 0 28px;font-size:13px;">Home, but smarter.</p>
+
+      <div style="border-left:4px solid #10b981;padding:14px 18px;background:#10b98112;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px;">Account Suspension Lifted (Appeal Approved)</p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">Full access to your account has been restored</p>
+      </div>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 6px;">Dear <strong>${opts.name}</strong>,</p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 16px;">
+        We have successfully reviewed the appeal you submitted regarding your recent account suspension.
+        After a careful re-evaluation of your case and the context provided, we are pleased to inform you that your appeal has been approved.
+      </p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 20px;">
+        As a result, your suspension has been lifted early, and full access to your Aozora account has been successfully restored effective immediately.
+      </p>
+
+      <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 6px;">Important Reminder</p>
+        <p style="font-size:13px;color:#78350f;line-height:1.6;margin:0;">
+          While your access has been restored, we kindly ask you to review our official Community Guidelines and Terms of Service.
+          Maintaining a safe, reliable, and respectful environment is essential for everyone in our community.
+          Please ensure all future activity complies with these policies, as <strong>subsequent infractions may lead to permanent account restriction.</strong>
+        </p>
+      </div>
+
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 24px;">
+        You can now log back into the platform and resume your normal activities.
+        If you encounter any technical issues or have trouble accessing your profile, please let us know.
+      </p>
+
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Welcome back,</p>
+      <p style="font-size:14px;color:#111827;font-weight:700;margin:0 0 2px;">Aozora Admin Team</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">aozora.dormfinder.admin@gmail.com</p>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+        This is a system-generated message from Aozora. If you need further assistance, visit our Help Center.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}
+
+export async function sendAppealDeniedEmail(opts: {
+  to: string;
+  name: string;
+  restorationDate: string;
+  reason?: string;
+}): Promise<void> {
+  const subject = "Notice of Continued Account Suspension";
+  const reason = opts.reason ?? "Confirmed violation of community standards";
+
+  const text =
+    `Dear ${opts.name},\n\n` +
+    `We have completed our review of your account status following your recent appeal or inquiry regarding your suspension. ` +
+    `After a careful evaluation of the evidence and context surrounding the violation, we regret to inform you that your appeal has been denied.\n\n` +
+    `The initial disciplinary action stands, and your account will remain suspended for the duration of the originally specified period.\n\n` +
+    `Current Status: Suspension Maintained\n\n` +
+    `Reason for Persistence: ${reason}\n\n` +
+    `Restoration Date: ${opts.restorationDate}\n\n` +
+    `Policy Reminder:\n\n` +
+    `Aozora Admin Team enforces these policies strictly to maintain a secure and reliable platform for all users. ` +
+    `Bypassing or violating these guidelines compromises community safety.\n\n` +
+    `What Happens Next?\n` +
+    `Your access to log in, view your profile, or interact on the Aozora platform will remain restricted until the Restoration Date listed above. ` +
+    `Once this period concludes, your account access will be automatically restored, provided there are no further policy infractions.\n\n` +
+    `Please note that any further violations upon your return will result in harsher penalties, up to and including a permanent ban from the platform.\n\n` +
+    `Sincerely,\n\nAozora Admin Team\naozora.dormfinder.admin@gmail.com`;
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+      <h2 style="color:#2563eb;margin:0 0 4px;font-size:22px;">Aozora</h2>
+      <p style="color:#9ca3af;margin:0 0 28px;font-size:13px;">Home, but smarter.</p>
+
+      <div style="border-left:4px solid #ef4444;padding:14px 18px;background:#ef444412;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px;">Notice of Continued Account Suspension</p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">Your appeal has been reviewed and denied</p>
+      </div>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 6px;">Dear <strong>${opts.name}</strong>,</p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 16px;">
+        We have completed our review of your account status following your recent appeal or inquiry regarding your suspension.
+        After a careful evaluation of the evidence and context surrounding the violation, we regret to inform you that your appeal has been denied.
+      </p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 20px;">
+        The initial disciplinary action stands, and your account will remain suspended for the duration of the originally specified period.
+      </p>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+        <tr style="background:#fef2f2;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#374151;border:1px solid #fecaca;width:40%;">Current Status</td>
+          <td style="padding:10px 14px;font-size:13px;color:#ef4444;font-weight:700;border:1px solid #fecaca;">Suspension Maintained</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#374151;border:1px solid #e5e7eb;border-top:none;">Reason for Persistence</td>
+          <td style="padding:10px 14px;font-size:13px;color:#111827;border:1px solid #e5e7eb;border-top:none;">${reason}</td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#374151;border:1px solid #e5e7eb;border-top:none;">Restoration Date</td>
+          <td style="padding:10px 14px;font-size:13px;color:#374151;font-weight:600;border:1px solid #e5e7eb;border-top:none;">${opts.restorationDate}</td>
+        </tr>
+      </table>
+
+      <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 6px;">Policy Reminder</p>
+        <p style="font-size:13px;color:#78350f;line-height:1.6;margin:0;">
+          Aozora Admin Team enforces these policies strictly to maintain a secure and reliable platform for all users.
+          Bypassing or violating these guidelines compromises community safety.
+        </p>
+      </div>
+
+      <p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 6px;">What Happens Next?</p>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 16px;">
+        Your access to log in, view your profile, or interact on the Aozora platform will remain restricted until the Restoration Date listed above.
+        Once this period concludes, your account access will be automatically restored, provided there are no further policy infractions.
+      </p>
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 24px;">
+        Please note that any further violations upon your return will result in harsher penalties, up to and including
+        <strong>a permanent ban from the platform.</strong>
+      </p>
+
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Sincerely,</p>
+      <p style="font-size:14px;color:#111827;font-weight:700;margin:0 0 2px;">Aozora Admin Team</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">aozora.dormfinder.admin@gmail.com</p>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+        This is a system-generated message from Aozora. If you need further assistance, please reach out via our Help Center.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}
+
 export async function sendSupportResponseEmail(opts: {
   to: string;
   name: string;

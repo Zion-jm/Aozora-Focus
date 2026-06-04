@@ -183,6 +183,7 @@ async function runMigrations() {
     const ADD_COLUMNS = [
       { table: "users", column: "recommendation_applied_at", type: "TEXT" },
       { table: "users", column: "gender", type: "TEXT" },
+      { table: "users", column: "appeal_cooldown_until", type: "TEXT" },
       { table: "dorms", column: "proof_of_ownership_url", type: "TEXT" },
       { table: "verification_records", column: "id_back_image_url", type: "TEXT" },
     ];

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
-import { sendSupportResponseEmail } from "../lib/mailer";
+import { sendSupportResponseEmail, sendAppealApprovedEmail, sendAppealDeniedEmail } from "../lib/mailer";
 
 const router = Router();
 
@@ -103,7 +103,7 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
   });
 });
 
-// ─── POST /support-tickets/public — unauthenticated (suspended users) ─────────
+// ─── POST /support-tickets/public — unauthenticated guests & suspended users ──
 router.post("/support-tickets/public", async (req, res) => {
   const { guestName, guestEmail, ticketType, subject, message } = req.body;
 
@@ -112,14 +112,42 @@ router.post("/support-tickets/public", async (req, res) => {
     return;
   }
 
-  // Email must belong to a registered account
-  const existingUser = sqlite.prepare("SELECT id FROM users WHERE email = ? LIMIT 1").get(guestEmail) as any;
-  if (!existingUser) {
-    res.status(403).json({
-      error: "Email not registered",
-      message: "The email address you entered is not registered in Aozora. Please use the email address linked to your account.",
-    });
-    return;
+  const isAppealSuspension = ticketType === "Appeal Suspension";
+
+  if (isAppealSuspension) {
+    // For suspension appeals: email must belong to a registered, currently-suspended account
+    const suspendedUser = sqlite.prepare(
+      "SELECT id, is_suspended, suspended_until, appeal_cooldown_until FROM users WHERE email = ? LIMIT 1"
+    ).get(guestEmail) as any;
+
+    if (!suspendedUser) {
+      res.status(403).json({
+        error: "Email not registered",
+        message: "The email address you entered is not registered in Aozora. Please use the email address linked to your suspended account.",
+      });
+      return;
+    }
+
+    if (!suspendedUser.is_suspended) {
+      res.status(400).json({
+        error: "Not suspended",
+        message: "Your account does not appear to be suspended. If you are having trouble logging in, please select a different ticket type.",
+      });
+      return;
+    }
+
+    // Check 24-hour cooldown from a previously denied appeal
+    if (suspendedUser.appeal_cooldown_until) {
+      const cooldownEnd = new Date(suspendedUser.appeal_cooldown_until);
+      if (cooldownEnd > new Date()) {
+        const hoursLeft = Math.ceil((cooldownEnd.getTime() - Date.now()) / 3_600_000);
+        res.status(429).json({
+          error: "Cooldown",
+          message: `Your last appeal was denied. You may resubmit in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""}.`,
+        });
+        return;
+      }
+    }
   }
 
   const now = new Date().toISOString();
@@ -132,7 +160,7 @@ router.post("/support-tickets/public", async (req, res) => {
 
   notifyAllAdmins(sqlite, {
     type: "support_ticket_new",
-    title: "New Support Ticket (Guest) 🎫",
+    title: isAppealSuspension ? "New Suspension Appeal (Guest) 🔓" : "New Support Ticket (Guest) 🎫",
     body: `${guestName} submitted a support ticket: "${subject}"`,
     relatedId: ticket.id as number,
     relatedType: "support_ticket",
@@ -209,14 +237,26 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
     return;
   }
 
-  // Determine recipient email
+  // Determine recipient email and name
   let recipientEmail: string | null = ticket.guest_email ?? null;
   let recipientName: string = ticket.guest_name ?? "there";
 
-  if (!recipientEmail && ticket.user_id) {
-    const user = sqlite.prepare("SELECT email, full_name FROM users WHERE id = ?").get(ticket.user_id) as any;
-    recipientEmail = user?.email ?? null;
-    recipientName = user?.full_name ?? "there";
+  // For guest tickets look up the registered user by email (needed for suspension actions)
+  let linkedUserId: number | null = ticket.user_id ?? null;
+  let linkedUserSuspendedUntil: string | null = null;
+
+  if (ticket.user_id) {
+    const userRow = sqlite.prepare("SELECT email, full_name, suspended_until FROM users WHERE id = ?").get(ticket.user_id) as any;
+    recipientEmail = userRow?.email ?? recipientEmail;
+    recipientName = userRow?.full_name ?? recipientName;
+    linkedUserSuspendedUntil = userRow?.suspended_until ?? null;
+  } else if (ticket.guest_email) {
+    const guestUserRow = sqlite.prepare("SELECT id, full_name, suspended_until FROM users WHERE email = ? LIMIT 1").get(ticket.guest_email) as any;
+    if (guestUserRow) {
+      linkedUserId = guestUserRow.id;
+      linkedUserSuspendedUntil = guestUserRow.suspended_until ?? null;
+      if (guestUserRow.full_name) recipientName = guestUserRow.full_name;
+    }
   }
 
   if (!recipientEmail) {
@@ -224,21 +264,56 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
     return;
   }
 
+  const now = new Date().toISOString();
+
   try {
-    await sendSupportResponseEmail({
-      to: recipientEmail,
-      name: recipientName,
-      ticketType: ticket.ticket_type,
-      subject: ticket.subject,
-      responseType,
-    });
+    if (responseType === "suspension_lifted") {
+      // Unsuspend the user and clear any appeal cooldown
+      if (linkedUserId) {
+        sqlite.prepare(
+          "UPDATE users SET is_suspended = 0, suspended_until = NULL, appeal_cooldown_until = NULL, updated_at = ? WHERE id = ?"
+        ).run(now, linkedUserId);
+
+        notifyUser(sqlite, linkedUserId, {
+          type: "suspension_lifted",
+          title: "Suspension Lifted ✅",
+          body: "Your appeal has been approved. Your account suspension has been lifted and full access has been restored.",
+          relatedId: ticketId,
+          relatedType: "support_ticket",
+        });
+      }
+      await sendAppealApprovedEmail({ to: recipientEmail, name: recipientName });
+
+    } else if (responseType === "suspension_persists") {
+      // Set a 24-hour cooldown so the user cannot immediately resubmit
+      if (linkedUserId) {
+        const cooldownUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        sqlite.prepare(
+          "UPDATE users SET appeal_cooldown_until = ?, updated_at = ? WHERE id = ?"
+        ).run(cooldownUntil, now, linkedUserId);
+      }
+
+      const restorationDate = linkedUserSuspendedUntil
+        ? new Date(linkedUserSuspendedUntil).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+        : "the originally specified date";
+
+      await sendAppealDeniedEmail({ to: recipientEmail, name: recipientName, restorationDate });
+
+    } else {
+      await sendSupportResponseEmail({
+        to: recipientEmail,
+        name: recipientName,
+        ticketType: ticket.ticket_type,
+        subject: ticket.subject,
+        responseType,
+      });
+    }
   } catch (err: any) {
     console.error("Failed to send support response email:", err?.message);
     res.status(500).json({ error: "Failed to send email", message: err?.message });
     return;
   }
 
-  const now = new Date().toISOString();
   sqlite.prepare(
     "UPDATE support_tickets SET admin_response = ?, email_sent_at = ?, status = 'resolved', updated_at = ? WHERE id = ?"
   ).run(responseType, now, now, ticketId);
@@ -248,8 +323,8 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
     sqlite.prepare("UPDATE admin_conversations SET closed_at = ? WHERE id = ?").run(now, ticket.conversation_id);
   }
 
-  // Notify in-app user if they have an account
-  if (ticket.user_id) {
+  // Notify in-app user if they have an account (for non-suspension-lifted, which already notified above)
+  if (ticket.user_id && responseType !== "suspension_lifted") {
     notifyUser(sqlite, ticket.user_id, {
       type: "support_ticket_resolved",
       title: "Support Ticket Resolved ✅",
