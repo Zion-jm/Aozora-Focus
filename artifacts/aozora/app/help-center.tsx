@@ -10,7 +10,9 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useToast } from "@/context/ToastContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -56,6 +58,8 @@ export default function HelpCenterScreen() {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [attachmentUri, setAttachmentUri] = useState<string | null>(null);
+  const [attachmentBase64, setAttachmentBase64] = useState<string | null>(null);
 
   const [checkingExisting, setCheckingExisting] = useState(false);
   const [activeTicket, setActiveTicket] = useState<{ id: number; subject: string; conversationId: number | null } | null>(null);
@@ -129,6 +133,24 @@ export default function HelpCenterScreen() {
       .finally(() => setCheckingExisting(false));
   }, [token, isAdmin, isGuest]);
 
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      toast.warning("Permission Required", "Please allow access to your photo library to attach an image.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setAttachmentUri(result.assets[0].uri);
+      setAttachmentBase64(result.assets[0].base64 ?? null);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!isGuest && !isAdmin) {
       let verified = false;
@@ -143,6 +165,10 @@ export default function HelpCenterScreen() {
     if (isGuest && !guestEmail.trim()) { toast.warning("Required", "Please enter your email address."); return; }
     if (isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) { toast.warning("Invalid Email", "Please enter a valid email address."); return; }
 
+    const attachmentUrl = attachmentBase64
+      ? `data:image/jpeg;base64,${attachmentBase64}`
+      : attachmentUri ?? undefined;
+
     setIsSubmitting(true);
     try {
       let res: Response;
@@ -150,13 +176,13 @@ export default function HelpCenterScreen() {
         res = await fetch(`${BASE_URL}/api/support-tickets/public`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ guestName: guestName.trim(), guestEmail: guestEmail.trim(), ticketType, subject: subject.trim(), message: message.trim() }),
+          body: JSON.stringify({ guestName: guestName.trim(), guestEmail: guestEmail.trim(), ticketType, subject: subject.trim(), message: message.trim(), attachmentUrl }),
         });
       } else {
         res = await fetch(`${BASE_URL}/api/support-tickets`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ ticketType, subject: subject.trim(), message: message.trim() }),
+          body: JSON.stringify({ ticketType, subject: subject.trim(), message: message.trim(), attachmentUrl }),
         });
       }
 
@@ -421,6 +447,31 @@ export default function HelpCenterScreen() {
         />
         <Text style={[styles.charCount, { color: colors.mutedForeground }]}>{message.length}/2000</Text>
 
+        <Text style={[styles.label, { color: colors.foreground }]}>
+          Attachment <Text style={[styles.optionalTag, { color: colors.mutedForeground }]}>(optional)</Text>
+        </Text>
+        {attachmentUri ? (
+          <View style={[styles.attachmentPreview, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}>
+            <Image source={{ uri: attachmentUri }} style={styles.attachmentThumb} resizeMode="cover" />
+            <View style={styles.attachmentInfo}>
+              <Feather name="image" size={14} color={colors.primary} />
+              <Text style={[styles.attachmentText, { color: colors.foreground }]} numberOfLines={1}>Image attached</Text>
+            </View>
+            <TouchableOpacity onPress={() => { setAttachmentUri(null); setAttachmentBase64(null); }} style={styles.attachmentRemove}>
+              <Feather name="x" size={16} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.attachBtn, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}
+            onPress={handlePickImage}
+            activeOpacity={0.8}
+          >
+            <Feather name="paperclip" size={16} color={colors.mutedForeground} />
+            <Text style={[styles.attachBtnText, { color: colors.mutedForeground }]}>Attach a screenshot or image</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={[styles.submitBtn, { backgroundColor: isSubmitting ? colors.muted : colors.primary, borderRadius: colors.radius }]}
           onPress={handleSubmit}
@@ -485,6 +536,14 @@ const styles = StyleSheet.create({
   pickerSelected: { flexDirection: "row", alignItems: "center", gap: 10 },
   pickerText: { fontSize: 15 },
   typeIconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  optionalTag: { fontSize: 13, fontWeight: "400" },
+  attachBtn: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1.5, borderStyle: "dashed", paddingHorizontal: 14, paddingVertical: 13, marginBottom: 2 },
+  attachBtnText: { fontSize: 14 },
+  attachmentPreview: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, padding: 10, marginBottom: 2 },
+  attachmentThumb: { width: 56, height: 56, borderRadius: 8 },
+  attachmentInfo: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+  attachmentText: { fontSize: 14, fontWeight: "500" },
+  attachmentRemove: { padding: 6 },
   submitBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16, marginTop: 16 },
   submitBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
   successScroll: { padding: 24, gap: 20 },

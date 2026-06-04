@@ -675,6 +675,9 @@ export async function sendSuspensionNoticeEmail(opts: {
     `Your access will be automatically restored on the Restoration Date noted above, provided there are no further complications.\n\n` +
     `Please use this time to review our guidelines so you can safely resume your activities once the suspension is lifted. ` +
     `Please note that subsequent violations following this suspension may result in a permanent ban.\n\n` +
+    `Listing Impact:\n` +
+    `If you have any active dorm listings on Aozora, they have been temporarily hidden and will not be visible to other users during this suspension period. ` +
+    `Your listings will be automatically reinstated when your account access is restored on the Restoration Date above.\n\n` +
     `If you believe this action was taken in error and wish to submit an appeal, please reach out via our support portal.\n\n` +
     `Sincerely,\n\nAozora Admin Team\naozora.dormfinder.admin@gmail.com`;
 
@@ -725,6 +728,16 @@ export async function sendSuspensionNoticeEmail(opts: {
         Please use this time to review our guidelines so you can safely resume your activities once the suspension is lifted.
         Please note that subsequent violations following this suspension may result in a permanent ban.
       </p>
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#1d4ed8;margin:0 0 6px;">📋 Listing Impact</p>
+        <p style="font-size:13px;color:#1e40af;line-height:1.65;margin:0;">
+          If you have any active dorm listings on Aozora, they have been <strong>temporarily hidden</strong> and will not be
+          visible to other users during this suspension period. Your listings will be automatically reinstated when your
+          account access is restored on the Restoration Date noted above.
+        </p>
+      </div>
+
       <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 24px;">
         If you believe this action was taken in error and wish to submit an appeal, please reach out via our support portal.
       </p>

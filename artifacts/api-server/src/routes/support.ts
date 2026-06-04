@@ -105,7 +105,7 @@ router.post("/support-tickets", requireAuth, async (req, res) => {
 
 // ─── POST /support-tickets/public — unauthenticated guests & suspended users ──
 router.post("/support-tickets/public", async (req, res) => {
-  const { guestName, guestEmail, ticketType, subject, message } = req.body;
+  const { guestName, guestEmail, ticketType, subject, message, attachmentUrl } = req.body;
 
   if (!guestName || !guestEmail || !ticketType || !subject || !message) {
     res.status(400).json({ error: "Validation error", message: "guestName, guestEmail, ticketType, subject, and message are required" });
@@ -152,9 +152,9 @@ router.post("/support-tickets/public", async (req, res) => {
 
   const now = new Date().toISOString();
   const ticketResult = sqlite.prepare(
-    `INSERT INTO support_tickets (guest_name, guest_email, ticket_type, subject, message, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
-  ).run(guestName, guestEmail, ticketType, subject, message, now, now);
+    `INSERT INTO support_tickets (guest_name, guest_email, ticket_type, subject, message, attachment_url, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`
+  ).run(guestName, guestEmail, ticketType, subject, message, attachmentUrl ?? null, now, now);
 
   const ticket = sqlite.prepare("SELECT * FROM support_tickets WHERE id = ?").get(ticketResult.lastInsertRowid) as any;
 

@@ -9,6 +9,9 @@ import {
   RefreshControl,
   TextInput,
   Alert,
+  Image,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -102,6 +105,7 @@ export default function AdminSupportTicketsScreen() {
   const [filter, setFilter] = useState<"pending" | "resolved">("pending");
   const [search, setSearch] = useState("");
   const [sendingEmail, setSendingEmail] = useState<Record<number, boolean>>({});
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const fetchTickets = async () => {
     if (!token) return;
@@ -271,6 +275,21 @@ export default function AdminSupportTicketsScreen() {
           </View>
           <Text style={[styles.subject, { color: colors.foreground }]} numberOfLines={1}>{item.subject}</Text>
           <Text style={[styles.preview, { color: colors.mutedForeground }]} numberOfLines={2}>{item.message}</Text>
+
+          {item.attachmentUrl ? (
+            <TouchableOpacity
+              style={[styles.attachmentRow, { backgroundColor: colors.background, borderColor: colors.border }]}
+              onPress={() => setPreviewImageUrl(item.attachmentUrl)}
+              activeOpacity={0.8}
+            >
+              <Image source={{ uri: item.attachmentUrl }} style={styles.attachmentThumb} resizeMode="cover" />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.attachmentLabel, { color: colors.foreground }]}>Attachment</Text>
+                <Text style={[styles.attachmentHint, { color: colors.primary }]}>Tap to view full image</Text>
+              </View>
+              <Feather name="maximize-2" size={14} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {needsEmailResponse && (
@@ -425,6 +444,17 @@ export default function AdminSupportTicketsScreen() {
           }
         />
       )}
+
+      <Modal visible={!!previewImageUrl} transparent animationType="fade" onRequestClose={() => setPreviewImageUrl(null)}>
+        <Pressable style={styles.previewOverlay} onPress={() => setPreviewImageUrl(null)}>
+          {previewImageUrl ? (
+            <Image source={{ uri: previewImageUrl }} style={styles.previewImage} resizeMode="contain" />
+          ) : null}
+          <TouchableOpacity style={styles.previewClose} onPress={() => setPreviewImageUrl(null)}>
+            <Feather name="x" size={22} color="#fff" />
+          </TouchableOpacity>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -468,6 +498,13 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 12 },
   subject: { fontSize: 15, fontWeight: "700" },
   preview: { fontSize: 13, lineHeight: 18 },
+  attachmentRow: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 10, padding: 8, marginTop: 2 },
+  attachmentThumb: { width: 48, height: 48, borderRadius: 8 },
+  attachmentLabel: { fontSize: 13, fontWeight: "600" },
+  attachmentHint: { fontSize: 12 },
+  previewOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  previewImage: { width: "92%", height: "75%" },
+  previewClose: { position: "absolute", top: 52, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
   emailSection: { borderWidth: 1, borderRadius: 10, padding: 10, gap: 8 },
   emailSectionHeader: { flexDirection: "row", alignItems: "center", gap: 5, flexWrap: "wrap" },
   emailSectionLabel: { fontSize: 12, fontWeight: "600" },

@@ -353,11 +353,18 @@ router.put("/admin/dorms/:dormId/status", requireAuth, requireRole("admin"), asy
   const notifTitle =
     status === "approved" ? "Listing Approved ✅" :
     status === "rejected" ? "Listing Rejected" : "Listing Taken Down";
+  const ownerStatus = dorm.ownerId
+    ? (sqlite.prepare("SELECT is_suspended FROM users WHERE id = ?").get(dorm.ownerId) as any)
+    : null;
+  const ownerSuspended = !!ownerStatus?.is_suspended;
+
   const notifBody =
     status === "approved"
       ? `Your listing "${dorm.name}" has been approved and is now live!`
       : status === "rejected"
       ? `Your listing "${dorm.name}" was not approved.${note ? ` Reason: ${note}` : ""}`
+      : ownerSuspended
+      ? `Your listing "${dorm.name}" has been taken down. Since your account is currently suspended, this listing will not be visible to users until your account is reinstated.${note ? ` Reason: ${note}` : ""}`
       : `Your listing "${dorm.name}" has been taken down.${note ? ` Reason: ${note}` : ""}`;
 
   notifyUser(sqlite, dorm.ownerId, {
@@ -670,10 +677,25 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
   } else if (level === "ban") {
     await db.update(users).set({ isSuspended: true, suspendedUntil: null, recommendationAppliedAt: appliedAt, updatedAt: appliedAt }).where(eq(users.id, userId));
 
+    // Fetch dorms that will be taken down (before the update so we can notify)
+    const dormsToTakeDown = sqlite.prepare(
+      "SELECT id, name FROM dorms WHERE owner_id = ? AND status IN ('approved', 'pending')"
+    ).all(userId) as any[];
+
     // Take down all approved/pending dorm listings
     sqlite.prepare(
       "UPDATE dorms SET status = 'taken_down', updated_at = ? WHERE owner_id = ? AND status IN ('approved', 'pending')"
     ).run(appliedAt, userId);
+
+    // Notify the owner for each taken-down listing
+    for (const dorm of dormsToTakeDown) {
+      notifyUser(sqlite, userId, {
+        type: "dorm_taken_down",
+        title: "Listing Taken Down",
+        body: `Your listing "${dorm.name}" has been taken down. Your account has been permanently banned, so this listing is no longer visible on the platform.`,
+        data: { path: `/dorm/${dorm.id}` },
+      });
+    }
 
     // Cancel all pending appointments (as student or as dorm owner)
     sqlite.prepare(
