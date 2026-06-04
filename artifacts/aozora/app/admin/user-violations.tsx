@@ -143,8 +143,6 @@ export default function UserViolationsScreen() {
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
-  const [applied, setApplied] = useState(false);
-
   const queryKey = ["adminUserViolations", uid];
   const { data, isLoading, refetch } = useQuery({
     queryKey,
@@ -165,16 +163,11 @@ export default function UserViolationsScreen() {
   const userEmail: string | null = data?.userEmail ?? null;
   const rec = RECOMMENDATIONS[level] ?? RECOMMENDATIONS["clean"]!;
   const roundedScore = Math.round(score * 10) / 10;
+  const applied = !!data?.recommendationAppliedAt;
 
   const daysLeft = suspendedUntil
     ? Math.max(0, Math.ceil((new Date(suspendedUntil).getTime() - Date.now()) / 86400000))
     : null;
-
-  useEffect(() => {
-    if (data?.recommendationAppliedAt) {
-      setApplied(true);
-    }
-  }, [data?.recommendationAppliedAt]);
 
   const [notifyLoading, setNotifyLoading] = useState(false);
   const [notified, setNotified] = useState(false);
@@ -283,12 +276,11 @@ export default function UserViolationsScreen() {
             }),
           });
           if (res.status === 409) {
-            setApplied(true);
             toast.info("Already Applied", "A recommendation has already been applied for this user.");
+            qc.invalidateQueries({ queryKey });
             return;
           }
           if (!res.ok) throw new Error("Failed");
-          setApplied(true);
           toast.success("Action Applied", `${rec.label} has been applied to the user.`);
           qc.invalidateQueries({ queryKey });
           qc.invalidateQueries({ queryKey: ["adminAllViolations"] });
