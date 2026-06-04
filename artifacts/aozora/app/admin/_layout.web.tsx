@@ -14,14 +14,32 @@ type NavItem = {
   badgeKey?: string;
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard",   icon: "grid",           href: "/admin" },
-  { label: "Listings",    icon: "home",            href: "/admin/dorms",            badgeKey: "pendingDorms" },
-  { label: "Verify IDs",  icon: "shield",          href: "/admin/verifications",    badgeKey: "pendingVerifications" },
-  { label: "Users",       icon: "users",           href: "/admin/users" },
-  { label: "Reports",     icon: "flag",            href: "/admin/reports",          badgeKey: "pendingReports" },
-  { label: "Support",     icon: "message-circle",  href: "/admin/support-tickets",  badgeKey: "pendingTickets" },
-  { label: "Violations",  icon: "alert-octagon",   href: "/admin/violations",       badgeKey: "recentViolations" },
+type NavSection = {
+  label: string;
+  items: NavItem[];
+};
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    label: "PLATFORM",
+    items: [
+      { label: "Dashboard",         icon: "grid",           href: "/admin" },
+      { label: "Listings",          icon: "home",           href: "/admin/dorms",            badgeKey: "pendingDorms" },
+      { label: "Rejected Listings", icon: "x-circle",       href: "/admin/rejected-listings" },
+      { label: "Verify IDs",        icon: "shield",         href: "/admin/verifications",    badgeKey: "pendingVerifications" },
+      { label: "Users",             icon: "users",          href: "/admin/users" },
+      { label: "Suspended Users",   icon: "user-x",         href: "/admin/suspended-users" },
+      { label: "Reports",           icon: "flag",           href: "/admin/reports",          badgeKey: "pendingReports" },
+      { label: "Support",           icon: "message-circle", href: "/admin/support-tickets",  badgeKey: "pendingTickets" },
+      { label: "Violations",        icon: "alert-octagon",  href: "/admin/violations",       badgeKey: "recentViolations" },
+    ],
+  },
+  {
+    label: "ACCOUNT",
+    items: [
+      { label: "My Profile", icon: "user", href: "/admin/profile" },
+    ],
+  },
 ];
 
 export default function AdminLayoutWeb() {
@@ -61,49 +79,53 @@ export default function AdminLayoutWeb() {
 
         {/* Nav items */}
         <ScrollView style={styles.navScroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.navSectionLabel}>NAVIGATION</Text>
-          <View style={styles.navList}>
-            {NAV_ITEMS.map((item) => {
-              const isActive =
-                item.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname.startsWith(item.href);
-              const badge = item.badgeKey ? stats?.[item.badgeKey] : undefined;
-              const showBadge = badge && badge > 0;
+          {NAV_SECTIONS.map((section) => (
+            <View key={section.label}>
+              <Text style={styles.navSectionLabel}>{section.label}</Text>
+              <View style={styles.navList}>
+                {section.items.map((item) => {
+                  const isActive =
+                    item.href === "/admin"
+                      ? pathname === "/admin"
+                      : pathname.startsWith(item.href);
+                  const badge = item.badgeKey ? stats?.[item.badgeKey] : undefined;
+                  const showBadge = badge && badge > 0;
 
-              return (
-                <TouchableOpacity
-                  key={item.href}
-                  style={[styles.navItem, isActive && styles.navItemActive]}
-                  onPress={() => router.push(item.href as any)}
-                  activeOpacity={0.75}
-                >
-                  {isActive && (
-                    <LinearGradient
-                      colors={["rgba(129,140,248,0.18)", "rgba(79,70,229,0.10)"]}
-                      style={StyleSheet.absoluteFillObject}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    />
-                  )}
-                  {isActive && <View style={styles.activeBar} />}
-                  <Feather
-                    name={item.icon}
-                    size={17}
-                    color={isActive ? "#a5b4fc" : "rgba(255,255,255,0.38)"}
-                  />
-                  <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-                    {item.label}
-                  </Text>
-                  {showBadge && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                  return (
+                    <TouchableOpacity
+                      key={item.href}
+                      style={[styles.navItem, isActive && styles.navItemActive]}
+                      onPress={() => router.push(item.href as any)}
+                      activeOpacity={0.75}
+                    >
+                      {isActive && (
+                        <LinearGradient
+                          colors={["rgba(129,140,248,0.18)", "rgba(79,70,229,0.10)"]}
+                          style={StyleSheet.absoluteFillObject}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                        />
+                      )}
+                      {isActive && <View style={styles.activeBar} />}
+                      <Feather
+                        name={item.icon}
+                        size={17}
+                        color={isActive ? "#a5b4fc" : "rgba(255,255,255,0.38)"}
+                      />
+                      <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+                        {item.label}
+                      </Text>
+                      {showBadge && (
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
         </ScrollView>
 
         {/* Footer: user + logout */}

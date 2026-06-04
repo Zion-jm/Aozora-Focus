@@ -114,6 +114,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="suspended-users" options={{ href: null }} />
       <Tabs.Screen name="user-detail" options={{ href: null }} />
       <Tabs.Screen name="user-violations" options={{ href: null }} />
+      <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   );
 }

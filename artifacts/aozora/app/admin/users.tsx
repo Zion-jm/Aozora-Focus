@@ -207,6 +207,7 @@ export default function AdminUsersScreen() {
       <PageHeader
         title="User Management"
         subtitle="View and manage platform users"
+        showBack={false}
         right={
           <TouchableOpacity
             style={[styles.addAdminBtn, { backgroundColor: colors.primary }]}
