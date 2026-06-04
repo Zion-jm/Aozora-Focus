@@ -4,7 +4,7 @@ import { users, verificationRecords, dorms, dormPhotos, appointments } from "../
 import { eq, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
-import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail, sendVerificationApprovedEmail, sendVerificationRejectedEmail } from "../lib/mailer";
+import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail, sendVerificationApprovedEmail, sendVerificationRejectedEmail, sendBanTerminationEmail } from "../lib/mailer";
 
 const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
@@ -669,6 +669,34 @@ router.post("/admin/violations/apply-recommendation", requireAuth, requireRole("
     }
   } else if (level === "ban") {
     await db.update(users).set({ isSuspended: true, suspendedUntil: null, recommendationAppliedAt: appliedAt, updatedAt: appliedAt }).where(eq(users.id, userId));
+
+    // Take down all approved/pending dorm listings
+    sqlite.prepare(
+      "UPDATE dorms SET status = 'taken_down', updated_at = ? WHERE owner_id = ? AND status IN ('approved', 'pending')"
+    ).run(appliedAt, userId);
+
+    // Cancel all pending appointments (as student or as dorm owner)
+    sqlite.prepare(
+      `UPDATE appointments SET status = 'cancelled', updated_at = ?
+       WHERE status = 'pending' AND (
+         student_id = ? OR
+         dorm_id IN (SELECT id FROM dorms WHERE owner_id = ?)
+       )`
+    ).run(appliedAt, userId, userId);
+
+    // Send ban termination email
+    const bannedUser = sqlite.prepare(`SELECT full_name, email FROM users WHERE id = ?`).get(userId) as any;
+    const mostRecentViol = sqlite.prepare(`SELECT category FROM violations WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`).get(userId) as any;
+    if (bannedUser?.email) {
+      const reason = CATEGORY_LABELS[mostRecentViol?.category as string] ?? "Multiple persistent policy infractions";
+      const effectiveDate = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+      sendBanTerminationEmail({
+        to: bannedUser.email,
+        name: bannedUser.full_name,
+        reason,
+        effectiveDate,
+      }).catch((e) => console.error("Failed to send ban termination email:", e));
+    }
   } else if (level === "warning") {
     await db.update(users).set({ recommendationAppliedAt: appliedAt, updatedAt: appliedAt }).where(eq(users.id, userId));
   }

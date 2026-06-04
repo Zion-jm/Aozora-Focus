@@ -248,47 +248,60 @@ export default function UserViolationsScreen() {
 
   const handleApply = () => {
     if (level === "clean" || applied) return;
-    const actionMap: Record<string, string> = {
-      warning: "Send a formal warning notification",
-      short_suspension: "Suspend user for 7 days",
-      long_suspension: "Suspend user for 30 days",
-      ban: "Permanently ban this user",
-    };
     const mostRecentDescription = violations[0]?.description as string | undefined;
-    showConfirm({
-      title: `Apply: ${rec.label}?`,
-      message: actionMap[level] ?? "Apply recommended action?",
-      confirmLabel: "Apply",
-      destructive: level === "ban" || level === "long_suspension",
-      icon: rec.icon,
-      onConfirm: async () => {
-        try {
-          const res = await fetch(`${BASE_URL}/api/admin/violations/apply-recommendation`, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId: uid,
-              level,
-              infractionDescription: mostRecentDescription || undefined,
-            }),
-          });
-          if (res.status === 409) {
-            toast.info("Already Applied", "A recommendation has already been applied for this user.");
-            qc.invalidateQueries({ queryKey });
-            return;
-          }
-          if (!res.ok) throw new Error("Failed");
-          toast.success("Action Applied", `${rec.label} has been applied to the user.`);
+
+    const doApply = async () => {
+      try {
+        const res = await fetch(`${BASE_URL}/api/admin/violations/apply-recommendation`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: uid,
+            level,
+            infractionDescription: mostRecentDescription || undefined,
+          }),
+        });
+        if (res.status === 409) {
+          toast.info("Already Applied", "A recommendation has already been applied for this user.");
           qc.invalidateQueries({ queryKey });
-          qc.invalidateQueries({ queryKey: ["adminAllViolations"] });
-        } catch {
-          toast.error("Error", "Could not apply recommendation.");
+          return;
         }
-      },
-    });
+        if (!res.ok) throw new Error("Failed");
+        toast.success("Action Applied", `${rec.label} has been applied to the user.`);
+        qc.invalidateQueries({ queryKey });
+        qc.invalidateQueries({ queryKey: ["adminAllViolations"] });
+      } catch {
+        toast.error("Error", "Could not apply recommendation.");
+      }
+    };
+
+    if (level === "ban") {
+      showConfirm({
+        title: "⚠️ Permanent Ban — Are You Sure?",
+        message: `This action is IRREVERSIBLE.\n\nBanning ${userName ?? "this user"} will:\n• Permanently revoke their account access\n• Take down all their dorm listings\n• Cancel all pending appointments\n• Send them a termination email\n\nThis cannot be undone. Proceed only if you are certain this user has committed a severe violation.`,
+        confirmLabel: "Permanently Ban",
+        destructive: true,
+        icon: "slash",
+        onConfirm: doApply,
+      });
+    } else {
+      const actionMap: Record<string, string> = {
+        warning: "Send a formal warning notification",
+        short_suspension: "Suspend user for 7 days",
+        long_suspension: "Suspend user for 30 days",
+      };
+      showConfirm({
+        title: `Apply: ${rec.label}?`,
+        message: actionMap[level] ?? "Apply recommended action?",
+        confirmLabel: "Apply",
+        destructive: level === "long_suspension",
+        icon: rec.icon,
+        onConfirm: doApply,
+      });
+    }
   };
 
   const getCategoryLabel = (cat: string) =>

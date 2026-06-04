@@ -335,6 +335,199 @@ export async function sendAppealDeniedEmail(opts: {
   });
 }
 
+export async function sendBugInProgressEmail(opts: {
+  to: string;
+  name: string;
+  bugSubject: string;
+  bugMessage: string;
+}): Promise<void> {
+  const subject = "We're On It: Update Regarding Your Bug Report";
+
+  const text =
+    `Dear ${opts.name},\n\n` +
+    `Thank you for reporting the issue you encountered with ${opts.bugSubject}.\n\n` +
+    `Our technical team has successfully isolated the root cause of the "${opts.bugSubject}" error, ` +
+    `and we are currently in the process of fixing it.\n\n` +
+    `Current Status: Fix in Progress / Deploying\n\n` +
+    `Affected Feature: ${opts.bugSubject}\n\n` +
+    `What happens next?\n` +
+    `Our team is working to get this patched as quickly as possible. You do not need to resubmit another report. ` +
+    `We will send you another update the moment the fix is fully live and operational so you can get right back to what you were doing.\n\n` +
+    `We appreciate your patience and cooperation while we smooth things out!\n\n` +
+    `Best regards,\n\nAozora Admin Team\naozora.dormfinder.admin@gmail.com`;
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+      <h2 style="color:#2563eb;margin:0 0 4px;font-size:22px;">Aozora</h2>
+      <p style="color:#9ca3af;margin:0 0 28px;font-size:13px;">Home, but smarter.</p>
+
+      <div style="border-left:4px solid #f59e0b;padding:14px 18px;background:#f59e0b12;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px;">We're On It — Your Bug Report Is In Progress 🔧</p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">An update regarding the issue you reported</p>
+      </div>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 6px;">Dear <strong>${opts.name}</strong>,</p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 20px;">
+        Thank you for reporting the issue you encountered with <strong>${opts.bugSubject}</strong>.
+      </p>
+
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 20px;">
+        Our technical team has successfully isolated the root cause of the
+        "<strong>${opts.bugSubject}</strong>" error, and we are currently in the process of fixing it.
+      </p>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+        <tr style="background:#fef3c7;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:700;color:#92400e;border:1px solid #fde68a;width:42%;">Current Status</td>
+          <td style="padding:10px 14px;font-size:13px;color:#b45309;font-weight:700;border:1px solid #fde68a;">⚙ Fix in Progress / Deploying</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;font-size:13px;font-weight:700;color:#374151;border:1px solid #e5e7eb;border-top:none;">Affected Feature</td>
+          <td style="padding:10px 14px;font-size:13px;color:#111827;border:1px solid #e5e7eb;border-top:none;">${opts.bugSubject}</td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:700;color:#374151;border:1px solid #e5e7eb;border-top:none;vertical-align:top;">Your Report</td>
+          <td style="padding:10px 14px;font-size:13px;color:#6b7280;border:1px solid #e5e7eb;border-top:none;line-height:1.55;">${opts.bugMessage}</td>
+        </tr>
+      </table>
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#1e40af;margin:0 0 5px;">What happens next?</p>
+        <p style="font-size:13px;color:#1d4ed8;line-height:1.6;margin:0;">
+          Our team is working to get this patched as quickly as possible.
+          <strong>You do not need to resubmit another report.</strong>
+          We will send you another update the moment the fix is fully live and operational so you can get right back to what you were doing.
+        </p>
+      </div>
+
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 24px;">
+        We appreciate your patience and cooperation while we smooth things out!
+      </p>
+
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Best regards,</p>
+      <p style="font-size:14px;color:#111827;font-weight:700;margin:0 0 2px;">Aozora Admin Team</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">aozora.dormfinder.admin@gmail.com</p>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+        This is a system-generated message from Aozora. If you need further assistance, visit our Help Center.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Aozora Support" <${process.env.GMAIL_USER}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}
+
+export async function sendBanTerminationEmail(opts: {
+  to: string;
+  name: string;
+  reason: string;
+  effectiveDate: string;
+}): Promise<void> {
+  const subject = "Notice of Permanent Account Termination";
+
+  const text =
+    `Dear ${opts.name},\n\n` +
+    `We are writing to inform you that your Aozora account has been permanently terminated following a severe violation of our community standards and platform policies.\n\n` +
+    `Action Taken: Permanent Account Ban\n\n` +
+    `Reason for Action: ${opts.reason}\n\n` +
+    `Effective Date: ${opts.effectiveDate}\n\n` +
+    `Policy Reminder:\n\n` +
+    `Aozora Admin Team is dedicated to maintaining a safe, transparent, and trustworthy marketplace for both boarders and dorm owners. ` +
+    `Actions that compromise the safety, integrity, or security of our users are strictly not tolerated and result in immediate termination of platform privileges.\n\n` +
+    `What this means for your account:\n\n` +
+    `Access Revoked: You will no longer be able to log in, view your profile, or access any associated data.\n\n` +
+    `Data Restrictions: Any active dorm listings or pending visit bookings tied to this account have been permanently removed from the system.\n\n` +
+    `Future Registration: You are strictly prohibited from creating new or alternative accounts on the Aozora platform. Any new accounts linked to your identity will be flagged and terminated automatically.\n\n` +
+    `This decision has been made after a comprehensive internal investigation of your account history and activity. ` +
+    `As this restriction is permanent, further appeals regarding this matter will not be reviewed.\n\n` +
+    `Sincerely,\n\nAozora Admin Team\naozora.dormfinder.admin@gmail.com`;
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+      <h2 style="color:#2563eb;margin:0 0 4px;font-size:22px;">Aozora</h2>
+      <p style="color:#9ca3af;margin:0 0 28px;font-size:13px;">Home, but smarter.</p>
+
+      <div style="border-left:4px solid #7c3aed;padding:14px 18px;background:#7c3aed12;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px;">Notice of Permanent Account Termination</p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">Your account has been permanently banned from the Aozora platform</p>
+      </div>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 6px;">Dear <strong>${opts.name}</strong>,</p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 20px;">
+        We are writing to inform you that your Aozora account has been permanently terminated following a severe violation of our community standards and platform policies.
+      </p>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+        <tr style="background:#fdf4ff;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:700;color:#6b21a8;border:1px solid #e9d5ff;width:42%;">Action Taken</td>
+          <td style="padding:10px 14px;font-size:13px;color:#7c3aed;font-weight:700;border:1px solid #e9d5ff;">Permanent Account Ban</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;font-size:13px;font-weight:700;color:#374151;border:1px solid #e5e7eb;border-top:none;">Reason for Action</td>
+          <td style="padding:10px 14px;font-size:13px;color:#111827;border:1px solid #e5e7eb;border-top:none;">${opts.reason}</td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:10px 14px;font-size:13px;font-weight:700;color:#374151;border:1px solid #e5e7eb;border-top:none;">Effective Date</td>
+          <td style="padding:10px 14px;font-size:13px;color:#374151;font-weight:600;border:1px solid #e5e7eb;border-top:none;">${opts.effectiveDate}</td>
+        </tr>
+      </table>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#991b1b;margin:0 0 5px;">Policy Reminder</p>
+        <p style="font-size:13px;color:#7f1d1d;line-height:1.6;margin:0;">
+          Aozora Admin Team is dedicated to maintaining a safe, transparent, and trustworthy marketplace for both boarders and dorm owners.
+          Actions that compromise the safety, integrity, or security of our users result in immediate termination of platform privileges.
+        </p>
+      </div>
+
+      <p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 8px;">What this means for your account:</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px;">
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;">
+          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 3px;">🚫 Access Revoked</p>
+          <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.55;">You will no longer be able to log in, view your profile, or access any associated data.</p>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;">
+          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 3px;">🗑 Data Restrictions</p>
+          <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.55;">Any active dorm listings or pending visit bookings tied to this account have been permanently removed from the system.</p>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;">
+          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 3px;">⛔ Future Registration</p>
+          <p style="font-size:13px;color:#6b7280;margin:0;line-height:1.55;">You are strictly prohibited from creating new or alternative accounts on the Aozora platform. Any new accounts linked to your identity will be flagged and terminated automatically.</p>
+        </div>
+      </div>
+
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 24px;">
+        This decision has been made after a comprehensive internal investigation of your account history and activity.
+        <strong>As this restriction is permanent, further appeals regarding this matter will not be reviewed.</strong>
+      </p>
+
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Sincerely,</p>
+      <p style="font-size:14px;color:#111827;font-weight:700;margin:0 0 2px;">Aozora Admin Team</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">aozora.dormfinder.admin@gmail.com</p>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+        This is a final system-generated notice from Aozora. No further correspondence regarding this matter will be accepted.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}
+
 export async function sendBugFixedEmail(opts: {
   to: string;
   name: string;

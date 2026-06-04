@@ -2,7 +2,7 @@ import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
-import { sendSupportResponseEmail, sendAppealApprovedEmail, sendAppealDeniedEmail, sendBugFixedEmail } from "../lib/mailer";
+import { sendSupportResponseEmail, sendAppealApprovedEmail, sendAppealDeniedEmail, sendBugFixedEmail, sendBugInProgressEmail } from "../lib/mailer";
 
 const router = Router();
 
@@ -299,6 +299,13 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
 
       await sendAppealDeniedEmail({ to: recipientEmail, name: recipientName, restorationDate });
 
+    } else if (responseType === "bug_in_progress") {
+      await sendBugInProgressEmail({
+        to: recipientEmail,
+        name: recipientName,
+        bugSubject: ticket.subject,
+        bugMessage: (ticket.message as string).slice(0, 300),
+      });
     } else if (responseType === "bug_fixed") {
       await sendBugFixedEmail({
         to: recipientEmail,
