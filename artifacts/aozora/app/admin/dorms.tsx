@@ -62,9 +62,13 @@ export default function AdminDormsScreen() {
 
   const update = useAdminUpdateDormStatus({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (_data: any, vars: any) => {
         qc.invalidateQueries({ queryKey: getAdminGetDormsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetDormsQueryKey() });
+        const s = vars?.data?.status;
+        if (s === "approved") toast.success("Listing Approved", "The listing is now live and visible to boarders.");
+        else if (s === "rejected") toast.success("Listing Rejected", "The listing has been rejected.");
+        else toast.success("Updated", "Listing status updated.");
       },
       onError: () => toast.error("Error", "Could not update dorm."),
     },

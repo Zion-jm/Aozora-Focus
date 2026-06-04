@@ -1,6 +1,6 @@
 kind = "mobile"
 previewPath = "/"
-title = "Aozora"
+title = "Aozora Mobile"
 version = "1.0.0"
 id = "artifacts/aozora"
 router = "expo-domain"

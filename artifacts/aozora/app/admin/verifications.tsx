@@ -85,7 +85,12 @@ export default function AdminVerificationsScreen() {
 
   const review = useAdminReviewVerification({
     mutation: {
-      onSuccess: () => qc.invalidateQueries({ queryKey: getAdminGetVerificationsQueryKey() }),
+      onSuccess: (_data: any, vars: any) => {
+        qc.invalidateQueries({ queryKey: getAdminGetVerificationsQueryKey() });
+        const s = vars?.data?.status;
+        if (s === "approved") toast.success("ID Verified", "User identity has been verified successfully.");
+        else if (s === "rejected") toast.success("Verification Rejected", "The ID verification has been rejected.");
+      },
       onError: () => toast.error("Error", "Could not update verification."),
     },
   });

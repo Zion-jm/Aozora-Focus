@@ -32,6 +32,7 @@ export default function LoginScreen() {
     mutation: {
       onSuccess: (data) => {
         setSuspended(false);
+        toast.success("Welcome back!", `Signed in as ${data.user.fullName}.`);
         login(data.token, data.user);
         router.replace("/(tabs)");
       },

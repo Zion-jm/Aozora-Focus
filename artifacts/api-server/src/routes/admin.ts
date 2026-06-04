@@ -1,4 +1,5 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { db, sqlite } from "../db/index";
 import { users, verificationRecords, dorms, dormPhotos, appointments } from "../db/schema";
 import { eq, asc } from "drizzle-orm";
@@ -67,6 +68,32 @@ router.get("/admin/stats", requireAuth, requireRole("admin"), async (_req, res) 
     totalViolations,
     recentViolations,
   });
+});
+
+router.post("/admin/create-admin", requireAuth, requireRole("admin"), async (req, res) => {
+  const { email, fullName, password } = req.body as any;
+  if (!email?.trim() || !fullName?.trim() || !password) {
+    res.status(400).json({ error: "Bad Request", message: "Email, full name, and password are required." });
+    return;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ error: "Bad Request", message: "Password must be at least 8 characters." });
+    return;
+  }
+  const existing = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).get();
+  if (existing) {
+    res.status(409).json({ error: "Conflict", message: "An account with this email already exists." });
+    return;
+  }
+  const passwordHash = await bcrypt.hash(password, 10);
+  const [newUser] = await db.insert(users).values({
+    email: email.trim().toLowerCase(),
+    fullName: fullName.trim(),
+    passwordHash,
+    role: "admin",
+    verificationStatus: "verified",
+  }).returning();
+  res.json({ id: newUser.id, email: newUser.email, fullName: newUser.fullName, role: newUser.role });
 });
 
 router.get("/admin/users/:userId", requireAuth, requireRole("admin"), async (req, res) => {

@@ -109,11 +109,26 @@ export default function AdminUserDetailScreen() {
   };
 
   const reviewMutation = useAdminReviewVerification({
-    mutation: { onSuccess: invalidate, onError: () => toast.error("Error", "Could not update verification.") },
+    mutation: {
+      onSuccess: (_data: any, vars: any) => {
+        invalidate();
+        const s = vars?.data?.status;
+        if (s === "approved") toast.success("ID Verified", "Verification approved successfully.");
+        else if (s === "rejected") toast.success("Verification Rejected", "The ID has been rejected.");
+      },
+      onError: () => toast.error("Error", "Could not update verification."),
+    },
   });
 
   const statusMutation = useAdminUpdateUserStatus({
-    mutation: { onSuccess: invalidate, onError: () => toast.error("Error", "Could not update user status.") },
+    mutation: {
+      onSuccess: (_data: any, vars: any) => {
+        invalidate();
+        if ((vars as any)?.data?.isSuspended) toast.success("User Suspended", "The user's account has been suspended.");
+        else toast.success("User Updated", "User status has been updated.");
+      },
+      onError: () => toast.error("Error", "Could not update user status."),
+    },
   });
 
   const handleReview = (verifId: number, status: "approved" | "rejected") => {

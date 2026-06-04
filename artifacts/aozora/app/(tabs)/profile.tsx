@@ -13,6 +13,7 @@ import { router } from "expo-router";
 
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import { UserAvatar } from "@/components/UserAvatar";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { showConfirm } = useConfirm();
+  const { toast } = useToast();
   const handleLogout = () => {
     showConfirm({
       title: "Log out",
@@ -60,6 +62,7 @@ export default function ProfileScreen() {
       icon: "log-out",
       onConfirm: async () => {
         await logout();
+        toast.success("Signed out", "See you next time!");
         router.replace("/(auth)/login");
       },
     });

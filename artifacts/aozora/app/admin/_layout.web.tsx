@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAdminGetStats, getAdminGetStatsQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import { AozoraLogo } from "@/components/AozoraLogo";
 
 type NavItem = {
@@ -25,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function AdminLayoutWeb() {
   const { user, logout } = useAuth();
+  const { toast } = useToast();
   const pathname = usePathname();
   const { data } = useAdminGetStats({
     query: { queryKey: getAdminGetStatsQueryKey(), refetchInterval: 8_000 },
@@ -33,6 +35,7 @@ export default function AdminLayoutWeb() {
 
   const handleLogout = async () => {
     await logout();
+    toast.success("Signed out", "See you next time!");
     router.replace("/(auth)/login");
   };
 

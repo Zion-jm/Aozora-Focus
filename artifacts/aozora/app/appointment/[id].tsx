@@ -60,9 +60,19 @@ export default function AppointmentDetailScreen() {
 
   const update = useUpdateAppointmentStatus({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (_data: any, vars: any) => {
         qc.invalidateQueries({ queryKey: getGetAppointmentsQueryKey() });
         qc.invalidateQueries({ queryKey: getGetAppointmentByIdQueryKey(id!) });
+        const s = (vars as any)?.data?.status;
+        const messages: Record<string, [string, string]> = {
+          approved: ["Visit Approved", "The appointment has been scheduled."],
+          rejected: ["Visit Rejected", "The appointment has been declined."],
+          completed: ["Visit Complete", "The visit has been marked as completed."],
+          no_show: ["Marked No-show", "The visit has been marked as a no-show."],
+          cancelled: ["Cancelled", "The appointment has been cancelled."],
+        };
+        const [title, msg] = messages[s] ?? ["Updated", "Appointment status updated."];
+        toast.success(title, msg);
       },
       onError: () => toast.error("Error", "Could not update status."),
     },

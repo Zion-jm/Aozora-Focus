@@ -5,6 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import { Redirect, router } from "expo-router";
 import { AozoraLogo } from "@/components/AozoraLogo";
 
+const isAdminPortal =
+  typeof window !== "undefined"
+    ? !window.location.port || window.location.port === "80"
+    : true;
+
 export default function IndexWeb() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
 
@@ -22,6 +27,11 @@ export default function IndexWeb() {
         </View>
       </View>
     );
+  }
+
+  if (!isAdminPortal) {
+    if (isAuthenticated) return <Redirect href="/(tabs)" />;
+    return <Redirect href="/(auth)/login" />;
   }
 
   if (isAuthenticated && user?.role === "admin") {

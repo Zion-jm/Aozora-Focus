@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
-  Alert,
   Image,
   Modal,
   Pressable,
@@ -19,6 +18,8 @@ import { router, useFocusEffect } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { UserAvatar } from "@/components/UserAvatar";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
@@ -99,6 +100,8 @@ export default function AdminSupportTicketsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { token, user } = useAuth();
+  const { toast } = useToast();
+  const { showConfirm } = useConfirm();
   const [tickets, setTickets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -153,44 +156,41 @@ export default function AdminSupportTicketsScreen() {
     const recipientEmail = item.guestEmail ?? item.user?.email ?? "the user";
     const isBugInProgress = responseType === "bug_in_progress";
 
-    Alert.alert(
-      `Send Email: ${label}`,
-      isBugInProgress
+    showConfirm({
+      title: `Send Email: ${label}`,
+      message: isBugInProgress
         ? `This will send a "Bug In Progress" email to ${recipientEmail}.\n\nThe ticket will remain open so you can later send "Bug Fixed" once resolved.\n\nProceed?`
         : `This will send an email to ${recipientEmail} and mark the ticket as resolved.\n\nProceed?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: isBugInProgress ? "Send Email" : "Send & Resolve",
-          style: "default",
-          onPress: async () => {
-            setSendingEmail((prev) => ({ ...prev, [item.id]: true }));
-            try {
-              const res = await fetch(`${BASE_URL}/api/admin/support-tickets/${item.id}/respond`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ responseType }),
-              });
-              if (res.ok) {
-                const data = await res.json();
-                setTickets((prev) =>
-                  prev.map((t) =>
-                    t.id === item.id ? { ...t, status: data.status, adminResponse: data.adminResponse } : t
-                  )
-                );
-              } else {
-                const err = await res.json().catch(() => ({}));
-                Alert.alert("Failed", (err as any).message ?? "Could not send email. Please try again.");
-              }
-            } catch {
-              Alert.alert("Error", "Network error. Please try again.");
-            } finally {
-              setSendingEmail((prev) => ({ ...prev, [item.id]: false }));
-            }
-          },
-        },
-      ]
-    );
+      confirmLabel: isBugInProgress ? "Send Email" : "Send & Resolve",
+      destructive: false,
+      icon: "mail",
+      onConfirm: async () => {
+        setSendingEmail((prev) => ({ ...prev, [item.id]: true }));
+        try {
+          const res = await fetch(`${BASE_URL}/api/admin/support-tickets/${item.id}/respond`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ responseType }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setTickets((prev) =>
+              prev.map((t) =>
+                t.id === item.id ? { ...t, status: data.status, adminResponse: data.adminResponse } : t
+              )
+            );
+            toast.success("Email Sent", `${label} email sent successfully.`);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            toast.error("Failed", (err as any).message ?? "Could not send email. Please try again.");
+          }
+        } catch {
+          toast.error("Error", "Network error. Please try again.");
+        } finally {
+          setSendingEmail((prev) => ({ ...prev, [item.id]: false }));
+        }
+      },
+    });
   };
 
   const filtered = tickets.filter((t) => {
