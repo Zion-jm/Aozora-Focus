@@ -162,6 +162,22 @@ export default function AdminDormsScreen() {
                 <Text style={[styles.price, { color: colors.primary }]}>₱{Number(item.monthlyRent).toLocaleString()}/mo</Text>
                 <Text style={[styles.owner, { color: colors.mutedForeground }]}>Owner: {item.owner?.fullName || "—"}</Text>
 
+                {item.proofOfOwnershipUrl && (
+                  <View style={[styles.proofBox, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                    <Feather name="file-text" size={13} color={colors.mutedForeground} />
+                    <Text style={[styles.proofLabel, { color: colors.mutedForeground }]}>Proof of Ownership</Text>
+                    <TouchableOpacity onPress={() => router.push(`/dorm/${item.id}`)}>
+                      <Text style={[styles.proofLink, { color: colors.primary }]}>View</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {item.status === "pending" && !item.proofOfOwnershipUrl && (
+                  <View style={[styles.noProofBox, { backgroundColor: "#f59e0b15", borderRadius: 6 }]}>
+                    <Feather name="alert-triangle" size={12} color="#f59e0b" />
+                    <Text style={{ color: "#f59e0b", fontSize: 12, fontWeight: "600" }}>No proof of ownership submitted</Text>
+                  </View>
+                )}
+
                 {item.status === "pending" && (
                   <View style={styles.actions}>
                     <TouchableOpacity
@@ -245,4 +261,8 @@ const styles = StyleSheet.create({
   fullBtn: { paddingVertical: 10, alignItems: "center", marginTop: 4 },
   empty: { paddingVertical: 60, alignItems: "center", gap: 12 },
   emptyText: { fontSize: 16 },
+  proofBox: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6, paddingHorizontal: 8, borderWidth: 1, borderRadius: 6 },
+  proofLabel: { fontSize: 12, flex: 1 },
+  proofLink: { fontSize: 12, fontWeight: "700" },
+  noProofBox: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6, paddingHorizontal: 8 },
 });

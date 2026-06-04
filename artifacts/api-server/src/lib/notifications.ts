@@ -61,6 +61,15 @@ export function createNotification({
          VALUES (?, ?, ?, ?, ?, ?)`
       )
       .run(userId, type, title, body, relatedId ?? null, relatedType ?? null);
+
+    // Cap at 20 notifications per user — delete oldest beyond the limit
+    sqlite
+      .prepare(
+        `DELETE FROM notifications WHERE user_id = ? AND id NOT IN (
+           SELECT id FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
+         )`
+      )
+      .run(userId, userId);
   } catch {
     // Non-fatal — notifications must never break the primary action
   }
@@ -110,6 +119,15 @@ export function upsertConversationNotification({
           "INSERT INTO notifications (user_id, type, title, body, related_id, related_type) VALUES (?, ?, ?, ?, ?, 'conversation')"
         )
         .run(userId, type, title, body, relatedId);
+
+      // Cap at 20 notifications per user
+      sqlite
+        .prepare(
+          `DELETE FROM notifications WHERE user_id = ? AND id NOT IN (
+             SELECT id FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
+           )`
+        )
+        .run(userId, userId);
     }
   } catch {
     // Non-fatal

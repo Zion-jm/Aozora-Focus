@@ -66,6 +66,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState<"boarder" | "owner">("boarder");
+  const [gender, setGender] = useState<"male" | "female" | "other" | "prefer_not_to_say" | "">("");
 
   const apiPost = async (path: string, body: Record<string, string>) => {
     const res = await fetch(`${BASE_URL}/api${path}`, {
@@ -165,7 +166,8 @@ export default function RegisterScreen() {
         password,
         role,
         verificationToken,
-      });
+        ...(gender ? { gender } : {}),
+      } as any);
       login(data.token, data.user);
       router.replace("/(tabs)");
     } catch (e: any) {
@@ -645,6 +647,38 @@ export default function RegisterScreen() {
                 </View>
               </View>
 
+              <View style={styles.fieldWrap}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+                  Gender / Sex{" "}
+                  <Text style={{ color: colors.mutedForeground, fontWeight: "400", fontSize: 13 }}>(optional)</Text>
+                </Text>
+                <View style={styles.genderButtons}>
+                  {([
+                    { value: "male", label: "Male" },
+                    { value: "female", label: "Female" },
+                    { value: "other", label: "Other" },
+                    { value: "prefer_not_to_say", label: "Prefer not to say" },
+                  ] as const).map((opt) => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      onPress={() => setGender(gender === opt.value ? "" : opt.value)}
+                      style={[
+                        styles.genderBtn,
+                        {
+                          borderColor: gender === opt.value ? colors.primary : colors.border,
+                          backgroundColor: gender === opt.value ? colors.primary : colors.card,
+                          borderRadius: colors.radius,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.roleButtonText, { color: gender === opt.value ? "#fff" : colors.foreground }]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
               {/* ToS + Community Guidelines consent */}
               <View style={[styles.consentBox, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "25", borderRadius: colors.radius }]}>
                 <Feather name="info" size={14} color={colors.primary} style={{ marginTop: 1, flexShrink: 0 }} />
@@ -808,6 +842,8 @@ const styles = StyleSheet.create({
 
   roleContainer: { gap: 8 },
   roleButtons: { flexDirection: "row", gap: 10 },
+  genderButtons: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  genderBtn: { borderWidth: 1.5, paddingVertical: 10, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
   roleButton: {
     flex: 1,
     borderWidth: 1.5,

@@ -94,7 +94,7 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
   const {
     name, description, monthlyRent, address,
     latitude, longitude, amenities, totalRooms,
-    bedsPerRoom, availableBeds, coverPhotoUrl, nearbyLandmark, genderPolicy,
+    bedsPerRoom, availableBeds, coverPhotoUrl, nearbyLandmark, genderPolicy, proofOfOwnershipUrl,
   } = req.body;
 
   if (!name || !description || !monthlyRent || !address || !totalRooms || !bedsPerRoom || availableBeds === undefined) {
@@ -118,6 +118,7 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
     coverPhotoUrl: coverPhotoUrl ?? null,
     nearbyLandmark: nearbyLandmark ?? null,
     genderPolicy: genderPolicy ?? "any",
+    proofOfOwnershipUrl: proofOfOwnershipUrl ?? null,
   }).returning();
 
   notifyAllAdmins(sqlite, {
@@ -172,7 +173,7 @@ router.put("/dorms/:dormId", requireAuth, async (req, res) => {
     return;
   }
 
-  const { name, description, monthlyRent, address, latitude, longitude, amenities, totalRooms, bedsPerRoom, availableBeds, coverPhotoUrl, nearbyLandmark, genderPolicy } = req.body;
+  const { name, description, monthlyRent, address, latitude, longitude, amenities, totalRooms, bedsPerRoom, availableBeds, coverPhotoUrl, nearbyLandmark, genderPolicy, proofOfOwnershipUrl } = req.body;
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
@@ -187,6 +188,7 @@ router.put("/dorms/:dormId", requireAuth, async (req, res) => {
   if (coverPhotoUrl !== undefined) updates.coverPhotoUrl = coverPhotoUrl;
   if (nearbyLandmark !== undefined) updates.nearbyLandmark = nearbyLandmark;
   if (genderPolicy !== undefined) updates.genderPolicy = genderPolicy;
+  if (proofOfOwnershipUrl !== undefined) updates.proofOfOwnershipUrl = proofOfOwnershipUrl;
 
   const result = await db.update(dorms).set(updates).where(eq(dorms.id, dormId)).returning();
   res.json(parseDorm(result[0]!));

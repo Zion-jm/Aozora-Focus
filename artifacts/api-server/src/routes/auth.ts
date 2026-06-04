@@ -104,7 +104,7 @@ router.post("/auth/verify-otp", async (req, res) => {
 
 // POST /auth/register — requires a verificationToken from /auth/verify-otp
 router.post("/auth/register", async (req, res) => {
-  const { fullName, password, role, verificationToken } = req.body;
+  const { fullName, password, role, verificationToken, gender } = req.body;
 
   if (!fullName || !password || !role || !verificationToken) {
     res.status(400).json({ error: "Validation error", message: "fullName, password, role, and verificationToken are required" });
@@ -145,6 +145,7 @@ router.post("/auth/register", async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const VALID_GENDERS = ["male", "female", "other", "prefer_not_to_say"];
   const result = await db.insert(users).values({
     fullName,
     email,
@@ -153,6 +154,7 @@ router.post("/auth/register", async (req, res) => {
     role,
     verificationStatus: "unverified",
     isSuspended: false,
+    gender: (gender && VALID_GENDERS.includes(gender)) ? gender : null,
   }).returning();
 
   sqlite.prepare("DELETE FROM otp_verifications WHERE verification_token = ?").run(verificationToken);

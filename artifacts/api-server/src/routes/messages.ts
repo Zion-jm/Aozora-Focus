@@ -90,10 +90,10 @@ function serializeAdminConversation(conv: any, currentUserId: number) {
     archived,
     otherParticipant: other ? {
       id: other.id,
-      fullName: other.full_name,
+      fullName: (!isAdmin && other.role === "admin") ? "Aozora Admin" : other.full_name,
       role: other.role,
       verificationStatus: other.verification_status,
-      avatarUrl: other.avatar_url,
+      avatarUrl: (!isAdmin && other.role === "admin") ? null : other.avatar_url,
     } : null,
     lastMessage: lastMsg ? {
       id: lastMsg.id,
@@ -122,8 +122,13 @@ router.get("/conversations", requireAuth, async (req, res) => {
   const enriched: any[] = [];
 
   if (role === "admin") {
+    // Only show support-type conversations that the admin has started (started_at IS NOT NULL)
+    // Warning conversations are always shown
     const adminConvs = sqlite.prepare(
-      "SELECT * FROM admin_conversations WHERE admin_id = ? AND admin_deleted_at IS NULL ORDER BY updated_at DESC"
+      `SELECT * FROM admin_conversations
+       WHERE admin_id = ? AND admin_deleted_at IS NULL
+         AND (conversation_type != 'support' OR started_at IS NOT NULL)
+       ORDER BY updated_at DESC`
     ).all(userId) as any[];
     for (const c of adminConvs) {
       enriched.push(serializeAdminConversation(c, userId));

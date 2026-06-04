@@ -18,6 +18,7 @@ function formatUser(user: typeof users.$inferSelect) {
     isSuspended: user.isSuspended,
     avatarUrl: user.avatarUrl,
     birthday: user.birthday ?? null,
+    gender: user.gender ?? null,
     universityOrWorkplace: user.universityOrWorkplace ?? null,
     emergencyContactName: user.emergencyContactName ?? null,
     emergencyContactPhone: user.emergencyContactPhone ?? null,
@@ -66,7 +67,7 @@ router.get("/violations/my", requireAuth, async (req, res) => {
 router.put("/users/me", requireAuth, async (req, res) => {
   const {
     fullName, phone, avatarUrl,
-    birthday, universityOrWorkplace,
+    birthday, gender, universityOrWorkplace,
     emergencyContactName, emergencyContactPhone, bio,
     phonePublic,
   } = req.body;
@@ -77,6 +78,7 @@ router.put("/users/me", requireAuth, async (req, res) => {
   if (phone !== undefined) updates.phone = phone;
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
   if (birthday !== undefined) updates.birthday = birthday;
+  if (gender !== undefined) updates.gender = gender;
   if (universityOrWorkplace !== undefined) updates.universityOrWorkplace = universityOrWorkplace;
   if (emergencyContactName !== undefined) updates.emergencyContactName = emergencyContactName;
   if (emergencyContactPhone !== undefined) updates.emergencyContactPhone = emergencyContactPhone;

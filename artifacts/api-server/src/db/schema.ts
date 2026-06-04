@@ -22,6 +22,7 @@ export const users = sqliteTable("users", {
   recommendationAppliedAt: text("recommendation_applied_at"),
   avatarUrl: text("avatar_url"),
   birthday: text("birthday"),
+  gender: text("gender", { enum: ["male", "female", "other", "prefer_not_to_say"] }),
   universityOrWorkplace: text("university_or_workplace"),
   emergencyContactName: text("emergency_contact_name"),
   emergencyContactPhone: text("emergency_contact_phone"),
@@ -62,6 +63,7 @@ export const dorms = sqliteTable("dorms", {
   totalReviews: integer("total_reviews").notNull().default(0),
   adminNote: text("admin_note"),
   genderPolicy: text("gender_policy", { enum: ["any", "male", "female"] }).notNull().default("any"),
+  proofOfOwnershipUrl: text("proof_of_ownership_url"),
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").notNull().default(sql`(datetime('now'))`),
 });

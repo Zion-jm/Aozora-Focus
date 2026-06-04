@@ -299,7 +299,9 @@ export default function AdminConversationScreen() {
     const isLastReadSent = isMe && msg.id === lastReadSentId;
     const senderLabel = isMe
       ? "You"
-      : (msg.sender?.fullName ?? otherUser?.fullName ?? (isAdmin ? "User" : "Aozora Support"));
+      : isAdmin
+        ? (msg.sender?.fullName ?? otherUser?.fullName ?? "User")
+        : "Aozora Admin";
 
     return (
       <View style={[styles.msgRow, isMe && styles.msgRowMe]}>

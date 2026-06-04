@@ -79,6 +79,8 @@ export default function CreateDormScreen() {
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [genderPolicy, setGenderPolicy] = useState<"any" | "male" | "female">("any");
+  const [proofOfOwnershipUri, setProofOfOwnershipUri] = useState<string | null>(null);
+  const [proofOfOwnershipBase64, setProofOfOwnershipBase64] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -104,6 +106,7 @@ export default function CreateDormScreen() {
     setAvailableBeds(String(d.availableBeds ?? "1"));
     setSelectedAmenities(Array.isArray(d.amenities) ? d.amenities : []);
     setGenderPolicy(d.genderPolicy ?? "any");
+    if (d.proofOfOwnershipUrl) setProofOfOwnershipUri(d.proofOfOwnershipUrl);
     if (Array.isArray(d.photos) && d.photos.length > 0) {
       setPhotos(
         d.photos.map((p: any) => ({
@@ -166,6 +169,26 @@ export default function CreateDormScreen() {
       prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
     );
   };
+
+  const pickProofOfOwnership = useCallback(async () => {
+    if (Platform.OS !== "web") {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        toast.warning("Permission needed", "Allow access to your photo library to add proof of ownership.");
+        return;
+      }
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsMultipleSelection: false,
+      quality: 0.8,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setProofOfOwnershipUri(result.assets[0].uri);
+      setProofOfOwnershipBase64(result.assets[0].base64 ?? null);
+    }
+  }, []);
 
   const pickImages = useCallback(async () => {
     if (Platform.OS !== "web") {
@@ -279,6 +302,9 @@ export default function CreateDormScreen() {
       coverPhotoUrl,
       amenities: selectedAmenities,
       genderPolicy,
+      proofOfOwnershipUrl: proofOfOwnershipBase64
+        ? `data:image/jpeg;base64,${proofOfOwnershipBase64}`
+        : proofOfOwnershipUri ?? undefined,
     };
 
     setIsSubmitting(true);
@@ -438,6 +464,47 @@ export default function CreateDormScreen() {
             );
           })}
         </View>
+
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+          Proof of Ownership{!isEditMode ? " *" : ""}
+        </Text>
+        <Text style={{ color: colors.mutedForeground, fontSize: 12, marginTop: -8 }}>
+          Upload a photo of your property title, deed, or tax declaration
+        </Text>
+        {proofOfOwnershipUri ? (
+          <View style={{ position: "relative" }}>
+            <Image
+              source={{ uri: proofOfOwnershipUri }}
+              style={[styles.proofImage, { borderColor: colors.border, borderRadius: colors.radius }]}
+            />
+            <TouchableOpacity
+              style={styles.proofRemoveBtn}
+              onPress={() => { setProofOfOwnershipUri(null); setProofOfOwnershipBase64(null); }}
+            >
+              <Feather name="x" size={14} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.proofChangeBtn, { backgroundColor: colors.primary + "dd", borderRadius: 6 }]}
+              onPress={pickProofOfOwnership}
+            >
+              <Feather name="refresh-cw" size={12} color="#fff" />
+              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Change</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.proofPlaceholder, { borderColor: colors.border, backgroundColor: colors.card, borderRadius: colors.radius }]}
+            onPress={pickProofOfOwnership}
+          >
+            <Feather name="file-text" size={28} color={colors.mutedForeground} />
+            <Text style={[styles.photoPlaceholderText, { color: colors.mutedForeground }]}>
+              Tap to upload proof of ownership
+            </Text>
+            <Text style={[styles.photoPlaceholderSub, { color: colors.mutedForeground }]}>
+              Title deed, tax declaration, or similar document
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
@@ -605,4 +672,8 @@ const styles = StyleSheet.create({
   submitBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16, marginTop: 8 },
   submitBtnText: { color: "#fff", fontSize: 17, fontWeight: "700" },
   hint: { fontSize: 13, textAlign: "center" },
+  proofImage: { width: "100%", height: 180, borderWidth: 1 },
+  proofRemoveBtn: { position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center" },
+  proofChangeBtn: { position: "absolute", bottom: 8, right: 8, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6 },
+  proofPlaceholder: { borderWidth: 1.5, borderStyle: "dashed", paddingVertical: 28, alignItems: "center", gap: 8 },
 });

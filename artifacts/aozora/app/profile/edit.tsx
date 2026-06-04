@@ -324,6 +324,7 @@ export default function EditProfileScreen() {
   const [emergencyNational, setEmergencyNational] = useState(parsedEmergency.national);
 
   const [birthday, setBirthday] = useState(user?.birthday ?? "");
+  const [gender, setGender] = useState<string>((user as any)?.gender ?? "");
   const [universityOrWorkplace, setUniversityOrWorkplace] = useState(
     user?.universityOrWorkplace ?? ""
   );
@@ -437,6 +438,7 @@ export default function EditProfileScreen() {
         phone: fullPhone || undefined,
         avatarUrl,
         birthday: birthday || undefined,
+        gender: (gender || undefined) as any,
         universityOrWorkplace: universityOrWorkplace || undefined,
         emergencyContactName: emergencyContactName || undefined,
         emergencyContactPhone: fullEmergency || undefined,
@@ -564,9 +566,10 @@ export default function EditProfileScreen() {
     if (emergencyContactName !== (user?.emergencyContactName ?? "")) return true;
     if (buildPhone(emergencyCountry, emergencyNational) !== (user?.emergencyContactPhone ?? "")) return true;
     if (bio !== (user?.bio ?? "")) return true;
+    if (gender !== ((user as any)?.gender ?? "")) return true;
     if (phonePublic !== !!(user as any)?.phonePublic) return true;
     return false;
-  }, [fullName, phoneCountry, phoneNational, birthday, universityOrWorkplace, emergencyContactName, emergencyCountry, emergencyNational, bio, phonePublic, avatarBase64, user]);
+  }, [fullName, phoneCountry, phoneNational, birthday, gender, universityOrWorkplace, emergencyContactName, emergencyCountry, emergencyNational, bio, phonePublic, avatarBase64, user]);
 
   const avatarLetter = (fullName || user?.fullName || "U")[0]?.toUpperCase() ?? "U";
 
@@ -882,6 +885,36 @@ export default function EditProfileScreen() {
           onChange={setBirthday}
           colors={colors}
         />
+
+        <View style={styles.fieldWrap}>
+          <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Gender / Sex</Text>
+          <View style={[styles.genderRow]}>
+            {([
+              { value: "male", label: "Male" },
+              { value: "female", label: "Female" },
+              { value: "other", label: "Other" },
+              { value: "prefer_not_to_say", label: "Prefer not to say" },
+            ] as const).map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => setGender(gender === opt.value ? "" : opt.value)}
+                style={[
+                  styles.genderChip,
+                  {
+                    borderColor: gender === opt.value ? colors.primary : colors.border,
+                    backgroundColor: gender === opt.value ? colors.primary + "18" : colors.card,
+                    borderRadius: colors.radius,
+                  },
+                ]}
+              >
+                <Text style={[styles.genderChipText, { color: gender === opt.value ? colors.primary : colors.mutedForeground }]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <Field
           label="University / Workplace"
           value={universityOrWorkplace}
@@ -1207,6 +1240,9 @@ const styles = StyleSheet.create({
 
   fieldWrap: { gap: 6 },
   fieldLabel: { fontSize: 14, fontWeight: "600" },
+  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 2 },
+  genderChip: { paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5 },
+  genderChipText: { fontSize: 13, fontWeight: "600" },
   input: { borderWidth: 1, padding: 13, fontSize: 15 },
 
   toggleRow: {
