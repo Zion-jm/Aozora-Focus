@@ -9,6 +9,7 @@ export type NotificationType =
   | "appointment_completed"
   | "appointment_no_show"
   | "appointment_new"
+  | "appointment_reminder"
   | "dorm_approved"
   | "dorm_rejected"
   | "dorm_submitted"
@@ -16,19 +17,22 @@ export type NotificationType =
   | "id_verified"
   | "id_rejected"
   | "verification_submitted"
+  | "verification_approved"
+  | "verification_rejected"
   | "account_suspended"
   | "account_unsuspended"
   | "user_suspended"
   | "user_unsuspended"
   | "admin_warning"
   | "admin_message"
+  | "message_new"
   | "support_ticket_resolved"
+  | "support_ticket_new"
+  | "support_ticket_opened"
   | "dorm_review_received"
   | "user_review_received"
   | "report_new"
-  | "support_ticket_new"
-  | "support_ticket_opened"
-  | "appointment_reminder";
+  | "violation_logged";
 
 export interface NotificationPayload {
   type: string;
@@ -75,11 +79,12 @@ export function createNotification({
   }
 
   // Fire push in background (non-blocking)
-  const data: Record<string, unknown> = {};
+  const data: Record<string, unknown> = { type };
   if (relatedType === "appointment" && relatedId) data.path = `/appointment/${relatedId}`;
   else if (relatedType === "dorm" && relatedId) data.path = `/dorm/${relatedId}`;
   else if (relatedType === "conversation" && relatedId) data.path = `/conversation/${relatedId}`;
-  sendPushNotificationToUser(userId, title, body, Object.keys(data).length ? data : undefined).catch(() => {});
+  else if (relatedType === "support_ticket" && relatedId) data.path = `/my-tickets`;
+  sendPushNotificationToUser(userId, title, body, data).catch(() => {});
 }
 
 /**
@@ -134,7 +139,7 @@ export function upsertConversationNotification({
   }
 
   const path = type === "admin_message" ? `/admin-conversation/${relatedId}` : `/conversation/${relatedId}`;
-  sendPushNotificationToUser(userId, title, body, { path }).catch(() => {});
+  sendPushNotificationToUser(userId, title, body, { type, path }).catch(() => {});
 }
 
 export function notifyUser(
@@ -148,19 +153,27 @@ export function notifyUser(
     db.prepare(
       "INSERT INTO notifications (user_id, type, title, body, related_id, related_type) VALUES (?, ?, ?, ?, ?, ?)"
     ).run(userId, type, title, body, relatedId ?? null, relatedType ?? null);
+
+    // Cap at 20 notifications per user — delete oldest beyond the limit
+    db.prepare(
+      `DELETE FROM notifications WHERE user_id = ? AND id NOT IN (
+         SELECT id FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 20
+       )`
+    ).run(userId, userId);
   } catch {
     // Non-fatal
   }
 
-  const pushData: Record<string, unknown> = { ...data };
+  const pushData: Record<string, unknown> = { ...data, type };
   // Auto-populate path from relatedType/relatedId if not already in data
   if (!pushData.path) {
     if (relatedType === "appointment" && relatedId) pushData.path = `/appointment/${relatedId}`;
     else if (relatedType === "dorm" && relatedId) pushData.path = `/dorm/${relatedId}`;
     else if (relatedType === "conversation" && relatedId) pushData.path = `/conversation/${relatedId}`;
+    else if (relatedType === "support_ticket" && relatedId) pushData.path = `/my-tickets`;
   }
 
-  sendPushNotificationToUser(userId, title, body, Object.keys(pushData).length ? pushData : undefined).catch(() => {});
+  sendPushNotificationToUser(userId, title, body, pushData).catch(() => {});
 }
 
 export function notifyAllAdmins(

@@ -15,8 +15,20 @@ export function resolveNotifRoute(
   const relatedType = notif.relatedType ?? null;
   const relatedId = notif.relatedId ?? null;
 
-  const MSG_TYPES = ["new_message", "message_new", "admin_message", "admin_message_new"];
-  if (MSG_TYPES.includes(type)) return { kind: "none" };
+  const ADMIN_MSG_TYPES = ["admin_message", "admin_message_new"];
+  if (ADMIN_MSG_TYPES.includes(type)) {
+    if (relatedType === "conversation" && relatedId) {
+      return { kind: "push", path: `/admin-conversation/${relatedId}` };
+    }
+    return { kind: "none" };
+  }
+
+  if (type === "message_new" || type === "new_message") {
+    if (relatedType === "conversation" && relatedId) {
+      return { kind: "push", path: `/conversation/${relatedId}` };
+    }
+    return { kind: "none" };
+  }
 
   if (relatedType === "appointment" && relatedId) {
     return { kind: "push", path: `/appointment/${relatedId}` };

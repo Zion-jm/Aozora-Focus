@@ -201,6 +201,14 @@ router.put("/users/me/push-token", requireAuth, async (req, res) => {
 
   sqlite.prepare("UPDATE users SET expo_push_token = ? WHERE id = ?").run(expoPushToken, userId);
 
+  sqlite
+    .prepare(
+      `INSERT INTO push_tokens (user_id, token, platform, updated_at)
+       VALUES (?, ?, 'unknown', datetime('now'))
+       ON CONFLICT(user_id, token) DO UPDATE SET updated_at = datetime('now')`
+    )
+    .run(userId, expoPushToken);
+
   res.json({ message: "Push token registered" });
 });
 

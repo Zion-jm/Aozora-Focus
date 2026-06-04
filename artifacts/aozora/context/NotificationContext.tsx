@@ -55,7 +55,11 @@ export function NotificationProvider({
       });
       if (res.ok) {
         const data = await res.json();
-        setUnreadCount(data.unreadCount ?? 0);
+        const count = data.unreadCount ?? 0;
+        setUnreadCount(count);
+        if (Platform.OS !== "web") {
+          Notifications.setBadgeCountAsync(count).catch(() => {});
+        }
       }
     } catch {
       // silently ignore network errors
@@ -82,31 +86,6 @@ export function NotificationProvider({
     }
   }, [token]);
 
-  const registerPushToken = useCallback(async () => {
-    if (!token || Platform.OS === "web") return;
-    try {
-      const { status: existing } = await Notifications.getPermissionsAsync();
-      let finalStatus = existing;
-      if (existing !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== "granted") return;
-
-      const pushToken = await Notifications.getExpoPushTokenAsync();
-      await fetch(`${BASE_URL}/api/users/me/push-token`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ expoPushToken: pushToken.data }),
-      });
-    } catch {
-      // silently ignore — push is a nice-to-have
-    }
-  }, [token]);
-
   const pollAll = useCallback(async () => {
     await Promise.all([refreshUnreadCount(), refreshUnreadMessageCount()]);
   }, [refreshUnreadCount, refreshUnreadMessageCount]);
@@ -115,12 +94,12 @@ export function NotificationProvider({
     if (!user || !token) {
       setUnreadCount(0);
       setUnreadMessageCount(0);
+      if (Platform.OS !== "web") Notifications.setBadgeCountAsync(0).catch(() => {});
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       return;
     }
 
     pollAll();
-    registerPushToken();
 
     pollIntervalRef.current = setInterval(pollAll, POLL_INTERVAL_MS);
 
