@@ -17,6 +17,7 @@ import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AozoraLogo } from "@/components/AozoraLogo";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -80,14 +81,7 @@ export default function LoginScreen() {
         >
           <View style={styles.brand}>
             <View style={styles.logoShadow}>
-              <LinearGradient
-                colors={["#818cf8", "#4f46e5"]}
-                style={styles.logoGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Feather name="home" size={30} color="#fff" />
-              </LinearGradient>
+              <AozoraLogo size={76} />
             </View>
             <Text style={styles.brandName}>Aozora</Text>
             <Text style={styles.brandTagline}>Home, but smarter.</Text>

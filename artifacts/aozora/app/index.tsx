@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { Redirect } from "expo-router";
+import { AozoraLogo } from "@/components/AozoraLogo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ONBOARDING_KEY = "aozora_onboarding_done";
@@ -30,14 +31,7 @@ export default function Index() {
           end={{ x: 0.85, y: 1 }}
         />
         <View style={styles.logoShadow}>
-          <LinearGradient
-            colors={["#818cf8", "#4f46e5"]}
-            style={styles.logo}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Feather name="home" size={36} color="#fff" />
-          </LinearGradient>
+          <AozoraLogo size={88} />
         </View>
       </View>
     );

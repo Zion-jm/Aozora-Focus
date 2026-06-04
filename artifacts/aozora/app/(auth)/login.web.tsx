@@ -13,6 +13,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
+import { AozoraLogo } from "@/components/AozoraLogo";
 
 export default function AdminLoginWeb() {
   const { login, logout } = useAuth();
@@ -25,7 +26,7 @@ export default function AdminLoginWeb() {
     mutation: {
       onSuccess: async (data) => {
         if (data.user.role !== "admin") {
-          setError("Access denied. This portal is for administrators only.");
+          setError("This portal is for administrators only. Non-admin users should use the Aozora mobile app.");
           return;
         }
         setError(null);
@@ -62,14 +63,7 @@ export default function AdminLoginWeb() {
 
         <View style={styles.leftContent}>
           <View style={styles.brandRow}>
-            <LinearGradient
-              colors={["#818cf8", "#4f46e5"]}
-              style={styles.logoGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Feather name="home" size={28} color="#fff" />
-            </LinearGradient>
+            <AozoraLogo size={52} />
             <View style={styles.brandTextCol}>
               <Text style={styles.brandName}>Aozora Admin</Text>
               <Text style={styles.brandTagline}>Manage. Verify. Protect.</Text>
