@@ -36,6 +36,7 @@ export const verificationRecords = sqliteTable("verification_records", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   idImageUrl: text("id_image_url").notNull(),
+  idBackImageUrl: text("id_back_image_url"),
   idType: text("id_type").notNull(),
   status: text("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
   reviewNote: text("review_note"),

@@ -367,8 +367,11 @@ export default function VerifyScreen() {
     emergencyContactPhone: user?.emergencyContactPhone ?? "",
   });
   const [idType, setIdType] = useState(ID_TYPES[0]!);
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [frontImageUri, setFrontImageUri] = useState<string | null>(null);
+  const [frontImageBase64, setFrontImageBase64] = useState<string | null>(null);
+  const [backImageUri, setBackImageUri] = useState<string | null>(null);
+  const [backImageBase64, setBackImageBase64] = useState<string | null>(null);
+  const [photoSheetSide, setPhotoSheetSide] = useState<"front" | "back">("front");
 
   const [verificationStatus, setVerificationStatus] = useState(user?.verificationStatus);
   const isVerified = verificationStatus === "verified";
@@ -447,6 +450,11 @@ export default function VerifyScreen() {
 
   const [showPhotoSheet, setShowPhotoSheet] = useState(false);
 
+  const openPhotoSheet = (side: "front" | "back") => {
+    setPhotoSheetSide(side);
+    setShowPhotoSheet(true);
+  };
+
   const handleNextStep = () => {
     if (!personalInfoComplete) {
       toast.warning("Missing info", "Please fill in your name, contact (phone or email), and emergency contact before continuing.");
@@ -501,7 +509,12 @@ export default function VerifyScreen() {
     return true;
   };
 
-  const pickFromGallery = async () => {
+  const setPhotoForSide = (side: "front" | "back", uri: string, b64: string | null) => {
+    if (side === "front") { setFrontImageUri(uri); setFrontImageBase64(b64); }
+    else { setBackImageUri(uri); setBackImageBase64(b64); }
+  };
+
+  const pickFromGallery = async (side: "front" | "back" = photoSheetSide) => {
     if (!(await requestPermission("gallery"))) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -511,12 +524,11 @@ export default function VerifyScreen() {
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      setImageBase64(result.assets[0].base64 ?? null);
+      setPhotoForSide(side, result.assets[0].uri, result.assets[0].base64 ?? null);
     }
   };
 
-  const takePhoto = async () => {
+  const takePhoto = async (side: "front" | "back" = photoSheetSide) => {
     if (!(await requestPermission("camera"))) return;
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
@@ -525,17 +537,19 @@ export default function VerifyScreen() {
       base64: true,
     });
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      setImageBase64(result.assets[0].base64 ?? null);
+      setPhotoForSide(side, result.assets[0].uri, result.assets[0].base64 ?? null);
     }
   };
 
   const handleSubmit = () => {
-    if (!imageUri) return;
-    const idImageUrl = imageBase64
-      ? `data:image/jpeg;base64,${imageBase64}`
-      : imageUri;
-    submitVerification.mutate({ data: { idType, idImageUrl } });
+    if (!frontImageUri) return;
+    const idImageUrl = frontImageBase64
+      ? `data:image/jpeg;base64,${frontImageBase64}`
+      : frontImageUri;
+    const idBackImageUrl = backImageBase64
+      ? `data:image/jpeg;base64,${backImageBase64}`
+      : backImageUri ?? undefined;
+    submitVerification.mutate({ data: { idType, idImageUrl, idBackImageUrl } as any });
   };
 
   return (
@@ -886,85 +900,83 @@ export default function VerifyScreen() {
               ))}
             </View>
 
-            <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
-              ID Photo *
-            </Text>
-
-            {imageUri ? (
-              <View style={styles.previewWrap}>
-                <Image
-                  source={{ uri: imageUri }}
-                  style={[
-                    styles.previewImage,
-                    { borderRadius: colors.radius, borderColor: colors.border },
-                  ]}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.retakeBtn,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                      borderRadius: colors.radius,
-                    },
-                  ]}
-                  onPress={() => setShowPhotoSheet(true)}
-                >
-                  <Feather name="refresh-cw" size={15} color={colors.foreground} />
-                  <Text style={[styles.retakeBtnText, { color: colors.foreground }]}>
-                    Retake / Change Photo
-                  </Text>
-                </TouchableOpacity>
+            {/* Front of ID */}
+            <View style={[styles.idSideCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+              <View style={styles.idSideHeader}>
+                <View style={[styles.idSideBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.idSideBadgeText}>FRONT</Text>
+                </View>
+                <Text style={[styles.idSideLabel, { color: colors.foreground }]}>
+                  Front of ID <Text style={{ color: colors.destructive }}>*</Text>
+                </Text>
               </View>
-            ) : (
-              <View style={styles.uploadRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.uploadBtn,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.primary,
-                      borderRadius: colors.radius,
-                    },
-                  ]}
-                  onPress={takePhoto}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.uploadIconWrap, { backgroundColor: colors.primary + "15" }]}>
-                    <Feather name="camera" size={24} color={colors.primary} />
-                  </View>
-                  <Text style={[styles.uploadBtnTitle, { color: colors.foreground }]}>
-                    Take Photo
-                  </Text>
-                  <Text style={[styles.uploadBtnSub, { color: colors.mutedForeground }]}>
-                    Use camera
-                  </Text>
-                </TouchableOpacity>
+              {frontImageUri ? (
+                <View style={styles.previewWrap}>
+                  <Image source={{ uri: frontImageUri }} style={[styles.previewImage, { borderRadius: 8, borderColor: colors.border }]} />
+                  <TouchableOpacity
+                    style={[styles.retakeBtn, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: colors.radius }]}
+                    onPress={() => openPhotoSheet("front")}
+                  >
+                    <Feather name="refresh-cw" size={14} color={colors.foreground} />
+                    <Text style={[styles.retakeBtnText, { color: colors.foreground }]}>Retake / Change</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.uploadRow}>
+                  <TouchableOpacity style={[styles.uploadBtn, { backgroundColor: colors.background, borderColor: colors.primary, borderRadius: 8 }]} onPress={() => takePhoto("front")} activeOpacity={0.8}>
+                    <View style={[styles.uploadIconWrap, { backgroundColor: colors.primary + "15" }]}>
+                      <Feather name="camera" size={22} color={colors.primary} />
+                    </View>
+                    <Text style={[styles.uploadBtnTitle, { color: colors.foreground }]}>Camera</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.uploadBtn, { backgroundColor: colors.background, borderColor: colors.primary, borderRadius: 8 }]} onPress={() => pickFromGallery("front")} activeOpacity={0.8}>
+                    <View style={[styles.uploadIconWrap, { backgroundColor: colors.primary + "15" }]}>
+                      <Feather name="image" size={22} color={colors.primary} />
+                    </View>
+                    <Text style={[styles.uploadBtnTitle, { color: colors.foreground }]}>Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
 
-                <TouchableOpacity
-                  style={[
-                    styles.uploadBtn,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.primary,
-                      borderRadius: colors.radius,
-                    },
-                  ]}
-                  onPress={pickFromGallery}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.uploadIconWrap, { backgroundColor: colors.primary + "15" }]}>
-                    <Feather name="image" size={24} color={colors.primary} />
-                  </View>
-                  <Text style={[styles.uploadBtnTitle, { color: colors.foreground }]}>
-                    From Gallery
-                  </Text>
-                  <Text style={[styles.uploadBtnSub, { color: colors.mutedForeground }]}>
-                    Choose existing
-                  </Text>
-                </TouchableOpacity>
+            {/* Back of ID */}
+            <View style={[styles.idSideCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
+              <View style={styles.idSideHeader}>
+                <View style={[styles.idSideBadge, { backgroundColor: colors.mutedForeground }]}>
+                  <Text style={styles.idSideBadgeText}>BACK</Text>
+                </View>
+                <Text style={[styles.idSideLabel, { color: colors.foreground }]}>
+                  Back of ID <Text style={[{ color: colors.mutedForeground, fontWeight: "400", fontSize: 13 }]}>(optional)</Text>
+                </Text>
               </View>
-            )}
+              {backImageUri ? (
+                <View style={styles.previewWrap}>
+                  <Image source={{ uri: backImageUri }} style={[styles.previewImage, { borderRadius: 8, borderColor: colors.border }]} />
+                  <TouchableOpacity
+                    style={[styles.retakeBtn, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: colors.radius }]}
+                    onPress={() => openPhotoSheet("back")}
+                  >
+                    <Feather name="refresh-cw" size={14} color={colors.foreground} />
+                    <Text style={[styles.retakeBtnText, { color: colors.foreground }]}>Retake / Change</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.uploadRow}>
+                  <TouchableOpacity style={[styles.uploadBtn, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: 8 }]} onPress={() => takePhoto("back")} activeOpacity={0.8}>
+                    <View style={[styles.uploadIconWrap, { backgroundColor: colors.muted }]}>
+                      <Feather name="camera" size={22} color={colors.mutedForeground} />
+                    </View>
+                    <Text style={[styles.uploadBtnTitle, { color: colors.mutedForeground }]}>Camera</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.uploadBtn, { backgroundColor: colors.background, borderColor: colors.border, borderRadius: 8 }]} onPress={() => pickFromGallery("back")} activeOpacity={0.8}>
+                    <View style={[styles.uploadIconWrap, { backgroundColor: colors.muted }]}>
+                      <Feather name="image" size={22} color={colors.mutedForeground} />
+                    </View>
+                    <Text style={[styles.uploadBtnTitle, { color: colors.mutedForeground }]}>Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
 
             <View
               style={[
@@ -987,9 +999,9 @@ export default function VerifyScreen() {
               style={[
                 styles.actionBtn,
                 { backgroundColor: colors.primary, borderRadius: colors.radius },
-                (!imageUri || submitVerification.isPending) && { opacity: 0.5 },
+                (!frontImageUri || submitVerification.isPending) && { opacity: 0.5 },
               ]}
-              disabled={!imageUri || submitVerification.isPending}
+              disabled={!frontImageUri || submitVerification.isPending}
               onPress={handleSubmit}
             >
               {submitVerification.isPending ? (
@@ -1007,11 +1019,11 @@ export default function VerifyScreen() {
 
       <ActionSheet
         visible={showPhotoSheet}
-        title="Change Photo"
-        message="Choose how to update your ID photo."
+        title={`Change ${photoSheetSide === "front" ? "Front" : "Back"} Photo`}
+        message={`Choose how to update the ${photoSheetSide} of your ID.`}
         items={[
-          { label: "Take Photo", icon: "camera" as const, onPress: () => { setShowPhotoSheet(false); takePhoto(); } },
-          { label: "Choose from Gallery", icon: "image" as const, onPress: () => { setShowPhotoSheet(false); pickFromGallery(); } },
+          { label: "Take Photo", icon: "camera" as const, onPress: () => { setShowPhotoSheet(false); takePhoto(photoSheetSide); } },
+          { label: "Choose from Gallery", icon: "image" as const, onPress: () => { setShowPhotoSheet(false); pickFromGallery(photoSheetSide); } },
         ]}
         onClose={() => setShowPhotoSheet(false)}
       />
@@ -1094,23 +1106,29 @@ const styles = StyleSheet.create({
   idTypeName: { fontSize: 15, fontWeight: "500" },
   radioEmpty: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5 },
 
-  uploadRow: { flexDirection: "row", gap: 12 },
+  idSideCard: { borderWidth: 1, padding: 14, gap: 12 },
+  idSideHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  idSideBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
+  idSideBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },
+  idSideLabel: { fontSize: 15, fontWeight: "600", flex: 1 },
+
+  uploadRow: { flexDirection: "row", gap: 10 },
   uploadBtn: {
     flex: 1,
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 20,
+    gap: 8,
+    paddingVertical: 16,
     borderWidth: 1.5,
     borderStyle: "dashed",
   },
   uploadIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
-  uploadBtnTitle: { fontSize: 14, fontWeight: "700" },
+  uploadBtnTitle: { fontSize: 13, fontWeight: "700" },
   uploadBtnSub: { fontSize: 12 },
 
   previewWrap: { gap: 10 },

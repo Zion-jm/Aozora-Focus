@@ -38,15 +38,6 @@ const APPROVAL_CHECKLIST = [
   { id: "age_confirmed", label: "Birthday on ID confirms user is 18 or older" },
 ];
 
-const REJECTION_REASONS = [
-  { id: "photo_unclear",  label: "Document unclear or unreadable" },
-  { id: "name_mismatch",  label: "Name on ID does not match account profile" },
-  { id: "expired_id",     label: "ID document is expired" },
-  { id: "face_mismatch",  label: "Face on ID does not match the account holder" },
-  { id: "wrong_type",     label: "ID type does not match what was declared" },
-  { id: "incomplete",     label: "Document is incomplete or partially visible" },
-];
-
 const STATUS_COLOR: Record<string, string> = {
   pending: "#f59e0b",
   approved: "#10b981",
@@ -70,14 +61,9 @@ export default function AdminVerificationsScreen() {
   const [filter, setFilter] = useState("pending");
   const [search, setSearch] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [reviewModal, setReviewModal] = useState<{
-    item: any;
-    status: "approved" | "rejected";
-  } | null>(null);
-  const [reviewNote, setReviewNote] = useState("");
+  const [evaluateModal, setEvaluateModal] = useState<{ item: any } | null>(null);
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
-  const [rejectionChecked, setRejectionChecked] = useState<Set<string>>(new Set());
-  const [rejectionNote, setRejectionNote] = useState("");
+  const [additionalNote, setAdditionalNote] = useState("");
 
   const { data, isLoading, isError, refetch, isRefetching } = useAdminGetVerifications({
     query: { queryKey: getAdminGetVerificationsQueryKey(), refetchInterval: 8_000 },
@@ -104,12 +90,10 @@ export default function AdminVerificationsScreen() {
     },
   });
 
-  const openReviewModal = (item: any, status: "approved" | "rejected") => {
-    setReviewNote("");
+  const openEvaluateModal = (item: any) => {
     setCheckedItems(new Set());
-    setRejectionChecked(new Set());
-    setRejectionNote("");
-    setReviewModal({ item, status });
+    setAdditionalNote("");
+    setEvaluateModal({ item });
   };
 
   const toggleCheck = (id: string) => {
@@ -121,39 +105,25 @@ export default function AdminVerificationsScreen() {
     });
   };
 
-  const toggleRejectionReason = (id: string) => {
-    setRejectionChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const allChecked = checkedItems.size === APPROVAL_CHECKLIST.length;
 
-  const submitReview = () => {
-    if (!reviewModal) return;
-    const { item, status } = reviewModal;
-    if (status === "rejected" && rejectionChecked.size === 0) {
-      toast.warning("Select a reason", "Please select at least one reason for rejection.");
-      return;
+  const uncheckedItems = APPROVAL_CHECKLIST.filter((item) => !checkedItems.has(item.id));
+
+  const submitDecision = (decision: "approved" | "rejected") => {
+    if (!evaluateModal) return;
+    const { item } = evaluateModal;
+
+    let reviewNote: string | undefined;
+    if (decision === "rejected") {
+      const reasons = uncheckedItems.map((r) => r.label).join("\n");
+      reviewNote = reasons + (additionalNote.trim() ? "\n" + additionalNote.trim() : "");
+    } else {
+      reviewNote = additionalNote.trim() || undefined;
     }
-    if (status === "approved" && !allChecked) {
-      toast.warning("Checklist incomplete", "Please complete all verification checks before approving.");
-      return;
-    }
-    let builtNote = reviewNote.trim();
-    if (status === "rejected") {
-      const reasons = REJECTION_REASONS
-        .filter((r) => rejectionChecked.has(r.id))
-        .map((r) => r.label)
-        .join("\n");
-      builtNote = reasons + (rejectionNote.trim() ? "\n" + rejectionNote.trim() : "");
-    }
+
     review.mutate(
-      { verificationId: item.id, data: { status, reviewNote: builtNote || undefined } },
-      { onSuccess: () => setReviewModal(null) }
+      { verificationId: item.id, data: { status: decision, reviewNote } },
+      { onSuccess: () => setEvaluateModal(null) }
     );
   };
 
@@ -242,22 +212,27 @@ export default function AdminVerificationsScreen() {
                 </Text>
               )}
 
-              {item.idImageUrl && (
-                <TouchableOpacity
-                  onPress={() => setPreviewImage(item.idImageUrl)}
-                  activeOpacity={0.85}
-                >
-                  <Image
-                    source={{ uri: item.idImageUrl }}
-                    style={[styles.idThumbnail, { borderColor: colors.border, borderRadius: 8 }]}
-                    resizeMode="cover"
-                  />
-                  <View style={[styles.viewIdOverlay, { borderRadius: 8 }]}>
-                    <Feather name="zoom-in" size={18} color="#fff" />
-                    <Text style={styles.viewIdOverlayText}>Tap to view full image</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
+              {/* ID thumbnails */}
+              <View style={styles.idThumbnailRow}>
+                {item.idImageUrl && (
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => setPreviewImage(item.idImageUrl)} activeOpacity={0.85}>
+                    <Image source={{ uri: item.idImageUrl }} style={[styles.idThumbnail, { borderColor: colors.border }]} resizeMode="cover" />
+                    <View style={styles.idThumbOverlay}>
+                      <Text style={styles.idThumbLabel}>FRONT</Text>
+                      <Feather name="zoom-in" size={13} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                )}
+                {item.idBackImageUrl && (
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => setPreviewImage(item.idBackImageUrl)} activeOpacity={0.85}>
+                    <Image source={{ uri: item.idBackImageUrl }} style={[styles.idThumbnail, { borderColor: colors.border }]} resizeMode="cover" />
+                    <View style={styles.idThumbOverlay}>
+                      <Text style={styles.idThumbLabel}>BACK</Text>
+                      <Feather name="zoom-in" size={13} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
 
               {item.reviewNote && (
                 <View style={[styles.noteBox, { backgroundColor: colors.muted, borderRadius: 8 }]}>
@@ -267,24 +242,14 @@ export default function AdminVerificationsScreen() {
               )}
 
               {item.status === "pending" && (
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    style={[styles.approveBtn, { backgroundColor: "#10b981", borderRadius: 8 }]}
-                    onPress={() => openReviewModal(item, "approved")}
-                    disabled={review.isPending}
-                  >
-                    <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                    <Text style={styles.btnText}>Approve</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.rejectBtn, { backgroundColor: "#ef4444", borderRadius: 8 }]}
-                    onPress={() => openReviewModal(item, "rejected")}
-                    disabled={review.isPending}
-                  >
-                    <Feather name="x-circle" size={16} color="#fff" />
-                    <Text style={styles.btnText}>Reject</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={[styles.evaluateBtn, { backgroundColor: colors.primary, borderRadius: 8 }]}
+                  onPress={() => openEvaluateModal(item)}
+                  disabled={review.isPending}
+                >
+                  <Feather name="clipboard" size={16} color="#fff" />
+                  <Text style={styles.evaluateBtnText}>Evaluate</Text>
+                </TouchableOpacity>
               )}
 
               {item.status !== "pending" && item.reviewedAt && (
@@ -305,48 +270,40 @@ export default function AdminVerificationsScreen() {
         />
       )}
 
-      {/* Review note modal */}
+      {/* Evaluate modal */}
       <Modal
-        visible={!!reviewModal}
+        visible={!!evaluateModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setReviewModal(null)}
+        onRequestClose={() => setEvaluateModal(null)}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.reviewModalBackdrop}
         >
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setReviewModal(null)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setEvaluateModal(null)} />
           <View style={[styles.reviewModalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+
             {/* Header */}
             <View style={[styles.reviewModalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[
-                styles.reviewModalIconWrap,
-                { backgroundColor: reviewModal?.status === "approved" ? "#10b98122" : "#ef444422" },
-              ]}>
-                {reviewModal?.status === "approved"
-                  ? <Ionicons name="checkmark-circle" size={22} color="#10b981" />
-                  : <Feather name="x-circle" size={22} color="#ef4444" />
-                }
+              <View style={[styles.reviewModalIconWrap, { backgroundColor: colors.primary + "22" }]}>
+                <Feather name="clipboard" size={22} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.reviewModalTitle, { color: colors.foreground }]}>
-                  {reviewModal?.status === "approved" ? "Approve ID" : "Reject ID"}
-                </Text>
+                <Text style={[styles.reviewModalTitle, { color: colors.foreground }]}>Evaluate ID</Text>
                 <Text style={[styles.reviewModalSub, { color: colors.mutedForeground }]}>
-                  {reviewModal?.item?.user?.fullName ?? "User"}
-                  {" · "}
-                  {reviewModal?.item?.idType}
+                  {evaluateModal?.item?.user?.fullName ?? "User"} · {evaluateModal?.item?.idType}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setReviewModal(null)} style={styles.reviewModalCloseBtn}>
+              <TouchableOpacity onPress={() => setEvaluateModal(null)} style={styles.reviewModalCloseBtn}>
                 <Feather name="x" size={20} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">
-              {/* Applicant Info Panel */}
-              {reviewModal?.item?.user && (
+            <ScrollView style={{ maxHeight: 560 }} keyboardShouldPersistTaps="handled">
+
+              {/* Applicant info */}
+              {evaluateModal?.item?.user && (
                 <View style={[styles.applicantPanel, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
                   <View style={styles.reviewSectionLabel}>
                     <Feather name="user" size={13} color={colors.mutedForeground} />
@@ -355,39 +312,39 @@ export default function AdminVerificationsScreen() {
                   <View style={styles.applicantRows}>
                     <View style={styles.applicantRow}>
                       <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Full Name</Text>
-                      <Text style={[styles.applicantVal, { color: colors.foreground }]}>{reviewModal.item.user.fullName || "—"}</Text>
+                      <Text style={[styles.applicantVal, { color: colors.foreground }]}>{evaluateModal.item.user.fullName || "—"}</Text>
                     </View>
-                    {(reviewModal.item.user.email || reviewModal.item.user.phone) && (
+                    {(evaluateModal.item.user.email || evaluateModal.item.user.phone) && (
                       <View style={styles.applicantRow}>
                         <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Contact</Text>
                         <Text style={[styles.applicantVal, { color: colors.foreground }]}>
-                          {reviewModal.item.user.email || reviewModal.item.user.phone}
+                          {evaluateModal.item.user.email || evaluateModal.item.user.phone}
                         </Text>
                       </View>
                     )}
-                    {reviewModal.item.user.birthday && (
+                    {evaluateModal.item.user.birthday && (
                       <View style={styles.applicantRow}>
                         <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Birthday</Text>
                         <Text style={[styles.applicantVal, { color: colors.foreground }]}>
-                          {new Date(reviewModal.item.user.birthday).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+                          {new Date(evaluateModal.item.user.birthday).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
                         </Text>
                       </View>
                     )}
-                    {reviewModal.item.user.universityOrWorkplace && (
+                    {evaluateModal.item.user.universityOrWorkplace && (
                       <View style={styles.applicantRow}>
                         <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>School / Work</Text>
-                        <Text style={[styles.applicantVal, { color: colors.foreground }]}>{reviewModal.item.user.universityOrWorkplace}</Text>
+                        <Text style={[styles.applicantVal, { color: colors.foreground }]}>{evaluateModal.item.user.universityOrWorkplace}</Text>
                       </View>
                     )}
                     <View style={styles.applicantRow}>
                       <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>ID Type</Text>
-                      <Text style={[styles.applicantVal, { color: colors.foreground }]}>{reviewModal.item.idType}</Text>
+                      <Text style={[styles.applicantVal, { color: colors.foreground }]}>{evaluateModal.item.idType}</Text>
                     </View>
                     <View style={[styles.applicantRow, { borderBottomWidth: 0 }]}>
                       <Text style={[styles.applicantKey, { color: colors.mutedForeground }]}>Submitted</Text>
                       <Text style={[styles.applicantVal, { color: colors.foreground }]}>
-                        {reviewModal.item.submittedAt
-                          ? new Date(reviewModal.item.submittedAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
+                        {evaluateModal.item.submittedAt
+                          ? new Date(evaluateModal.item.submittedAt).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })
                           : "—"}
                       </Text>
                     </View>
@@ -395,8 +352,8 @@ export default function AdminVerificationsScreen() {
                 </View>
               )}
 
-              {/* ID Image */}
-              {reviewModal?.item?.idImageUrl && (
+              {/* ID images — front and back */}
+              {(evaluateModal?.item?.idImageUrl || evaluateModal?.item?.idBackImageUrl) && (
                 <View style={styles.reviewImageSection}>
                   <View style={styles.reviewSectionLabel}>
                     <Feather name="image" size={13} color={colors.mutedForeground} />
@@ -404,164 +361,135 @@ export default function AdminVerificationsScreen() {
                       Submitted ID Document
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => setPreviewImage(reviewModal.item.idImageUrl)}
-                    activeOpacity={0.88}
-                    style={styles.reviewImageWrap}
-                  >
-                    <Image
-                      source={{ uri: reviewModal.item.idImageUrl }}
-                      style={[styles.reviewImage, { borderColor: colors.border }]}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.reviewImageOverlay}>
-                      <Feather name="zoom-in" size={16} color="#fff" />
-                      <Text style={styles.reviewImageOverlayText}>Tap to enlarge</Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* Approval checklist */}
-              {reviewModal?.status === "approved" && (
-                <View style={styles.checklistSection}>
-                  <View style={styles.checklistHeader}>
-                    <Feather name="clipboard" size={15} color={colors.foreground} />
-                    <Text style={[styles.checklistTitle, { color: colors.foreground }]}>
-                      Verification Checklist
-                    </Text>
-                    <View style={[
-                      styles.checklistBadge,
-                      { backgroundColor: allChecked ? "#10b98122" : colors.muted },
-                    ]}>
-                      <Text style={[
-                        styles.checklistBadgeText,
-                        { color: allChecked ? "#10b981" : colors.mutedForeground },
-                      ]}>
-                        {checkedItems.size}/{APPROVAL_CHECKLIST.length}
-                      </Text>
-                    </View>
+                  <View style={styles.reviewImageRow}>
+                    {evaluateModal?.item?.idImageUrl && (
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.idSideTag, { color: colors.mutedForeground }]}>FRONT</Text>
+                        <TouchableOpacity
+                          onPress={() => setPreviewImage(evaluateModal!.item.idImageUrl)}
+                          activeOpacity={0.88}
+                          style={styles.reviewImageWrap}
+                        >
+                          <Image
+                            source={{ uri: evaluateModal.item.idImageUrl }}
+                            style={[styles.reviewImage, { borderColor: colors.border }]}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.reviewImageOverlay}>
+                            <Feather name="zoom-in" size={14} color="#fff" />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {evaluateModal?.item?.idBackImageUrl && (
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.idSideTag, { color: colors.mutedForeground }]}>BACK</Text>
+                        <TouchableOpacity
+                          onPress={() => setPreviewImage(evaluateModal!.item.idBackImageUrl)}
+                          activeOpacity={0.88}
+                          style={styles.reviewImageWrap}
+                        >
+                          <Image
+                            source={{ uri: evaluateModal.item.idBackImageUrl }}
+                            style={[styles.reviewImage, { borderColor: colors.border }]}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.reviewImageOverlay}>
+                            <Feather name="zoom-in" size={14} color="#fff" />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
-                  <Text style={[styles.checklistSub, { color: colors.mutedForeground }]}>
-                    Tick every item to enable approval.
-                  </Text>
-                  {APPROVAL_CHECKLIST.map((item) => {
-                    const checked = checkedItems.has(item.id);
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        style={[
-                          styles.checklistRow,
-                          {
-                            borderColor: checked ? "#10b981" : colors.border,
-                            backgroundColor: checked ? "#10b98110" : colors.background,
-                            borderRadius: colors.radius,
-                          },
-                        ]}
-                        onPress={() => toggleCheck(item.id)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[
-                          styles.checkbox,
-                          {
-                            borderColor: checked ? "#10b981" : colors.border,
-                            backgroundColor: checked ? "#10b981" : "transparent",
-                          },
-                        ]}>
-                          {checked && <Feather name="check" size={11} color="#fff" />}
-                        </View>
-                        <Text style={[
-                          styles.checklistLabel,
-                          { color: checked ? colors.foreground : colors.mutedForeground },
-                        ]}>
-                          {item.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                  {!allChecked && (
-                    <View style={styles.checklistWarning}>
-                      <Feather name="alert-circle" size={13} color="#f59e0b" />
-                      <Text style={styles.checklistWarningText}>
-                        Complete all checks before approving.
-                      </Text>
-                    </View>
-                  )}
                 </View>
               )}
 
-              {/* Rejection reasons checklist */}
-              {reviewModal?.status === "rejected" && (
-                <View style={styles.checklistSection}>
-                  <View style={styles.checklistHeader}>
-                    <Feather name="x-circle" size={15} color="#ef4444" />
-                    <Text style={[styles.checklistTitle, { color: colors.foreground }]}>
-                      Reason(s) for Rejection
-                    </Text>
-                    <View style={[
-                      styles.checklistBadge,
-                      { backgroundColor: rejectionChecked.size > 0 ? "#ef444422" : colors.muted },
+              {/* Evaluation checklist */}
+              <View style={styles.checklistSection}>
+                <View style={styles.checklistHeader}>
+                  <Feather name="check-square" size={15} color={colors.foreground} />
+                  <Text style={[styles.checklistTitle, { color: colors.foreground }]}>
+                    Evaluation Checklist
+                  </Text>
+                  <View style={[
+                    styles.checklistBadge,
+                    { backgroundColor: allChecked ? "#10b98122" : colors.muted },
+                  ]}>
+                    <Text style={[
+                      styles.checklistBadgeText,
+                      { color: allChecked ? "#10b981" : colors.mutedForeground },
                     ]}>
-                      <Text style={[
-                        styles.checklistBadgeText,
-                        { color: rejectionChecked.size > 0 ? "#ef4444" : colors.mutedForeground },
-                      ]}>
-                        {rejectionChecked.size} selected
-                      </Text>
-                    </View>
+                      {checkedItems.size}/{APPROVAL_CHECKLIST.length}
+                    </Text>
                   </View>
-                  <Text style={[styles.checklistSub, { color: colors.mutedForeground }]}>
-                    Select all that apply — these will be included in the email to the applicant.
-                  </Text>
-                  {REJECTION_REASONS.map((reason) => {
-                    const checked = rejectionChecked.has(reason.id);
-                    return (
-                      <TouchableOpacity
-                        key={reason.id}
-                        style={[
-                          styles.checklistRow,
-                          {
-                            borderColor: checked ? "#ef4444" : colors.border,
-                            backgroundColor: checked ? "#ef444410" : colors.background,
-                            borderRadius: colors.radius,
-                          },
-                        ]}
-                        onPress={() => toggleRejectionReason(reason.id)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[
-                          styles.checkbox,
-                          {
-                            borderColor: checked ? "#ef4444" : colors.border,
-                            backgroundColor: checked ? "#ef4444" : "transparent",
-                          },
-                        ]}>
-                          {checked && <Feather name="check" size={11} color="#fff" />}
-                        </View>
-                        <Text style={[
-                          styles.checklistLabel,
-                          { color: checked ? colors.foreground : colors.mutedForeground },
-                        ]}>
-                          {reason.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                  {rejectionChecked.size === 0 && (
-                    <View style={styles.checklistWarning}>
-                      <Feather name="alert-circle" size={13} color="#f59e0b" />
-                      <Text style={styles.checklistWarningText}>
-                        Select at least one reason before rejecting.
-                      </Text>
-                    </View>
-                  )}
                 </View>
-              )}
+                <Text style={[styles.checklistSub, { color: colors.mutedForeground }]}>
+                  Check each criterion that the submission satisfies. All checked = Approve; any unchecked = Reject with those reasons.
+                </Text>
+                {APPROVAL_CHECKLIST.map((chk) => {
+                  const checked = checkedItems.has(chk.id);
+                  return (
+                    <TouchableOpacity
+                      key={chk.id}
+                      style={[
+                        styles.checklistRow,
+                        {
+                          borderColor: checked ? "#10b981" : colors.border,
+                          backgroundColor: checked ? "#10b98110" : colors.background,
+                          borderRadius: colors.radius,
+                        },
+                      ]}
+                      onPress={() => toggleCheck(chk.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[
+                        styles.checkbox,
+                        {
+                          borderColor: checked ? "#10b981" : colors.border,
+                          backgroundColor: checked ? "#10b981" : "transparent",
+                        },
+                      ]}>
+                        {checked && <Feather name="check" size={11} color="#fff" />}
+                      </View>
+                      <Text style={[
+                        styles.checklistLabel,
+                        { color: checked ? colors.foreground : colors.mutedForeground },
+                      ]}>
+                        {chk.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
 
-              {/* Additional notes / approval note */}
+                {/* Outcome preview */}
+                {checkedItems.size > 0 && (
+                  <View style={[
+                    styles.outcomePreview,
+                    { backgroundColor: allChecked ? "#10b98112" : "#ef444412", borderRadius: colors.radius },
+                  ]}>
+                    {allChecked ? (
+                      <>
+                        <Ionicons name="checkmark-circle" size={15} color="#10b981" />
+                        <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "600" }}>
+                          All criteria met — this will be approved.
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Feather name="x-circle" size={15} color="#ef4444" />
+                        <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "600" }}>
+                          {uncheckedItems.length} unmet — this will be rejected.
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                )}
+              </View>
+
+              {/* Additional notes */}
               <View style={styles.reviewModalBody}>
                 <Text style={[styles.reviewNoteLabel, { color: colors.foreground }]}>
-                  {reviewModal?.status === "rejected" ? "Additional notes" : "Note for user"}
+                  Additional notes <Text style={[{ color: colors.mutedForeground, fontWeight: "400", fontSize: 12 }]}>(optional)</Text>
                 </Text>
                 <TextInput
                   style={[
@@ -573,52 +501,57 @@ export default function AdminVerificationsScreen() {
                       borderRadius: colors.radius,
                     },
                   ]}
-                  placeholder={
-                    reviewModal?.status === "rejected"
-                      ? "Optional — any extra detail for the applicant."
-                      : "Optional — any notes for this user."
-                  }
+                  placeholder="Any extra context for the applicant."
                   placeholderTextColor={colors.mutedForeground}
-                  value={reviewModal?.status === "rejected" ? rejectionNote : reviewNote}
-                  onChangeText={reviewModal?.status === "rejected" ? setRejectionNote : setReviewNote}
+                  value={additionalNote}
+                  onChangeText={setAdditionalNote}
                   multiline
                 />
               </View>
             </ScrollView>
 
-            {/* Actions */}
+            {/* Action footer */}
             <View style={[styles.reviewModalFooter, { borderTopColor: colors.border }]}>
               <TouchableOpacity
                 style={[styles.reviewCancelBtn, { borderColor: colors.border, borderRadius: colors.radius }]}
-                onPress={() => setReviewModal(null)}
+                onPress={() => setEvaluateModal(null)}
               >
                 <Text style={[styles.reviewCancelText, { color: colors.foreground }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.reviewConfirmBtn,
-                  {
-                    backgroundColor: reviewModal?.status === "approved" ? "#10b981" : "#ef4444",
-                    borderRadius: colors.radius,
-                    opacity: (review.isPending || (reviewModal?.status === "approved" && !allChecked) || (reviewModal?.status === "rejected" && rejectionChecked.size === 0)) ? 0.4 : 1,
-                  },
-                ]}
-                onPress={submitReview}
-                disabled={review.isPending || (reviewModal?.status === "approved" && !allChecked) || (reviewModal?.status === "rejected" && rejectionChecked.size === 0)}
-              >
-                {review.isPending
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <>
-                      {reviewModal?.status === "approved"
-                        ? <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                        : <Feather name="x-circle" size={16} color="#fff" />
-                      }
-                      <Text style={styles.reviewConfirmText}>
-                        {reviewModal?.status === "approved" ? "Approve" : "Reject"}
-                      </Text>
-                    </>
-                }
-              </TouchableOpacity>
+
+              {checkedItems.size === 0 ? (
+                <View style={[styles.reviewConfirmBtn, { backgroundColor: colors.muted, borderRadius: colors.radius, opacity: 0.5 }]}>
+                  <Text style={[styles.reviewConfirmText, { color: colors.mutedForeground }]}>Evaluate first</Text>
+                </View>
+              ) : allChecked ? (
+                <TouchableOpacity
+                  style={[styles.reviewConfirmBtn, { backgroundColor: "#10b981", borderRadius: colors.radius }]}
+                  onPress={() => submitDecision("approved")}
+                  disabled={review.isPending}
+                >
+                  {review.isPending
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <>
+                        <Ionicons name="checkmark-circle" size={16} color="#fff" />
+                        <Text style={styles.reviewConfirmText}>Approve</Text>
+                      </>
+                  }
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.reviewConfirmBtn, { backgroundColor: "#ef4444", borderRadius: colors.radius }]}
+                  onPress={() => submitDecision("rejected")}
+                  disabled={review.isPending}
+                >
+                  {review.isPending
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <>
+                        <Feather name="x-circle" size={16} color="#fff" />
+                        <Text style={styles.reviewConfirmText}>Reject</Text>
+                      </>
+                  }
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -653,10 +586,6 @@ export default function AdminVerificationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingBottom: 18, borderBottomWidth: 1 },
-  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: "#fff" },
-  headerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 1 },
   filterBar: { flexDirection: "row", padding: 12, gap: 8, borderBottomWidth: 1 },
   filterBtn: { paddingHorizontal: 14, paddingVertical: 6 },
   filterText: { fontSize: 13, fontWeight: "600" },
@@ -677,14 +606,22 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   statusText: { fontSize: 12, fontWeight: "600" },
   dateText: { fontSize: 12 },
-  idThumbnail: { width: "100%", height: 160, borderWidth: 1 },
-  viewIdOverlay: {
+  idThumbnailRow: { flexDirection: "row", gap: 8 },
+  idThumbnail: { width: "100%", height: 110, borderWidth: 1, borderRadius: 8 },
+  idThumbOverlay: {
     position: "absolute", bottom: 0, left: 0, right: 0,
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 8,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 8, paddingVertical: 5,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
   },
-  viewIdOverlayText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  idThumbLabel: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },
+  evaluateBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12 },
+  evaluateBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  noteBox: { padding: 10, gap: 2 },
+  noteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
+  noteText: { fontSize: 13 },
+
   modalBackdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.92)",
     alignItems: "center", justifyContent: "center",
@@ -697,27 +634,38 @@ const styles = StyleSheet.create({
   },
   modalImage: { width: "100%", height: 420 },
   modalHint: { color: "rgba(255,255,255,0.5)", fontSize: 12 },
-  noteBox: { padding: 10, gap: 2 },
-  noteLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase" },
-  noteText: { fontSize: 13 },
+
   applicantPanel: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderBottomWidth: 1 },
   applicantRows: { gap: 0 },
   applicantRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: 7, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(150,150,150,0.15)" },
   applicantKey: { fontSize: 12, fontWeight: "600", width: 100, paddingTop: 1 },
   applicantVal: { fontSize: 13, flex: 1, textAlign: "right" },
+
   reviewSectionLabel: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
-  reviewImageSection: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, gap: 8 },
-  reviewImageLabelRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  reviewImageSection: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 4 },
+  reviewImageRow: { flexDirection: "row", gap: 10 },
+  idSideTag: { fontSize: 10, fontWeight: "800", letterSpacing: 0.8, marginBottom: 4 },
   reviewImageLabel: { fontSize: 12, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
-  reviewImageWrap: { position: "relative", borderRadius: 10, overflow: "hidden" },
-  reviewImage: { width: "100%", height: 200, borderWidth: 1, borderRadius: 10 },
+  reviewImageWrap: { position: "relative", borderRadius: 8, overflow: "hidden" },
+  reviewImage: { width: "100%", height: 140, borderWidth: 1, borderRadius: 8 },
   reviewImageOverlay: {
     position: "absolute", bottom: 0, left: 0, right: 0,
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 8,
+    alignItems: "center", justifyContent: "center",
+    paddingVertical: 6,
     backgroundColor: "rgba(0,0,0,0.5)",
   },
-  reviewImageOverlayText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+
+  checklistSection: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 8 },
+  checklistHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  checklistTitle: { fontSize: 14, fontWeight: "700", flex: 1 },
+  checklistBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  checklistBadgeText: { fontSize: 12, fontWeight: "700" },
+  checklistSub: { fontSize: 12, lineHeight: 17 },
+  checklistRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderWidth: 1 },
+  checkbox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  checklistLabel: { fontSize: 13, flex: 1 },
+  outcomePreview: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10 },
+
   reviewModalBackdrop: {
     flex: 1, backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
@@ -737,57 +685,18 @@ const styles = StyleSheet.create({
   },
   reviewModalTitle: { fontSize: 16, fontWeight: "700" },
   reviewModalSub: { fontSize: 13, marginTop: 1 },
-  reviewModalCloseBtn: { padding: 6 },
-  reviewModalBody: { padding: 16, gap: 8 },
-  reviewNoteLabel: { fontSize: 14, fontWeight: "600" },
-  reviewNoteInput: {
-    borderWidth: 1, padding: 12, fontSize: 14,
-    minHeight: 90, textAlignVertical: "top",
-  },
-  reviewNoteHint: { fontSize: 12 },
+  reviewModalCloseBtn: { padding: 4 },
+  reviewModalBody: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  reviewNoteLabel: { fontSize: 13, fontWeight: "600" },
+  reviewNoteInput: { borderWidth: 1, padding: 12, fontSize: 14, minHeight: 72, textAlignVertical: "top" },
   reviewModalFooter: {
-    flexDirection: "row", gap: 10,
-    padding: 16, paddingBottom: 32, borderTopWidth: 1,
+    flexDirection: "row", gap: 10, padding: 16,
+    borderTopWidth: 1,
   },
-  reviewCancelBtn: {
-    flex: 1, borderWidth: 1, borderRadius: 8,
-    alignItems: "center", justifyContent: "center", paddingVertical: 14,
-  },
+  reviewCancelBtn: { flex: 1, paddingVertical: 13, alignItems: "center", borderWidth: 1 },
   reviewCancelText: { fontSize: 15, fontWeight: "600" },
-  reviewConfirmBtn: {
-    flex: 2, flexDirection: "row", alignItems: "center",
-    justifyContent: "center", gap: 8, paddingVertical: 14,
-  },
+  reviewConfirmBtn: { flex: 1.4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 13 },
   reviewConfirmText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  actions: { flexDirection: "row", gap: 10 },
-  approveBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
-  rejectBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
-  btnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  empty: { paddingVertical: 60, alignItems: "center", gap: 12 },
 
-  checklistSection: { paddingHorizontal: 16, paddingTop: 16, gap: 8 },
-  checklistHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  checklistTitle: { fontSize: 14, fontWeight: "700", flex: 1 },
-  checklistBadge: {
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 20,
-  },
-  checklistBadgeText: { fontSize: 12, fontWeight: "700" },
-  checklistSub: { fontSize: 12, marginBottom: 4 },
-  checklistRow: {
-    flexDirection: "row", alignItems: "center",
-    gap: 10, padding: 12, borderWidth: 1,
-  },
-  checkbox: {
-    width: 20, height: 20, borderRadius: 5, borderWidth: 2,
-    alignItems: "center", justifyContent: "center",
-  },
-  checklistLabel: { flex: 1, fontSize: 14, lineHeight: 20 },
-  checklistWarning: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "#f59e0b18", borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 7,
-    marginTop: 2,
-  },
-  checklistWarningText: { fontSize: 12, color: "#f59e0b", flex: 1 },
+  empty: { paddingVertical: 60, alignItems: "center", gap: 12 },
 });

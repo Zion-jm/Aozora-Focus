@@ -1014,6 +1014,11 @@ components:
       properties:
         idImageUrl:
           type: string
+          description: Base64 data URL of the front of the ID
+        idBackImageUrl:
+          type: string
+          nullable: true
+          description: Base64 data URL of the back of the ID
         idType:
           type: string
           description: e.g. "National ID", "Passport", "Driver's License"
@@ -1028,6 +1033,9 @@ components:
           type: integer
         idImageUrl:
           type: string
+        idBackImageUrl:
+          type: string
+          nullable: true
         idType:
           type: string
         status:

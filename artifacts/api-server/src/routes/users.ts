@@ -90,7 +90,7 @@ router.put("/users/me", requireAuth, async (req, res) => {
 });
 
 router.post("/users/me/submit-verification", requireAuth, async (req, res) => {
-  const { idImageUrl, idType } = req.body;
+  const { idImageUrl, idBackImageUrl, idType } = req.body;
   const userId = req.user!.id;
 
   if (!idImageUrl || !idType) {
@@ -126,6 +126,7 @@ router.post("/users/me/submit-verification", requireAuth, async (req, res) => {
   const result = await db.insert(verificationRecords).values({
     userId,
     idImageUrl,
+    idBackImageUrl: idBackImageUrl ?? null,
     idType,
     status: "pending",
   }).returning();
