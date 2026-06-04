@@ -172,6 +172,35 @@ function buildNative() {
   }
 }
 
+// Run lightweight column migrations so the DB stays in sync with schema.ts
+// without requiring a full Drizzle migration workflow.
+async function runMigrations() {
+  try {
+    const Database = (await import(resolve(SQLITE3_DIR ?? resolve(WORKSPACE_ROOT, "node_modules/better-sqlite3"), "lib/index.js"))).default;
+    const dbPath = process.env["DB_PATH"] ?? resolve(process.cwd(), "aozora.db");
+    const db = new Database(dbPath);
+
+    const ADD_COLUMNS = [
+      { table: "users", column: "recommendation_applied_at", type: "TEXT" },
+    ];
+
+    for (const { table, column, type } of ADD_COLUMNS) {
+      try {
+        db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+        console.log(`[ensure-sqlite] Migration: added ${table}.${column}`);
+      } catch {
+        // column already exists — safe to ignore
+      }
+    }
+
+    db.close();
+  } catch (e) {
+    console.warn("[ensure-sqlite] Migration skipped:", e.message);
+  }
+}
+
+await runMigrations();
+
 if (needsRebuild()) {
   console.log("[ensure-sqlite] Native binding missing or stale — rebuilding better-sqlite3...");
   buildNative();
