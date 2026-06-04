@@ -134,6 +134,50 @@ router.get("/admin/users", requireAuth, requireRole("admin"), async (req, res) =
   });
 });
 
+router.post("/admin/users/:userId/unsuspend", requireAuth, requireRole("admin"), async (req, res) => {
+  const userId = parseInt(req.params["userId"]!);
+
+  const userRow = sqlite.prepare("SELECT * FROM users WHERE id = ?").get(userId) as any;
+  if (!userRow) {
+    res.status(404).json({ error: "Not found", message: "User not found" });
+    return;
+  }
+  if (!userRow.is_suspended) {
+    res.status(400).json({ error: "User is not suspended" });
+    return;
+  }
+
+  const now = new Date().toISOString();
+  sqlite.prepare(
+    "UPDATE users SET is_suspended = 0, suspended_until = NULL, appeal_cooldown_until = NULL, updated_at = ? WHERE id = ?"
+  ).run(now, userId);
+
+  notifyUser(sqlite, userId, {
+    type: "user_unsuspended",
+    title: "Account Reinstated",
+    body: "Your Aozora account has been reinstated by an admin. Welcome back!",
+    data: { path: "/(tabs)/profile" },
+  });
+
+  const email = userRow.email;
+  const name = userRow.full_name ?? "there";
+  if (email) {
+    try {
+      await sendSuspensionLiftedEmail({ to: email, name });
+    } catch (err: any) {
+      console.error("Failed to send suspension lifted email:", err?.message);
+    }
+  }
+
+  const updated = sqlite.prepare("SELECT * FROM users WHERE id = ?").get(userId) as any;
+  res.json({
+    id: updated.id,
+    fullName: updated.full_name,
+    email: updated.email,
+    isSuspended: !!updated.is_suspended,
+  });
+});
+
 router.put("/admin/users/:userId/status", requireAuth, requireRole("admin"), async (req, res) => {
   const userId = parseInt(req.params["userId"]!);
   const { isSuspended } = req.body;

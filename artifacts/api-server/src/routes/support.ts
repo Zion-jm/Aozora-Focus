@@ -2,7 +2,7 @@ import { Router } from "express";
 import { sqlite } from "../db/index";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
-import { sendSupportResponseEmail, sendAppealApprovedEmail, sendAppealDeniedEmail } from "../lib/mailer";
+import { sendSupportResponseEmail, sendAppealApprovedEmail, sendAppealDeniedEmail, sendBugFixedEmail } from "../lib/mailer";
 
 const router = Router();
 
@@ -299,6 +299,13 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
 
       await sendAppealDeniedEmail({ to: recipientEmail, name: recipientName, restorationDate });
 
+    } else if (responseType === "bug_fixed") {
+      await sendBugFixedEmail({
+        to: recipientEmail,
+        name: recipientName,
+        bugName: ticket.subject,
+        bugDescription: (ticket.message as string).slice(0, 300),
+      });
     } else {
       await sendSupportResponseEmail({
         to: recipientEmail,
@@ -314,17 +321,20 @@ router.post("/admin/support-tickets/:id/respond", requireAuth, requireRole("admi
     return;
   }
 
-  sqlite.prepare(
-    "UPDATE support_tickets SET admin_response = ?, email_sent_at = ?, status = 'resolved', updated_at = ? WHERE id = ?"
-  ).run(responseType, now, now, ticketId);
+  // bug_in_progress keeps ticket open so admin can later send bug_fixed
+  const newStatus = responseType === "bug_in_progress" ? "pending" : "resolved";
 
-  // Sync conversation closed_at if present
-  if (ticket.conversation_id) {
+  sqlite.prepare(
+    "UPDATE support_tickets SET admin_response = ?, email_sent_at = ?, status = ?, updated_at = ? WHERE id = ?"
+  ).run(responseType, now, newStatus, now, ticketId);
+
+  // Sync conversation closed_at only when resolving
+  if (newStatus === "resolved" && ticket.conversation_id) {
     sqlite.prepare("UPDATE admin_conversations SET closed_at = ? WHERE id = ?").run(now, ticket.conversation_id);
   }
 
   // Notify in-app user if they have an account (for non-suspension-lifted, which already notified above)
-  if (ticket.user_id && responseType !== "suspension_lifted") {
+  if (ticket.user_id && responseType !== "suspension_lifted" && newStatus === "resolved") {
     notifyUser(sqlite, ticket.user_id, {
       type: "support_ticket_resolved",
       title: "Support Ticket Resolved ✅",

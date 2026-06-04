@@ -74,15 +74,51 @@ export default function AdminUsersScreen() {
     },
   });
 
-  const toggleSuspend = (user: any) => {
-    const action = user.isSuspended ? "unsuspend" : "suspend";
+  const [unsuspending, setUnsuspending] = useState<number | null>(null);
+
+  const handleUnsuspend = (user: any) => {
     showConfirm({
-      title: `${action.charAt(0).toUpperCase() + action.slice(1)} User?`,
-      message: `Are you sure you want to ${action} ${user.fullName}?`,
-      confirmLabel: action.charAt(0).toUpperCase() + action.slice(1),
-      destructive: !user.isSuspended,
-      icon: user.isSuspended ? "user-check" : "user-x",
-      onConfirm: () => update.mutate({ userId: user.id, data: { isSuspended: !user.isSuspended } }),
+      title: "Unsuspend User?",
+      message: `⚠️ Warning: This user has active violations on record.\n\nUnsuspending ${user.fullName} will override the suspension and restore their full account access immediately. A suspension-lifted email will be sent to them.\n\nThis action cannot be undone without re-suspending the user manually.`,
+      confirmLabel: "Unsuspend & Notify",
+      destructive: false,
+      icon: "user-check",
+      onConfirm: async () => {
+        if (!token) return;
+        setUnsuspending(user.id);
+        try {
+          const res = await fetch(`${BASE_URL}/api/admin/users/${user.id}/unsuspend`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            qc.invalidateQueries({ queryKey: getAdminGetUsersQueryKey() });
+            toast.success("Unsuspended", `${user.fullName}'s account has been reinstated.`);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            toast.error("Error", (err as any).message ?? "Could not unsuspend user.");
+          }
+        } catch {
+          toast.error("Error", "Network error. Please try again.");
+        } finally {
+          setUnsuspending(null);
+        }
+      },
+    });
+  };
+
+  const toggleSuspend = (user: any) => {
+    if (user.isSuspended) {
+      handleUnsuspend(user);
+      return;
+    }
+    showConfirm({
+      title: "Suspend User?",
+      message: `Are you sure you want to suspend ${user.fullName}?`,
+      confirmLabel: "Suspend",
+      destructive: true,
+      icon: "user-x",
+      onConfirm: () => update.mutate({ userId: user.id, data: { isSuspended: true } }),
     });
   };
 
@@ -230,12 +266,17 @@ export default function AdminUsersScreen() {
                           { backgroundColor: item.isSuspended ? "#10b98115" : "#ef444415", borderRadius: 8 },
                         ]}
                         onPress={() => toggleSuspend(item)}
+                        disabled={unsuspending === item.id}
                       >
-                        <Feather
-                          name={item.isSuspended ? "user-check" : "user-x"}
-                          size={16}
-                          color={item.isSuspended ? "#10b981" : "#ef4444"}
-                        />
+                        {unsuspending === item.id ? (
+                          <ActivityIndicator size="small" color="#10b981" />
+                        ) : (
+                          <Feather
+                            name={item.isSuspended ? "user-check" : "user-x"}
+                            size={16}
+                            color={item.isSuspended ? "#10b981" : "#ef4444"}
+                          />
+                        )}
                       </TouchableOpacity>
                     </>
                   )}

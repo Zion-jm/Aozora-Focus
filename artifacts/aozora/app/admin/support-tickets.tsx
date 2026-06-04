@@ -146,13 +146,18 @@ export default function AdminSupportTicketsScreen() {
   const handleSendEmailResponse = async (item: any, responseType: string, label: string) => {
     if (!token) return;
 
+    const recipientEmail = item.guestEmail ?? item.user?.email ?? "the user";
+    const isBugInProgress = responseType === "bug_in_progress";
+
     Alert.alert(
       `Send Email: ${label}`,
-      `This will send an email to ${item.guestEmail ?? item.user?.email ?? "the user"} and mark the ticket as resolved.\n\nProceed?`,
+      isBugInProgress
+        ? `This will send a "Bug In Progress" email to ${recipientEmail}.\n\nThe ticket will remain open so you can later send "Bug Fixed" once resolved.\n\nProceed?`
+        : `This will send an email to ${recipientEmail} and mark the ticket as resolved.\n\nProceed?`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Send & Resolve",
+          text: isBugInProgress ? "Send Email" : "Send & Resolve",
           style: "default",
           onPress: async () => {
             setSendingEmail((prev) => ({ ...prev, [item.id]: true }));
@@ -163,9 +168,10 @@ export default function AdminSupportTicketsScreen() {
                 body: JSON.stringify({ responseType }),
               });
               if (res.ok) {
+                const data = await res.json();
                 setTickets((prev) =>
                   prev.map((t) =>
-                    t.id === item.id ? { ...t, status: "resolved", adminResponse: responseType } : t
+                    t.id === item.id ? { ...t, status: data.status, adminResponse: data.adminResponse } : t
                   )
                 );
               } else {
@@ -205,6 +211,8 @@ export default function AdminSupportTicketsScreen() {
     const isGuest = !item.user;
     const isSuspendedUser = !!item.user?.isSuspended;
     const needsEmailResponse = (isGuest || isSuspendedUser) && isPending;
+    const isBugTicket = item.ticketType === "Report a Technical Bug";
+    const isBugInProgress = isBugTicket && item.adminResponse === "bug_in_progress" && isPending;
     const isSending = !!sendingEmail[item.id];
     const [positiveOption, negativeOption] = getResponseOptions(item.ticketType);
 
@@ -272,6 +280,12 @@ export default function AdminSupportTicketsScreen() {
               <Text style={[styles.emailSectionLabel, { color: colors.mutedForeground }]}>
                 Send email response
               </Text>
+              {isBugInProgress && (
+                <View style={[styles.inProgressBadge, { backgroundColor: "#f59e0b18" }]}>
+                  <Feather name="clock" size={10} color="#f59e0b" />
+                  <Text style={[styles.inProgressBadgeText, { color: "#f59e0b" }]}>In Progress — email sent</Text>
+                </View>
+              )}
             </View>
             <View style={styles.emailBtnRow}>
               {isSending ? (
@@ -279,6 +293,15 @@ export default function AdminSupportTicketsScreen() {
                   <ActivityIndicator size="small" color={colors.primary} />
                   <Text style={[styles.sendingText, { color: colors.mutedForeground }]}>Sending email…</Text>
                 </View>
+              ) : isBugInProgress ? (
+                <TouchableOpacity
+                  style={[styles.emailBtn, { backgroundColor: positiveOption.color + "18", borderColor: positiveOption.color + "40" }]}
+                  onPress={() => handleSendEmailResponse(item, positiveOption.responseType, positiveOption.label)}
+                  activeOpacity={0.8}
+                >
+                  <Feather name={positiveOption.icon} size={13} color={positiveOption.color} />
+                  <Text style={[styles.emailBtnText, { color: positiveOption.color }]}>{positiveOption.label}</Text>
+                </TouchableOpacity>
               ) : (
                 <>
                   <TouchableOpacity
@@ -446,8 +469,10 @@ const styles = StyleSheet.create({
   subject: { fontSize: 15, fontWeight: "700" },
   preview: { fontSize: 13, lineHeight: 18 },
   emailSection: { borderWidth: 1, borderRadius: 10, padding: 10, gap: 8 },
-  emailSectionHeader: { flexDirection: "row", alignItems: "center", gap: 5 },
+  emailSectionHeader: { flexDirection: "row", alignItems: "center", gap: 5, flexWrap: "wrap" },
   emailSectionLabel: { fontSize: 12, fontWeight: "600" },
+  inProgressBadge: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20, marginLeft: 4 },
+  inProgressBadgeText: { fontSize: 10, fontWeight: "700" },
   emailBtnRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   emailBtn: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 8, borderWidth: 1, flex: 1, justifyContent: "center" },
   emailBtnText: { fontSize: 12, fontWeight: "700" },

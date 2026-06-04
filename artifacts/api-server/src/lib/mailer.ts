@@ -335,6 +335,89 @@ export async function sendAppealDeniedEmail(opts: {
   });
 }
 
+export async function sendBugFixedEmail(opts: {
+  to: string;
+  name: string;
+  bugName: string;
+  bugDescription: string;
+}): Promise<void> {
+  const subject = `${opts.bugName} Has Been Fixed — Aozora`;
+
+  const text =
+    `Hi ${opts.name},\n\n` +
+    `Great news! The bug you reported has been identified and fixed by our engineering team.\n\n` +
+    `Bug Reported: ${opts.bugName}\n` +
+    `Description: ${opts.bugDescription}\n\n` +
+    `What we fixed:\n` +
+    `Our team investigated the issue you reported and has deployed a fix. The problem should no longer occur.\n\n` +
+    `What to do next:\n` +
+    `We recommend restarting or updating your Aozora app to ensure the fix is applied. If you still encounter the problem after restarting, please don't hesitate to submit a new report.\n\n` +
+    `Thank you for helping us improve Aozora — your report made a real difference!\n\n` +
+    `Warm regards,\nAozora Engineering Team\naozora.dormfinder.admin@gmail.com`;
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:540px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+      <h2 style="color:#2563eb;margin:0 0 4px;font-size:22px;">Aozora</h2>
+      <p style="color:#9ca3af;margin:0 0 28px;font-size:13px;">Home, but smarter.</p>
+
+      <div style="border-left:4px solid #10b981;padding:14px 18px;background:#10b98112;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px;">Your Reported Issue Has Been Resolved ✅</p>
+        <p style="font-size:13px;color:#6b7280;margin:0;">The bug you submitted has been fixed and deployed.</p>
+      </div>
+
+      <p style="font-size:15px;color:#374151;margin:0 0 6px;">Hi <strong>${opts.name}</strong>,</p>
+      <p style="font-size:15px;color:#374151;line-height:1.65;margin:0 0 20px;">
+        Great news! The bug you reported has been identified and fixed by our engineering team.
+        Thank you for taking the time to report it — your feedback makes Aozora better for everyone.
+      </p>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;border-radius:8px;overflow:hidden;">
+        <tr style="background:#f0fdf4;">
+          <td style="padding:11px 14px;font-size:13px;font-weight:700;color:#065f46;border:1px solid #bbf7d0;width:38%;">Bug Reported</td>
+          <td style="padding:11px 14px;font-size:13px;color:#111827;font-weight:600;border:1px solid #bbf7d0;">${opts.bugName}</td>
+        </tr>
+        <tr>
+          <td style="padding:11px 14px;font-size:13px;font-weight:700;color:#374151;border:1px solid #e5e7eb;border-top:none;vertical-align:top;">Your Description</td>
+          <td style="padding:11px 14px;font-size:13px;color:#6b7280;border:1px solid #e5e7eb;border-top:none;line-height:1.55;">${opts.bugDescription}</td>
+        </tr>
+        <tr style="background:#f9fafb;">
+          <td style="padding:11px 14px;font-size:13px;font-weight:700;color:#374151;border:1px solid #e5e7eb;border-top:none;">Status</td>
+          <td style="padding:11px 14px;font-size:13px;color:#10b981;font-weight:700;border:1px solid #e5e7eb;border-top:none;">✓ Fixed &amp; Deployed</td>
+        </tr>
+      </table>
+
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+        <p style="font-size:13px;font-weight:700;color:#1e40af;margin:0 0 5px;">📱 What to do next</p>
+        <p style="font-size:13px;color:#1d4ed8;line-height:1.6;margin:0;">
+          Restart or update your Aozora app to make sure the fix is applied.
+          If the issue still appears after restarting, please submit a new report and we'll look into it right away.
+        </p>
+      </div>
+
+      <p style="font-size:14px;color:#374151;line-height:1.65;margin:0 0 24px;">
+        Your bug report helped us catch and fix a real problem. We truly appreciate you taking the time — you're helping make Aozora a better platform for all students and property owners in Lopez.
+      </p>
+
+      <p style="font-size:14px;color:#374151;margin:0 0 2px;">Warm regards,</p>
+      <p style="font-size:14px;color:#111827;font-weight:700;margin:0 0 2px;">Aozora Engineering Team</p>
+      <p style="font-size:13px;color:#6b7280;margin:0;">aozora.dormfinder.admin@gmail.com</p>
+
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
+      <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.5;">
+        This is a system-generated message from Aozora. If you need further assistance, visit our Help Center.
+      </p>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: `"Aozora Engineering" <${process.env.GMAIL_USER}>`,
+    to: opts.to,
+    subject,
+    text,
+    html,
+  });
+}
+
 export async function sendSupportResponseEmail(opts: {
   to: string;
   name: string;
