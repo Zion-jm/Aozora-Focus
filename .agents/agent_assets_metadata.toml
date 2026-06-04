@@ -6,3 +6,9 @@ id = "wHvZ-5tovRB4rrM91XrOc"
 uri = "file://artifacts/aozora/assets/images/icon.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "z6afyhnEGHW_GLBN1709z"
+uri = "file://attached_assets/generated_images/app_icon_for_a_f8dc.png"
+type = "image"
+title = "generated_image"
