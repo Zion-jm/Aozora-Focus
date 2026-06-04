@@ -21,6 +21,14 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "API Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Expo Dev Server"
+
 [[workflows.workflow]]
 name = "Start application"
 author = "agent"
@@ -32,6 +40,30 @@ outputType = "webview"
 task = "shell.exec"
 args = "bash start.sh"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "API Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/api-server && node ensure-sqlite.mjs && pnpm run build && pnpm run start"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Expo Dev Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd artifacts/aozora && pnpm run dev"
+waitForPort = 3001
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -50,16 +82,8 @@ localPort = 3001
 externalPort = 3001
 
 [[ports]]
-localPort = 5000
-externalPort = 80
-
-[[ports]]
 localPort = 8080
 externalPort = 8080
-
-[[ports]]
-localPort = 8100
-externalPort = 3003
 
 [[ports]]
 localPort = 20823
@@ -77,4 +101,3 @@ channel = "stable-25_05"
 [userenv.shared]
 PORT = "8080"
 NODE_ENV = "development"
-JWT_SECRET = "tyDd165eeGYwMGztB0vIIslzKM0XsEm9t70ic5REOFTn17XstBo5bY7ckWtL+CZe"

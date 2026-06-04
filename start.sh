@@ -13,9 +13,9 @@ echo "[start] EXPO_PUBLIC_DOMAIN=$EXPO_PUBLIC_DOMAIN"
 echo "[start] Checking better-sqlite3 native binding..."
 node "$WORKSPACE_ROOT/artifacts/api-server/ensure-sqlite.mjs"
 
-# ── Wait for API server (started by artifact workflow) ────────────────────────
+# ── Wait for API server (started by API Server workflow) ─────────────────────
 echo "[start] Waiting for API server on port 8080..."
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
   if curl -sf http://localhost:8080/api/healthz > /dev/null 2>&1; then
     echo "[start] API server ready."
     break
@@ -23,6 +23,16 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-# ── Dev proxy on port 5000 → routes /api → 8080, everything else → 20823/20824
-echo "[start] Starting dev proxy on port 5000 → Expo on 20823/20824, API on 8080..."
+# ── Wait for Expo dev server (started by Expo Dev Server workflow) ─────────────
+echo "[start] Waiting for Expo dev server on port 3001..."
+for i in $(seq 1 60); do
+  if curl -sf http://localhost:3001 > /dev/null 2>&1; then
+    echo "[start] Expo dev server ready."
+    break
+  fi
+  sleep 2
+done
+
+# ── Dev proxy on port 5000 → routes /api → 8080, everything else → 3001
+echo "[start] Starting dev proxy on port 5000 → Expo on 3001, API on 8080..."
 node "$WORKSPACE_ROOT/dev-proxy.js"

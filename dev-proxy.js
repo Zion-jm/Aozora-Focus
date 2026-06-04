@@ -1,7 +1,7 @@
 const http = require("http");
 
 const API_PORT = 8080;
-const EXPO_PORTS = [20823, 20824]; // try both; artifact workflow may grab either one
+const EXPO_PORTS = [3001]; // Expo dev server port
 
 function tryProxy(req, res, ports, idx) {
   if (idx >= ports.length) {
