@@ -77,3 +77,4 @@ channel = "stable-25_05"
 [userenv.shared]
 PORT = "8080"
 NODE_ENV = "development"
+JWT_SECRET = "tyDd165eeGYwMGztB0vIIslzKM0XsEm9t70ic5REOFTn17XstBo5bY7ckWtL+CZe"
