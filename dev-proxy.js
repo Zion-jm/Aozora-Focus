@@ -1,42 +1,67 @@
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 
 const API_PORT = 8080;
-const EXPO_PORTS = [3000]; // Expo dev server port
+const STATIC_ROOT = path.resolve(__dirname, "artifacts/aozora/dist");
 
-function tryProxy(req, res, ports, idx) {
-  if (idx >= ports.length) {
-    res.writeHead(502, { "content-type": "text/html" });
+const MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".mjs": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".otf": "font/otf",
+  ".map": "application/json",
+  ".webp": "image/webp",
+};
+
+function serveStatic(req, res) {
+  if (!fs.existsSync(STATIC_ROOT)) {
+    res.writeHead(503, { "content-type": "text/html" });
     res.end(
-      "<html><body><h2>Aozora is starting up...</h2><p>The Expo dev server is initializing. Please refresh in a moment.</p><script>setTimeout(()=>location.reload(),3000)</script></body></html>",
+      "<html><body><h2>Aozora is building...</h2><p>The app is being compiled. Please refresh in a moment.</p><script>setTimeout(()=>location.reload(),4000)</script></body></html>",
     );
     return;
   }
 
-  const opts = {
-    hostname: "localhost",
-    port: ports[idx],
-    path: req.url,
-    method: req.method,
-    headers: req.headers,
-  };
+  const url = new URL(req.url || "/", "http://localhost");
+  let pathname = url.pathname;
 
-  const proxy = http.request(opts, (r) => {
-    res.writeHead(r.statusCode, r.headers);
-    r.pipe(res, { end: true });
-  });
+  // Try exact file first, then index.html fallback (SPA routing)
+  const candidates = [
+    path.join(STATIC_ROOT, pathname),
+    path.join(STATIC_ROOT, pathname, "index.html"),
+    path.join(STATIC_ROOT, "index.html"),
+  ];
 
-  proxy.on("error", () => {
-    // this port failed, try the next one
-    tryProxy(req, res, ports, idx + 1);
-  });
+  for (const filePath of candidates) {
+    const safe = path.normalize(filePath);
+    if (!safe.startsWith(STATIC_ROOT)) continue;
+    if (fs.existsSync(safe) && fs.statSync(safe).isFile()) {
+      const ext = path.extname(safe).toLowerCase();
+      const contentType = MIME_TYPES[ext] || "application/octet-stream";
+      res.writeHead(200, { "content-type": contentType });
+      fs.createReadStream(safe).pipe(res);
+      return;
+    }
+  }
 
-  req.pipe(proxy, { end: true });
+  res.writeHead(404);
+  res.end("Not found");
 }
 
 const server = http.createServer((req, res) => {
-  const isApiRequest = req.url && req.url.startsWith("/api");
-
-  if (isApiRequest) {
+  if (req.url && req.url.startsWith("/api")) {
     const opts = {
       hostname: "localhost",
       port: API_PORT,
@@ -54,10 +79,10 @@ const server = http.createServer((req, res) => {
     });
     req.pipe(proxy, { end: true });
   } else {
-    tryProxy(req, res, EXPO_PORTS, 0);
+    serveStatic(req, res);
   }
 });
 
 server.listen(5000, "0.0.0.0", () => {
-  console.log(`Dev proxy running on port 5000 → Expo on ${EXPO_PORTS.join(" or ")}, API on ${API_PORT}`);
+  console.log("Dev proxy running on port 5000 → static from dist/, API on 8080");
 });
