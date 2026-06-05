@@ -14,13 +14,19 @@ import { useAuth } from "./AuthContext";
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 const POLL_INTERVAL_MS = 3_000;
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// expo-notifications push support was removed from Expo Go in SDK 53.
+// Wrap the handler registration so the app doesn't crash in Expo Go.
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+} catch {
+  // silently ignore — not supported in Expo Go on Android (SDK 53+)
+}
 
 interface NotificationContextType {
   unreadCount: number;
@@ -94,7 +100,9 @@ export function NotificationProvider({
     if (!user || !token) {
       setUnreadCount(0);
       setUnreadMessageCount(0);
-      if (Platform.OS !== "web") Notifications.setBadgeCountAsync(0).catch(() => {});
+      if (Platform.OS !== "web") {
+        Notifications.setBadgeCountAsync(0).catch(() => {});
+      }
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       return;
     }
@@ -110,13 +118,17 @@ export function NotificationProvider({
 
   // Navigate to the relevant screen when a push notification is tapped
   useEffect(() => {
-    responseListenerRef.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        const data = response.notification.request.content.data as any;
-        if (data?.path) {
-          router.push(data.path);
-        }
-      });
+    try {
+      responseListenerRef.current =
+        Notifications.addNotificationResponseReceivedListener((response) => {
+          const data = response.notification.request.content.data as any;
+          if (data?.path) {
+            router.push(data.path);
+          }
+        });
+    } catch {
+      // silently ignore — not supported in Expo Go on Android (SDK 53+)
+    }
 
     return () => {
       responseListenerRef.current?.remove();
