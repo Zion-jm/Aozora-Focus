@@ -53,6 +53,11 @@ function RootLayoutNav() {
       <Stack.Screen name="profile/my-dorms" />
       <Stack.Screen name="profile/reviews" />
       <Stack.Screen name="admin-conversation/[id]" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="profile/edit" />
+      <Stack.Screen name="about" />
+      <Stack.Screen name="help-center" />
+      <Stack.Screen name="my-tickets" />
       <Stack.Screen name="terms-of-service" />
       <Stack.Screen name="community-guidelines" />
       <Stack.Screen name="privacy-policy" />
