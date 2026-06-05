@@ -42,7 +42,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/aozora run dev"
+args = "fuser -k 20823/tcp 2>/dev/null; fuser -k 20824/tcp 2>/dev/null; pnpm --filter @workspace/aozora run dev"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
