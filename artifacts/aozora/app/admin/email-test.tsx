@@ -159,9 +159,9 @@ export default function EmailTestScreen() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      toast({ type: "success", message: `Sent! → ${data.sentTo}` });
+      toast.success("Sent!", `→ ${data.sentTo}`);
     } catch (e: any) {
-      toast({ type: "error", message: e.message });
+      toast.error("Error", e.message);
     } finally {
       setSending(null);
     }
