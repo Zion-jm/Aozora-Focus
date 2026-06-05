@@ -20,6 +20,7 @@ import { useColors } from "@/hooks/useColors";
 import { useVerificationGate } from "@/hooks/useVerificationGate";
 import { useToast } from "@/context/ToastContext";
 import LocationPickerMap from "@/components/LocationPickerMap";
+import MapErrorBoundary from "@/components/MapErrorBoundary";
 import {
   useCreateDorm,
   useUpdateDorm,
@@ -412,16 +413,18 @@ export default function CreateDormScreen() {
         />
 
         <Text style={[styles.fieldLabel, { color: colors.foreground }]}>Location on Map</Text>
-        <LocationPickerMap
-          latitude={latitude}
-          longitude={longitude}
-          onLocationChange={(lat, lng) => {
-            lastGeocodedAddress.current = address.trim();
-            setLatitude(lat);
-            setLongitude(lng);
-          }}
-          isGeocoding={isGeocoding}
-        />
+        <MapErrorBoundary fallbackMessage="The location picker couldn't load. You can enter coordinates manually below.">
+          <LocationPickerMap
+            latitude={latitude}
+            longitude={longitude}
+            onLocationChange={(lat, lng) => {
+              lastGeocodedAddress.current = address.trim();
+              setLatitude(lat);
+              setLongitude(lng);
+            }}
+            isGeocoding={isGeocoding}
+          />
+        </MapErrorBoundary>
 
         <View style={styles.row}>
           <View style={styles.third}>

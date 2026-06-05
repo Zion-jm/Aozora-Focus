@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import DormMap from "@/components/DormMap";
+import MapErrorBoundary from "@/components/MapErrorBoundary";
 
 export default function MapScreen() {
   const colors = useColors();
@@ -26,7 +27,9 @@ export default function MapScreen() {
         </Text>
       </View>
       <View style={styles.mapContainer}>
-        <DormMap />
+        <MapErrorBoundary>
+          <DormMap />
+        </MapErrorBoundary>
       </View>
     </View>
   );
