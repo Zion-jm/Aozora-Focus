@@ -77,3 +77,4 @@ channel = "stable-25_05"
 [userenv.shared]
 PORT = "8080"
 NODE_ENV = "development"
+DB_PATH = "/home/runner/workspace/aozora.db"
