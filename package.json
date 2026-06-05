@@ -12,11 +12,5 @@
   "devDependencies": {
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "uuid": "^11.1.0",
-      "postcss": "^8.5.15"
-    }
   }
 }
