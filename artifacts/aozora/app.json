@@ -17,6 +17,7 @@
       "supportsTablet": false
     },
     "android": {
+      "package": "ph.aozora.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#4f46e5"
