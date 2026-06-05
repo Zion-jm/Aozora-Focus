@@ -473,6 +473,7 @@ export default function AdminDashboard() {
                 <NavTile icon="message-square" label="Support" badge={s?.pendingSupportTickets} color="#8b5cf6" onPress={() => router.push("/admin/support-tickets")} colors={colors} />
                 <NavTile icon="user-x" label="Suspended" badge={s?.suspendedUsers} color="#ef4444" onPress={() => router.push("/admin/suspended-users")} colors={colors} />
                 <NavTile icon="x-circle" label="Rejected Listings" badge={0} color="#64748b" onPress={() => router.push("/admin/rejected-listings")} colors={colors} />
+                <NavTile icon="mail" label="Test Emails" badge={0} color="#6366f1" onPress={() => router.push("/admin/email-test")} colors={colors} />
               </View>
             </View>
           </>

@@ -5,7 +5,7 @@ import { users, verificationRecords, dorms, dormPhotos, appointments } from "../
 import { eq, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
 import { notifyUser, notifyAllAdmins } from "../lib/notifications";
-import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail, sendVerificationApprovedEmail, sendVerificationRejectedEmail, sendBanTerminationEmail } from "../lib/mailer";
+import { sendSuspensionLiftedEmail, sendSuspensionNoticeEmail, sendVerificationApprovedEmail, sendVerificationRejectedEmail, sendBanTerminationEmail, sendOtpEmail, sendAppealApprovedEmail, sendAppealDeniedEmail, sendBugInProgressEmail, sendBugFixedEmail, sendSupportResponseEmail } from "../lib/mailer";
 
 const SEVERITY_POINTS: Record<number, number> = { 1: 1, 2: 3, 3: 6, 4: 10 };
 
@@ -859,5 +859,62 @@ export function startSuspensionChecker() {
   checkExpiredSuspensions();
   setInterval(checkExpiredSuspensions, 60 * 60 * 1000);
 }
+
+router.post("/admin/test-email", requireAuth, requireRole("admin"), async (req, res) => {
+  const { type } = req.body as { type: string };
+  const to = process.env.MOCK_EMAIL_RECIPIENT || "test@aozora.ph";
+  const name = "Test User";
+  const today = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+  const future7 = new Date(Date.now() + 7 * 86400000).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+  const future30 = new Date(Date.now() + 30 * 86400000).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
+
+  try {
+    switch (type) {
+      case "otp":
+        await sendOtpEmail(to, "123456");
+        break;
+      case "suspension_7day":
+        await sendSuspensionNoticeEmail({ to, name, violationCategory: "Harassment / Bullying", suspensionPeriod: "7 days", restorationDate: future7 });
+        break;
+      case "suspension_30day":
+        await sendSuspensionNoticeEmail({ to, name, violationCategory: "Repeated Policy Violations", suspensionPeriod: "30 days", restorationDate: future30 });
+        break;
+      case "ban":
+        await sendBanTerminationEmail({ to, name, reason: "Severe and repeated misconduct", effectiveDate: today });
+        break;
+      case "suspension_lifted":
+        await sendSuspensionLiftedEmail({ to, name });
+        break;
+      case "appeal_approved":
+        await sendAppealApprovedEmail({ to, name });
+        break;
+      case "appeal_denied":
+        await sendAppealDeniedEmail({ to, name, restorationDate: future30, reason: "Evidence did not support the appeal" });
+        break;
+      case "bug_in_progress":
+        await sendBugInProgressEmail({ to, name, bugSubject: "App crashes on map view", bugMessage: "This is a test bug report message." });
+        break;
+      case "bug_fixed":
+        await sendBugFixedEmail({ to, name, bugName: "App crashes on map view", bugDescription: "This issue has been resolved in the latest update." });
+        break;
+      case "support_response":
+        await sendSupportResponseEmail({ to, name, ticketType: "support", subject: "Sample support ticket", responseType: "resolved" });
+        break;
+      case "verification_approved":
+        await sendVerificationApprovedEmail({ to, name, approvalDate: today });
+        break;
+      case "verification_rejected":
+        await sendVerificationRejectedEmail({ to, name, rejectionReasons: "Photo is blurry or unreadable", reviewDate: today });
+        break;
+      default:
+        res.status(400).json({ error: `Unknown email type: ${type}` });
+        return;
+    }
+    res.json({ ok: true, sentTo: to, type });
+  } catch (e: any) {
+    console.error("test-email error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 export default router;

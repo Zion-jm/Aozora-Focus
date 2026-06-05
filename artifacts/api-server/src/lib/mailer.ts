@@ -8,8 +8,28 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const MOCK_RECIPIENT = process.env.MOCK_EMAIL_RECIPIENT;
+
+async function sendMail(opts: {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<void> {
+  if (MOCK_RECIPIENT) {
+    await transporter.sendMail({
+      ...opts,
+      to: MOCK_RECIPIENT,
+      subject: `[Mock → ${opts.to}] ${opts.subject}`,
+    });
+  } else {
+    await transporter.sendMail(opts);
+  }
+}
+
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora" <${process.env.GMAIL_USER}>`,
     to,
     subject: "Your Aozora verification code",
@@ -156,7 +176,7 @@ export async function sendSuspensionLiftedEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -228,7 +248,7 @@ export async function sendAppealApprovedEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -326,7 +346,7 @@ export async function sendAppealDeniedEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -415,7 +435,7 @@ export async function sendBugInProgressEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Support" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -519,7 +539,7 @@ export async function sendBanTerminationEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -602,7 +622,7 @@ export async function sendBugFixedEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Engineering" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -621,7 +641,7 @@ export async function sendSupportResponseEmail(opts: {
   const config = RESPONSE_CONFIGS[opts.responseType];
   if (!config) throw new Error(`Unknown responseType: ${opts.responseType}`);
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Support" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject: config.subject,
@@ -753,7 +773,7 @@ export async function sendSuspensionNoticeEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -828,7 +848,7 @@ export async function sendVerificationApprovedEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
@@ -934,7 +954,7 @@ export async function sendVerificationRejectedEmail(opts: {
     </div>
   `;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"Aozora Admin" <${process.env.GMAIL_USER}>`,
     to: opts.to,
     subject,
