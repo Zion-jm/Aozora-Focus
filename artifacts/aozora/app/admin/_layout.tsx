@@ -116,6 +116,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="user-violations" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="email-test" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }

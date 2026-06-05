@@ -262,9 +262,17 @@ export default function ProfileScreen() {
         )}
         <MenuItem icon="help-circle" label="Help Center" onPress={() => router.push("/help-center")} colors={colors} />
         <MenuItem icon="book-open" label="Community Guidelines" onPress={() => router.push("/community-guidelines")} colors={colors} />
-        <MenuItem icon="file-text" label="Terms of Service" onPress={() => router.push("/terms-of-service")} colors={colors} />
-        <MenuItem icon="lock" label="Privacy Policy" onPress={() => router.push("/privacy-policy")} colors={colors} />
         <MenuItem icon="info" label="About Aozora" onPress={() => router.push("/about")} colors={colors} />
+      </View>
+
+      <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card, marginTop: 12 }]}>
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>PREFERENCES</Text>
+        {user?.role !== "admin" && (
+          <MenuItem icon="settings" label="Settings" onPress={() => router.push("/settings")} colors={colors} />
+        )}
+        {user?.role === "admin" && (
+          <MenuItem icon="settings" label="Admin Settings" onPress={() => router.push("/admin/settings")} colors={colors} />
+        )}
       </View>
 
       <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.card, marginTop: 12 }]}>

@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
@@ -148,7 +149,15 @@ export default function AdminProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <PageHeader title="My Profile" subtitle="Manage your admin account" />
+      <PageHeader
+        title="My Profile"
+        subtitle="Manage your admin account"
+        right={
+          <TouchableOpacity onPress={() => router.push("/admin/settings")} style={{ padding: 4 }}>
+            <Feather name="settings" size={21} color={colors.foreground} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.scroll}

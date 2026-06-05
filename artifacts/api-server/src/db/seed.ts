@@ -1,9 +1,19 @@
 import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
 
+export function forceSeedDatabase(db: Database.Database) {
+  _seedUsers(db);
+  _seedDorms(db);
+}
+
 export function seedDatabase(db: Database.Database) {
   const existing = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
   if (existing.count > 0) return;
+  _seedUsers(db);
+  _seedDorms(db);
+}
+
+function _seedUsers(db: Database.Database) {
 
   const adminHash = bcrypt.hashSync("admin123", 10);
   const ownerHash = bcrypt.hashSync("owner123", 10);
@@ -33,7 +43,9 @@ export function seedDatabase(db: Database.Database) {
     INSERT INTO users (full_name, email, phone, password_hash, role, verification_status)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run("Juan Mendoza", "juan@example.com", "+63-9461234567", studentHash, "boarder", "unverified");
+}
 
+function _seedDorms(db: Database.Database) {
   const amenities1 = JSON.stringify(["WiFi", "Air Conditioning", "Private Bathroom", "Kitchen", "Laundry"]);
   const amenities2 = JSON.stringify(["WiFi", "Fan", "Shared Bathroom", "Water", "CCTV"]);
   const amenities3 = JSON.stringify(["WiFi", "Air Conditioning", "Private Bathroom", "Kitchen", "Parking", "Generator"]);

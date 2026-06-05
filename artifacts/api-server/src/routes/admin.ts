@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db, sqlite } from "../db/index";
+import { forceSeedDatabase, seedReviewsIfEmpty, seedDummyAdminData } from "../db/seed";
 import { users, verificationRecords, dorms, dormPhotos, appointments } from "../db/schema";
 import { eq, asc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../middlewares/auth";
@@ -917,34 +918,50 @@ router.post("/admin/test-email", requireAuth, requireRole("admin"), async (req, 
   }
 });
 
-router.post("/admin/reset-demo-data", requireAuth, requireRole("admin"), async (_req, res) => {
+router.post("/admin/reset-test-data", requireAuth, requireRole("admin"), async (_req, res) => {
   try {
-    const db = getDb();
+    sqlite.transaction(() => {
+      sqlite.prepare("DELETE FROM admin_messages").run();
+      sqlite.prepare("DELETE FROM admin_conversations").run();
+      sqlite.prepare("DELETE FROM messages").run();
+      sqlite.prepare("DELETE FROM conversations").run();
+      sqlite.prepare("DELETE FROM dorm_photos").run();
+      sqlite.prepare("DELETE FROM dorm_reviews").run();
+      sqlite.prepare("DELETE FROM user_reviews").run();
+      sqlite.prepare("DELETE FROM appointments").run();
+      sqlite.prepare("DELETE FROM favorites").run();
+      sqlite.prepare("DELETE FROM notifications").run();
+      sqlite.prepare("DELETE FROM reports").run();
+      sqlite.prepare("DELETE FROM push_tokens").run();
+      sqlite.prepare("DELETE FROM otp_verifications").run();
+      try { sqlite.prepare("DELETE FROM violations").run(); } catch { /* ignore */ }
+      try { sqlite.prepare("DELETE FROM support_tickets").run(); } catch { /* ignore */ }
+      sqlite.prepare("DELETE FROM verification_records").run();
+      sqlite.prepare("DELETE FROM dorms").run();
+      sqlite.prepare("DELETE FROM users WHERE role != 'admin'").run();
 
-    db.transaction(() => {
-      // Delete in dependency order (children first)
-      db.prepare("DELETE FROM messages").run();
-      db.prepare("DELETE FROM conversations").run();
-      db.prepare("DELETE FROM dorm_photos").run();
-      db.prepare("DELETE FROM dorm_reviews").run();
-      db.prepare("DELETE FROM user_reviews").run();
-      db.prepare("DELETE FROM appointments").run();
-      db.prepare("DELETE FROM favorites").run();
-      db.prepare("DELETE FROM notifications WHERE user_id != (SELECT id FROM users WHERE role = 'admin' LIMIT 1)").run();
-      db.prepare("DELETE FROM reports").run();
-      try { db.prepare("DELETE FROM violations").run(); } catch {}
-      try { db.prepare("DELETE FROM support_tickets").run(); } catch {}
-      db.prepare("DELETE FROM verification_records").run();
-      db.prepare("DELETE FROM dorms").run();
-      // Keep admin, delete all non-admin users
-      db.prepare("DELETE FROM users WHERE role != 'admin'").run();
-      // Ensure admin email is up to date
-      db.prepare("UPDATE users SET email = ? WHERE role = 'admin'").run("aozora.dormfinder.admin@gmail.com");
+    // Reset ID sequences so re-seeded users/dorms get their original IDs
+    // Users: admin stays at id=1; set seq=1 so next insert gets id=2
+    sqlite.prepare("UPDATE sqlite_sequence SET seq=1 WHERE name='users'").run();
+    // Reset all other cleared tables to start from id=1
+    const clearedTables = [
+      "dorms", "dorm_photos", "appointments", "conversations", "messages",
+      "favorites", "dorm_reviews", "user_reviews", "notifications", "reports",
+      "violations", "support_tickets", "admin_conversations", "admin_messages",
+      "verification_records", "push_tokens", "otp_verifications",
+    ];
+    for (const tbl of clearedTables) {
+      sqlite.prepare(`UPDATE sqlite_sequence SET seq=0 WHERE name=?`).run(tbl);
+    }
     })();
 
-    res.json({ ok: true, message: "Demo data cleared. App is ready for production." });
+    forceSeedDatabase(sqlite);
+    seedReviewsIfEmpty(sqlite);
+    seedDummyAdminData(sqlite);
+
+    res.json({ ok: true, message: "Test data cleared and re-seeded successfully." });
   } catch (e: any) {
-    console.error("reset-demo-data error:", e);
+    console.error("reset-test-data error:", e);
     res.status(500).json({ error: e.message });
   }
 });
