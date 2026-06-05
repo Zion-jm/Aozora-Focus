@@ -106,7 +106,7 @@ export function NotificationProvider({
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [user?.id, token, pollAll, registerPushToken]);
+  }, [user?.id, token, pollAll]);
 
   // Navigate to the relevant screen when a push notification is tapped
   useEffect(() => {
