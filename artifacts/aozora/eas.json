@@ -8,7 +8,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_NO_FROZEN_LOCKFILE": "1"
+        "EXPO_PUBLIC_DOMAIN": "93008aee-de8d-4d23-9bc5-89b33fc7b6e3-00-x393mngv41a9.pike.replit.dev"
       }
     },
     "production": {
@@ -16,7 +16,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_NO_FROZEN_LOCKFILE": "1"
+        "EXPO_PUBLIC_DOMAIN": "93008aee-de8d-4d23-9bc5-89b33fc7b6e3-00-x393mngv41a9.pike.replit.dev"
       }
     }
   }
