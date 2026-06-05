@@ -7,6 +7,13 @@ export EXPO_PUBLIC_REPL_ID="${REPL_ID:-}"
 
 echo "[start] EXPO_PUBLIC_DOMAIN=$EXPO_PUBLIC_DOMAIN"
 
+# Start API server on port 8080
+echo "[start] Starting API server on port 8080..."
+cd "$WORKSPACE_ROOT/artifacts/api-server" && \
+  node ensure-sqlite.mjs && \
+  PORT=8080 DB_PATH="$WORKSPACE_ROOT/aozora.db" node --enable-source-maps ./dist/index.mjs &
+API_PID=$!
+
 # Start proxy immediately on port 5000
 echo "[start] Starting proxy on port 5000..."
 node "$WORKSPACE_ROOT/dev-proxy.js" &
@@ -23,5 +30,5 @@ else
   echo "[start] Export complete. App is now live."
 fi
 
-# Keep the proxy alive
+# Keep alive
 wait $PROXY_PID
