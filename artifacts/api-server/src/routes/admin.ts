@@ -917,4 +917,36 @@ router.post("/admin/test-email", requireAuth, requireRole("admin"), async (req, 
   }
 });
 
+router.post("/admin/reset-demo-data", requireAuth, requireRole("admin"), async (_req, res) => {
+  try {
+    const db = getDb();
+
+    db.transaction(() => {
+      // Delete in dependency order (children first)
+      db.prepare("DELETE FROM messages").run();
+      db.prepare("DELETE FROM conversations").run();
+      db.prepare("DELETE FROM dorm_photos").run();
+      db.prepare("DELETE FROM dorm_reviews").run();
+      db.prepare("DELETE FROM user_reviews").run();
+      db.prepare("DELETE FROM appointments").run();
+      db.prepare("DELETE FROM favorites").run();
+      db.prepare("DELETE FROM notifications WHERE user_id != (SELECT id FROM users WHERE role = 'admin' LIMIT 1)").run();
+      db.prepare("DELETE FROM reports").run();
+      try { db.prepare("DELETE FROM violations").run(); } catch {}
+      try { db.prepare("DELETE FROM support_tickets").run(); } catch {}
+      db.prepare("DELETE FROM verification_records").run();
+      db.prepare("DELETE FROM dorms").run();
+      // Keep admin, delete all non-admin users
+      db.prepare("DELETE FROM users WHERE role != 'admin'").run();
+      // Ensure admin email is up to date
+      db.prepare("UPDATE users SET email = ? WHERE role = 'admin'").run("aozora.dormfinder.admin@gmail.com");
+    })();
+
+    res.json({ ok: true, message: "Demo data cleared. App is ready for production." });
+  } catch (e: any) {
+    console.error("reset-demo-data error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 export default router;

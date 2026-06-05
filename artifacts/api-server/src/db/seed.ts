@@ -12,7 +12,7 @@ export function seedDatabase(db: Database.Database) {
   db.prepare(`
     INSERT INTO users (full_name, email, phone, password_hash, role, verification_status)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run("Admin User", "admin@aozora.ph", "+63-9001234567", adminHash, "admin", "verified");
+  `).run("Admin User", "aozora.dormfinder.admin@gmail.com", "+63-9001234567", adminHash, "admin", "verified");
 
   db.prepare(`
     INSERT INTO users (full_name, email, phone, password_hash, role, verification_status)
