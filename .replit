@@ -77,4 +77,3 @@ channel = "stable-25_05"
 [userenv.shared]
 PORT = "8080"
 NODE_ENV = "development"
-MOCK_EMAIL_RECIPIENT = "aozora.dormfinder.admin@gmail.com"

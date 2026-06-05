@@ -7,6 +7,7 @@ import { users } from "../db/schema";
 import { eq, or } from "drizzle-orm";
 import { generateToken, requireAuth } from "../middlewares/auth";
 import { sendOtpEmail } from "../lib/mailer";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -59,14 +60,15 @@ router.post("/auth/send-otp", async (req, res) => {
 
   try {
     await sendOtpEmail(normalized, code);
+    logger.info({ contact: normalized }, "[send-otp] OTP email sent successfully");
   } catch (err) {
+    logger.error({ err, contact: normalized }, "[send-otp] Email delivery failed");
     if (process.env.NODE_ENV === "production") {
       sqlite.prepare("DELETE FROM otp_verifications WHERE contact = ? AND is_verified = 0").run(normalized);
       res.status(500).json({ error: "Email delivery failed", message: "We couldn't send the verification code to your email. Please check the address and try again." });
       return;
     }
-    console.warn("[send-otp] Email delivery failed — OTP logged for development:");
-    console.log(`\n====================================\n  OTP for ${normalized}: ${code}\n====================================\n`);
+    logger.warn({ contact: normalized, code }, "[send-otp] Dev fallback — OTP code logged above (check server logs)");
   }
 
   res.json({ message: "Verification code sent" });
@@ -279,14 +281,15 @@ router.post("/auth/forgot-password/send-otp", async (req, res) => {
 
   try {
     await sendOtpEmail(normalized, code);
+    logger.info({ contact: normalized }, "[forgot-password/send-otp] OTP email sent successfully");
   } catch (err) {
+    logger.error({ err, contact: normalized }, "[forgot-password/send-otp] Email delivery failed");
     if (process.env.NODE_ENV === "production") {
       sqlite.prepare("DELETE FROM otp_verifications WHERE contact = ? AND is_verified = 0").run(normalized);
       res.status(500).json({ error: "Email delivery failed", message: "We couldn't send the reset code to your email. Please try again later." });
       return;
     }
-    console.warn("[forgot-password/send-otp] Email delivery failed — OTP logged for development:");
-    console.log(`\n====================================\n  Password reset OTP for ${normalized}: ${code}\n====================================\n`);
+    logger.warn({ contact: normalized, code }, "[forgot-password/send-otp] Dev fallback — OTP code logged above");
   }
 
   res.json({ message: "Reset code sent" });
@@ -367,11 +370,10 @@ router.post("/auth/email-change/send-otp", requireAuth, async (req, res) => {
 
   try {
     await sendOtpEmail(normalized, code);
-  } catch {
-    console.warn("[email-change/send-otp] Email delivery failed — falling back to console log.");
-    console.log(`\n====================================`);
-    console.log(`  Email change OTP for ${normalized}: ${code}`);
-    console.log(`====================================\n`);
+    logger.info({ contact: normalized }, "[email-change/send-otp] OTP email sent successfully");
+  } catch (err) {
+    logger.error({ err, contact: normalized }, "[email-change/send-otp] Email delivery failed");
+    logger.warn({ contact: normalized, code }, "[email-change/send-otp] Dev fallback — OTP code logged above");
   }
 
   res.json({ message: "Verification code sent to your new email address." });
