@@ -14,13 +14,6 @@ echo "[start] Starting proxy on port 5000..."
 node "$WORKSPACE_ROOT/dev-proxy.js" &
 PROXY_PID=$!
 
-# Start API server on port 8080
-echo "[start] Starting API server on port 8080..."
-cd "$WORKSPACE_ROOT/artifacts/api-server" && \
-  node ensure-sqlite.mjs && \
-  PORT=8080 node --enable-source-maps ./dist/index.mjs &
-API_PID=$!
-
 DIST_DIR="$WORKSPACE_ROOT/artifacts/aozora/dist"
 
 if [ -f "$DIST_DIR/index.html" ]; then
@@ -32,5 +25,5 @@ else
   echo "[start] Export complete. App is now live."
 fi
 
-# Keep alive — wait for all background processes
-wait $PROXY_PID $API_PID
+# Keep alive
+wait $PROXY_PID

@@ -8,7 +8,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "93008aee-de8d-4d23-9bc5-89b33fc7b6e3-00-x393mngv41a9.pike.replit.dev"
+        "EXPO_PUBLIC_DOMAIN": "1be44634-3cf5-4241-8982-1459da235cad-00-3qem2hy0504d8.sisko.replit.dev"
       }
     },
     "production": {
@@ -16,7 +16,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "93008aee-de8d-4d23-9bc5-89b33fc7b6e3-00-x393mngv41a9.pike.replit.dev"
+        "EXPO_PUBLIC_DOMAIN": "1be44634-3cf5-4241-8982-1459da235cad-00-3qem2hy0504d8.sisko.replit.dev"
       }
     }
   }
