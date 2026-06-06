@@ -253,37 +253,20 @@ export default function LocationPickerMap({ latitude, longitude, onLocationChang
   return (
     <>
       <TouchableOpacity
-        style={[styles.trigger, { borderColor: isGeocoding ? colors.primary : colors.border, borderRadius: colors.radius }]}
+        style={[styles.trigger, { borderColor: isGeocoding ? colors.primary : colors.border, borderRadius: colors.radius, backgroundColor: colors.card }]}
         onPress={handleOpen}
         activeOpacity={0.85}
       >
-        <MapView
-          style={StyleSheet.absoluteFillObject}
-          region={{
-            latitude,
-            longitude,
-            latitudeDelta: 0.012,
-            longitudeDelta: 0.012,
-          }}
-          scrollEnabled={false}
-          zoomEnabled={false}
-          rotateEnabled={false}
-          pitchEnabled={false}
-          pointerEvents="none"
-        >
-          <Marker coordinate={{ latitude, longitude }} />
-        </MapView>
-
         {isGeocoding ? (
-          <View style={[styles.overlay, { backgroundColor: "rgba(79,70,229,0.55)" }]}>
-            <ActivityIndicator size="small" color="#fff" />
-            <Text style={styles.overlayLabel}>Finding location…</Text>
+          <View style={[styles.overlay, { backgroundColor: colors.card }]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.overlayLabel, { color: colors.foreground }]}>Finding location…</Text>
           </View>
         ) : (
-          <View style={[styles.overlay, { backgroundColor: "rgba(0,0,0,0.28)" }]}>
-            <Feather name="map-pin" size={20} color="#fff" />
-            <Text style={styles.overlayLabel}>Tap to adjust pin</Text>
-            <Text style={styles.overlayCoords}>
+          <View style={[styles.overlay, { backgroundColor: colors.card }]}>
+            <Feather name="map-pin" size={24} color={colors.primary} />
+            <Text style={[styles.overlayLabel, { color: colors.foreground }]}>Tap to set location on map</Text>
+            <Text style={[styles.overlayCoords, { color: colors.mutedForeground }]}>
               {latitude.toFixed(5)}, {longitude.toFixed(5)}
             </Text>
           </View>
@@ -369,13 +352,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 6,
+    padding: 12,
   },
-  overlayLabel: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  overlayCoords: { color: "rgba(255,255,255,0.85)", fontSize: 12 },
+  overlayLabel: { fontSize: 15, fontWeight: "700" },
+  overlayCoords: { fontSize: 12 },
 
   modal: { flex: 1 },
   modalHeader: {
