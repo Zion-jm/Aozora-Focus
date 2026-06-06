@@ -98,7 +98,7 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
     bedsPerRoom, availableBeds, coverPhotoUrl, nearbyLandmark, genderPolicy, proofOfOwnershipUrl,
   } = req.body;
 
-  if (!name || !description || !monthlyRent || !address || !totalRooms || !bedsPerRoom || availableBeds === undefined) {
+  if (!name || !monthlyRent || !address || !totalRooms || !bedsPerRoom || availableBeds === undefined) {
     res.status(400).json({ error: "Validation error", message: "Missing required fields" });
     return;
   }
@@ -106,7 +106,7 @@ router.post("/dorms", requireAuth, requireRole("owner", "admin"), async (req, re
   const result = await db.insert(dorms).values({
     ownerId: req.user!.id,
     name,
-    description,
+    description: description ?? "",
     monthlyRent,
     address,
     latitude: latitude ?? null,
