@@ -29,21 +29,49 @@ echo "[start] Starting proxy on port 5000..."
 node "$WORKSPACE_ROOT/dev-proxy.js" &
 PROXY_PID=$!
 
-# Ensure better-sqlite3 native binary is built and run DB migrations
+# Always ensure the native SQLite binding is ready (safe to run alongside artifact workflow).
 echo "[start] Ensuring better-sqlite3 native binding..."
 cd "$WORKSPACE_ROOT/artifacts/api-server" && node ensure-sqlite.mjs
 
-# Build the API server if dist is missing or stale
-API_DIST="$WORKSPACE_ROOT/artifacts/api-server/dist/index.mjs"
-if [ ! -f "$API_DIST" ]; then
-  echo "[start] Building API server..."
-  cd "$WORKSPACE_ROOT/artifacts/api-server" && node build.mjs
-fi
+# Check if something is already listening on the API port using Node.js
+# (fuser/lsof are not available in this Nix environment).
+check_port() {
+  node -e "
+    const net = require('net');
+    const s = net.createServer();
+    s.on('error', () => { process.stdout.write('used'); process.exit(0); });
+    s.listen($PORT, () => { s.close(() => { process.stdout.write('free'); process.exit(0); }); });
+  " 2>/dev/null
+}
 
-# Start the API server
-echo "[start] Starting API server on port $PORT..."
-cd "$WORKSPACE_ROOT/artifacts/api-server" && node --enable-source-maps dist/index.mjs &
-API_PID=$!
+# Wait up to 20s for the artifact "API Server" workflow to start and bind the port.
+# This covers the time needed for its build + server startup.
+# If it doesn't show up in time (e.g. in production) we build and start our own.
+API_WAIT_SECS=20
+echo "[start] Waiting up to ${API_WAIT_SECS}s for API server on port $PORT..."
+API_OWNED_BY_ARTIFACT=false
+for i in $(seq 1 $API_WAIT_SECS); do
+  STATUS=$(check_port)
+  if [ "$STATUS" = "used" ]; then
+    echo "[start] Port $PORT in use after ${i}s — API server managed elsewhere."
+    API_OWNED_BY_ARTIFACT=true
+    break
+  fi
+  sleep 1
+done
+
+if [ "$API_OWNED_BY_ARTIFACT" = "false" ]; then
+  echo "[start] No API server found after ${API_WAIT_SECS}s — building and starting our own..."
+  cd "$WORKSPACE_ROOT/artifacts/api-server" && node build.mjs
+  # One final check: the artifact workflow may have started during our build.
+  STATUS=$(check_port)
+  if [ "$STATUS" = "free" ]; then
+    cd "$WORKSPACE_ROOT/artifacts/api-server" && node --enable-source-maps dist/index.mjs &
+    echo "[start] API server started (fallback mode)."
+  else
+    echo "[start] Port $PORT taken during build — deferring to artifact workflow."
+  fi
+fi
 
 # Build Expo web app if not built, or if the domain has changed since last build
 DIST_DIR="$WORKSPACE_ROOT/artifacts/aozora/dist"
@@ -69,5 +97,5 @@ else
   echo "[start] Web build up to date for domain $CURRENT_DOMAIN — skipping export."
 fi
 
-# Keep alive — wait for both processes
-wait $PROXY_PID $API_PID
+# Keep alive — wait on the proxy
+wait $PROXY_PID

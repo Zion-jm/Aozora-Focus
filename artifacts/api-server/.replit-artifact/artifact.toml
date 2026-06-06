@@ -10,7 +10,9 @@ name = "API Server"
 paths = ["/api"]
 
 [services.development]
-run = "fuser -k 8080/tcp 2>/dev/null; sleep 1; pnpm --filter @workspace/api-server run dev"
+# If port 8080 is already owned by Aozora Admin Website (start.sh), attach to it
+# rather than fighting for the port. If it's free, start the server normally.
+run = "bash -c 'if fuser 8080/tcp 2>/dev/null; then echo \"[api-server] Port 8080 in use — attaching to existing server\"; until curl -sf http://localhost:8080/api/healthz >/dev/null 2>&1; do sleep 1; done; echo \"[api-server] Health check passed — server is live on :8080\"; tail -f /dev/null; else pnpm --filter @workspace/api-server run dev; fi'"
 
 [services.production]
 
