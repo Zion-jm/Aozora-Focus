@@ -3,7 +3,9 @@ modules = ["nodejs-20", "web", "python-3.12", "bash"]
 
 [deployment]
 router = "application"
-deploymentTarget = "autoscale"
+deploymentTarget = "vm"
+run = ["bash", "start.sh"]
+build = ["bash", "-c", "node artifacts/api-server/ensure-sqlite.mjs && node artifacts/api-server/build.mjs"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
