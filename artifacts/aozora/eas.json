@@ -8,7 +8,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "af9a2f46-8085-4c7f-a3d3-6a3ef4187eee-00-33tlr8gwukq9h.pike.replit.dev",
+        "EXPO_PUBLIC_DOMAIN": "5cde0c0c-0929-4e13-8461-f1222d2dfd56-00-dlxezqoe282w.pike.replit.dev",
         "GOOGLE_MAPS_API_KEY": "AIzaSyCRk5YWHUeX014TdB8BE51AQcas9dJaM2o"
       }
     },
@@ -17,7 +17,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "af9a2f46-8085-4c7f-a3d3-6a3ef4187eee-00-33tlr8gwukq9h.pike.replit.dev",
+        "EXPO_PUBLIC_DOMAIN": "5cde0c0c-0929-4e13-8461-f1222d2dfd56-00-dlxezqoe282w.pike.replit.dev",
         "GOOGLE_MAPS_API_KEY": "AIzaSyCRk5YWHUeX014TdB8BE51AQcas9dJaM2o"
       }
     }
